@@ -116,31 +116,80 @@ var g = &grammar{
 							label: "first",
 							expr: &ruleRefExpr{
 								pos:  position{line: 15, col: 15, offset: 210},
+								name: "Cmp",
+							},
+						},
+						&labeledExpr{
+							pos:   position{line: 15, col: 19, offset: 214},
+							label: "rest",
+							expr: &zeroOrMoreExpr{
+								pos: position{line: 15, col: 24, offset: 219},
+								expr: &seqExpr{
+									pos: position{line: 15, col: 26, offset: 221},
+									exprs: []interface{}{
+										&ruleRefExpr{
+											pos:  position{line: 15, col: 26, offset: 221},
+											name: "_",
+										},
+										&ruleRefExpr{
+											pos:  position{line: 15, col: 28, offset: 223},
+											name: "MulOp",
+										},
+										&ruleRefExpr{
+											pos:  position{line: 15, col: 34, offset: 229},
+											name: "_",
+										},
+										&ruleRefExpr{
+											pos:  position{line: 15, col: 36, offset: 231},
+											name: "Cmp",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Cmp",
+			pos:  position{line: 20, col: 1, offset: 297},
+			expr: &actionExpr{
+				pos: position{line: 20, col: 8, offset: 304},
+				run: (*parser).callonCmp1,
+				expr: &seqExpr{
+					pos: position{line: 20, col: 8, offset: 304},
+					exprs: []interface{}{
+						&labeledExpr{
+							pos:   position{line: 20, col: 8, offset: 304},
+							label: "first",
+							expr: &ruleRefExpr{
+								pos:  position{line: 20, col: 14, offset: 310},
 								name: "Factor",
 							},
 						},
 						&labeledExpr{
-							pos:   position{line: 15, col: 22, offset: 217},
+							pos:   position{line: 20, col: 21, offset: 317},
 							label: "rest",
 							expr: &zeroOrMoreExpr{
-								pos: position{line: 15, col: 27, offset: 222},
+								pos: position{line: 20, col: 26, offset: 322},
 								expr: &seqExpr{
-									pos: position{line: 15, col: 29, offset: 224},
+									pos: position{line: 20, col: 28, offset: 324},
 									exprs: []interface{}{
 										&ruleRefExpr{
-											pos:  position{line: 15, col: 29, offset: 224},
+											pos:  position{line: 20, col: 28, offset: 324},
 											name: "_",
 										},
 										&ruleRefExpr{
-											pos:  position{line: 15, col: 31, offset: 226},
-											name: "MulOp",
+											pos:  position{line: 20, col: 30, offset: 326},
+											name: "CmpOp",
 										},
 										&ruleRefExpr{
-											pos:  position{line: 15, col: 37, offset: 232},
+											pos:  position{line: 20, col: 36, offset: 332},
 											name: "_",
 										},
 										&ruleRefExpr{
-											pos:  position{line: 15, col: 39, offset: 234},
+											pos:  position{line: 20, col: 38, offset: 334},
 											name: "Factor",
 										},
 									},
@@ -153,32 +202,32 @@ var g = &grammar{
 		},
 		{
 			name: "Factor",
-			pos:  position{line: 20, col: 1, offset: 303},
+			pos:  position{line: 25, col: 1, offset: 403},
 			expr: &choiceExpr{
-				pos: position{line: 20, col: 11, offset: 313},
+				pos: position{line: 25, col: 11, offset: 413},
 				alternatives: []interface{}{
 					&actionExpr{
-						pos: position{line: 20, col: 11, offset: 313},
+						pos: position{line: 25, col: 11, offset: 413},
 						run: (*parser).callonFactor2,
 						expr: &seqExpr{
-							pos: position{line: 20, col: 11, offset: 313},
+							pos: position{line: 25, col: 11, offset: 413},
 							exprs: []interface{}{
 								&litMatcher{
-									pos:        position{line: 20, col: 11, offset: 313},
+									pos:        position{line: 25, col: 11, offset: 413},
 									val:        "(",
 									ignoreCase: false,
 									want:       "\"(\"",
 								},
 								&labeledExpr{
-									pos:   position{line: 20, col: 15, offset: 317},
+									pos:   position{line: 25, col: 15, offset: 417},
 									label: "expr",
 									expr: &ruleRefExpr{
-										pos:  position{line: 20, col: 20, offset: 322},
+										pos:  position{line: 25, col: 20, offset: 422},
 										name: "Expr",
 									},
 								},
 								&litMatcher{
-									pos:        position{line: 20, col: 25, offset: 327},
+									pos:        position{line: 25, col: 25, offset: 427},
 									val:        ")",
 									ignoreCase: false,
 									want:       "\")\"",
@@ -187,13 +236,13 @@ var g = &grammar{
 						},
 					},
 					&actionExpr{
-						pos: position{line: 23, col: 5, offset: 378},
+						pos: position{line: 28, col: 5, offset: 478},
 						run: (*parser).callonFactor8,
 						expr: &labeledExpr{
-							pos:   position{line: 23, col: 5, offset: 378},
+							pos:   position{line: 28, col: 5, offset: 478},
 							label: "integer",
 							expr: &ruleRefExpr{
-								pos:  position{line: 23, col: 13, offset: 386},
+								pos:  position{line: 28, col: 13, offset: 486},
 								name: "Integer",
 							},
 						},
@@ -203,21 +252,21 @@ var g = &grammar{
 		},
 		{
 			name: "AddOp",
-			pos:  position{line: 28, col: 1, offset: 443},
+			pos:  position{line: 33, col: 1, offset: 543},
 			expr: &actionExpr{
-				pos: position{line: 28, col: 10, offset: 452},
+				pos: position{line: 33, col: 10, offset: 552},
 				run: (*parser).callonAddOp1,
 				expr: &choiceExpr{
-					pos: position{line: 28, col: 12, offset: 454},
+					pos: position{line: 33, col: 12, offset: 554},
 					alternatives: []interface{}{
 						&litMatcher{
-							pos:        position{line: 28, col: 12, offset: 454},
+							pos:        position{line: 33, col: 12, offset: 554},
 							val:        "+",
 							ignoreCase: false,
 							want:       "\"+\"",
 						},
 						&litMatcher{
-							pos:        position{line: 28, col: 18, offset: 460},
+							pos:        position{line: 33, col: 18, offset: 560},
 							val:        "-",
 							ignoreCase: false,
 							want:       "\"-\"",
@@ -228,30 +277,103 @@ var g = &grammar{
 		},
 		{
 			name: "MulOp",
-			pos:  position{line: 33, col: 1, offset: 522},
+			pos:  position{line: 38, col: 1, offset: 622},
 			expr: &actionExpr{
-				pos: position{line: 33, col: 10, offset: 531},
+				pos: position{line: 38, col: 10, offset: 631},
 				run: (*parser).callonMulOp1,
 				expr: &choiceExpr{
-					pos: position{line: 33, col: 12, offset: 533},
+					pos: position{line: 38, col: 12, offset: 633},
 					alternatives: []interface{}{
 						&litMatcher{
-							pos:        position{line: 33, col: 12, offset: 533},
+							pos:        position{line: 38, col: 12, offset: 633},
+							val:        "//",
+							ignoreCase: false,
+							want:       "\"//\"",
+						},
+						&litMatcher{
+							pos:        position{line: 38, col: 19, offset: 640},
 							val:        "*",
 							ignoreCase: false,
 							want:       "\"*\"",
 						},
 						&litMatcher{
-							pos:        position{line: 33, col: 18, offset: 539},
+							pos:        position{line: 38, col: 25, offset: 646},
 							val:        "/",
 							ignoreCase: false,
 							want:       "\"/\"",
 						},
 						&litMatcher{
-							pos:        position{line: 33, col: 24, offset: 545},
+							pos:        position{line: 38, col: 31, offset: 652},
 							val:        "@",
 							ignoreCase: false,
 							want:       "\"@\"",
+						},
+						&litMatcher{
+							pos:        position{line: 38, col: 37, offset: 658},
+							val:        "&",
+							ignoreCase: false,
+							want:       "\"&\"",
+						},
+						&litMatcher{
+							pos:        position{line: 38, col: 43, offset: 664},
+							val:        "|",
+							ignoreCase: false,
+							want:       "\"|\"",
+						},
+						&litMatcher{
+							pos:        position{line: 38, col: 49, offset: 670},
+							val:        "^",
+							ignoreCase: false,
+							want:       "\"^\"",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "CmpOp",
+			pos:  position{line: 43, col: 1, offset: 732},
+			expr: &actionExpr{
+				pos: position{line: 43, col: 10, offset: 741},
+				run: (*parser).callonCmpOp1,
+				expr: &choiceExpr{
+					pos: position{line: 43, col: 12, offset: 743},
+					alternatives: []interface{}{
+						&litMatcher{
+							pos:        position{line: 43, col: 12, offset: 743},
+							val:        "==",
+							ignoreCase: false,
+							want:       "\"==\"",
+						},
+						&litMatcher{
+							pos:        position{line: 43, col: 19, offset: 750},
+							val:        "!=",
+							ignoreCase: false,
+							want:       "\"!=\"",
+						},
+						&litMatcher{
+							pos:        position{line: 43, col: 26, offset: 757},
+							val:        "<=",
+							ignoreCase: false,
+							want:       "\"<=\"",
+						},
+						&litMatcher{
+							pos:        position{line: 43, col: 33, offset: 764},
+							val:        ">=",
+							ignoreCase: false,
+							want:       "\">=\"",
+						},
+						&litMatcher{
+							pos:        position{line: 43, col: 40, offset: 771},
+							val:        "<",
+							ignoreCase: false,
+							want:       "\"<\"",
+						},
+						&litMatcher{
+							pos:        position{line: 43, col: 46, offset: 777},
+							val:        ">",
+							ignoreCase: false,
+							want:       "\">\"",
 						},
 					},
 				},
@@ -259,26 +381,26 @@ var g = &grammar{
 		},
 		{
 			name: "Integer",
-			pos:  position{line: 38, col: 1, offset: 607},
+			pos:  position{line: 48, col: 1, offset: 839},
 			expr: &actionExpr{
-				pos: position{line: 38, col: 12, offset: 618},
+				pos: position{line: 48, col: 12, offset: 850},
 				run: (*parser).callonInteger1,
 				expr: &seqExpr{
-					pos: position{line: 38, col: 12, offset: 618},
+					pos: position{line: 48, col: 12, offset: 850},
 					exprs: []interface{}{
 						&zeroOrOneExpr{
-							pos: position{line: 38, col: 12, offset: 618},
+							pos: position{line: 48, col: 12, offset: 850},
 							expr: &litMatcher{
-								pos:        position{line: 38, col: 12, offset: 618},
+								pos:        position{line: 48, col: 12, offset: 850},
 								val:        "-",
 								ignoreCase: false,
 								want:       "\"-\"",
 							},
 						},
 						&oneOrMoreExpr{
-							pos: position{line: 38, col: 17, offset: 623},
+							pos: position{line: 48, col: 17, offset: 855},
 							expr: &charClassMatcher{
-								pos:        position{line: 38, col: 17, offset: 623},
+								pos:        position{line: 48, col: 17, offset: 855},
 								val:        "[0-9]",
 								ranges:     []rune{'0', '9'},
 								ignoreCase: false,
@@ -292,11 +414,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 43, col: 1, offset: 695},
+			pos:         position{line: 53, col: 1, offset: 927},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 43, col: 19, offset: 713},
+				pos: position{line: 53, col: 19, offset: 945},
 				expr: &charClassMatcher{
-					pos:        position{line: 43, col: 19, offset: 713},
+					pos:        position{line: 53, col: 19, offset: 945},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -306,11 +428,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 45, col: 1, offset: 725},
+			pos:  position{line: 55, col: 1, offset: 957},
 			expr: &notExpr{
-				pos: position{line: 45, col: 8, offset: 732},
+				pos: position{line: 55, col: 8, offset: 964},
 				expr: &anyMatcher{
-					line: 45, col: 9, offset: 733,
+					line: 55, col: 9, offset: 965,
 				},
 			},
 		},
@@ -348,6 +470,17 @@ func (p *parser) callonTerm1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
 	return p.cur.onTerm1(stack["first"], stack["rest"])
+}
+
+func (c *current) onCmp1(first, rest interface{}) (interface{}, error) {
+	cntCodeBlocks++
+	return eval(first, rest), nil
+}
+
+func (p *parser) callonCmp1() (interface{}, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCmp1(stack["first"], stack["rest"])
 }
 
 func (c *current) onFactor2(expr interface{}) (interface{}, error) {
@@ -392,6 +525,17 @@ func (p *parser) callonMulOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
 	return p.cur.onMulOp1()
+}
+
+func (c *current) onCmpOp1() (interface{}, error) {
+	cntCodeBlocks++
+	return string(c.text), nil
+}
+
+func (p *parser) callonCmpOp1() (interface{}, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onCmpOp1()
 }
 
 func (c *current) onInteger1() (interface{}, error) {

@@ -12,7 +12,12 @@ Expr <- _ first:Term rest:( _ AddOp _ Term )* _ {
     return eval(first, rest), nil
 }
 
-Term <- first:Factor rest:( _ MulOp _ Factor )* {
+Term <- first:Cmp rest:( _ MulOp _ Cmp )* {
+    cntCodeBlocks++
+    return eval(first, rest), nil
+}
+
+Cmp <- first:Factor rest:( _ CmpOp _ Factor )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
@@ -30,7 +35,12 @@ AddOp <- ( '+' / '-' ) {
     return string(c.text), nil
 }
 
-MulOp <- ( '*' / '/' / '@' ) {
+MulOp <- ( "//" / '*' / '/' / '@' / '&' / '|' / '^' ) {
+    cntCodeBlocks++
+    return string(c.text), nil
+}
+
+CmpOp <- ( "==" / "!=" / "<=" / ">=" / '<' / '>' ) {
     cntCodeBlocks++
     return string(c.text), nil
 }

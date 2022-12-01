@@ -4,6 +4,13 @@ import "math"
 
 var cntCodeBlocks int
 
+func boolToInt(isTrue bool) int {
+	if isTrue {
+		return 1
+	}
+	return 0
+}
+
 var ops = map[string]func(int, int) int{
 	"+": func(l, r int) int {
 		return l + r
@@ -17,8 +24,35 @@ var ops = map[string]func(int, int) int{
 	"/": func(l, r int) int {
 		return l / r
 	},
-	"@": func(l, r int) int {
+	"//": func(l, r int) int {
 		return int(math.Mod(float64(l), float64(r)))
+	},
+	"&": func(l, r int) int {
+		return l & r
+	},
+	"|": func(l, r int) int {
+		return l | r
+	},
+	"^": func(l, r int) int {
+		return l ^ r
+	},
+	"==": func(l, r int) int {
+		return boolToInt(l == r)
+	},
+	"!=": func(l, r int) int {
+		return boolToInt(l != r)
+	},
+	"<": func(l, r int) int {
+		return boolToInt(l < r)
+	},
+	"<=": func(l, r int) int {
+		return boolToInt(l <= r)
+	},
+	">": func(l, r int) int {
+		return boolToInt(l > r)
+	},
+	">=": func(l, r int) int {
+		return boolToInt(l >= r)
 	},
 }
 
