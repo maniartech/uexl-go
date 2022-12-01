@@ -7,7 +7,7 @@ Input <- expr:Expr EOF {
     return expr, nil
 }
 
-Expr <- _ first:Term rest:( _ AddOp _ Term )* _ {
+Expr <- _ first:Term rest:( _ CmpOp _ Term )* _ {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
@@ -17,7 +17,12 @@ Term <- first:Cmp rest:( _ MulOp _ Cmp )* {
     return eval(first, rest), nil
 }
 
-Cmp <- first:Factor rest:( _ CmpOp _ Factor )* {
+Cmp <- first:Bit rest:( _ AddOp _ Bit )* {
+    cntCodeBlocks++
+    return eval(first, rest), nil
+}
+
+Bit <- first:Factor rest:( _ BitOp _ Factor )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
@@ -35,12 +40,17 @@ AddOp <- ( '+' / '-' ) {
     return string(c.text), nil
 }
 
-MulOp <- ( "//" / '*' / '/' / '@' / '&' / '|' / '^' ) {
+MulOp <- ( "//" / '*' / '/' ) {
     cntCodeBlocks++
     return string(c.text), nil
 }
 
 CmpOp <- ( "==" / "!=" / "<=" / ">=" / '<' / '>' ) {
+    cntCodeBlocks++
+    return string(c.text), nil
+}
+
+BitOp <- ( '&' / '|' / '^' ) {
     cntCodeBlocks++
     return string(c.text), nil
 }
