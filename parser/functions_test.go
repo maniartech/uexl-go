@@ -106,4 +106,24 @@ func TestParser(t *testing.T) {
 	if got != expected {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
+
+	// Test for the Logical OR Operator (||) Operator.
+	got, err = ParseReader("", strings.NewReader("0 || 1"))
+	expected = 1
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
+
+	// Test for the Logical AND Operator (&&) Operator.
+	got, err = ParseReader("", strings.NewReader("0 && 1"))
+	expected = 0
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
 }

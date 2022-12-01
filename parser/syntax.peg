@@ -22,7 +22,12 @@ Cmp <- first:Bit rest:( _ AddOp _ Bit )* {
     return eval(first, rest), nil
 }
 
-Bit <- first:Factor rest:( _ BitOp _ Factor )* {
+Bit <- first:Log rest:( _ BitOp _ Log )* {
+    cntCodeBlocks++
+    return eval(first, rest), nil
+}
+
+Log <- first:Factor rest:( _ LogOp _ Factor )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
@@ -51,6 +56,11 @@ CmpOp <- ( "==" / "!=" / "<=" / ">=" / '<' / '>' ) {
 }
 
 BitOp <- ( '&' / '|' / '^' ) {
+    cntCodeBlocks++
+    return string(c.text), nil
+}
+
+LogOp <- ( "&&" / "||" ) {
     cntCodeBlocks++
     return string(c.text), nil
 }

@@ -11,6 +11,17 @@ func boolToInt(isTrue bool) int {
 	return 0
 }
 
+func boolCalc(a, b int) (bool, bool) {
+	var aBool, bBool bool
+	if a != 0 {
+		aBool = true
+	}
+	if b != 0 {
+		bBool = true
+	}
+	return aBool, bBool
+}
+
 var ops = map[string]func(int, int) int{
 	"+": func(l, r int) int {
 		return l + r
@@ -53,6 +64,14 @@ var ops = map[string]func(int, int) int{
 	},
 	">=": func(l, r int) int {
 		return boolToInt(l >= r)
+	},
+	"&&": func(l, r int) int {
+		a, b := boolCalc(l, r)
+		return boolToInt(a && b)
+	},
+	"||": func(l, r int) int {
+		a, b := boolCalc(l, r)
+		return boolToInt(a || b)
 	},
 }
 
