@@ -73,6 +73,12 @@ var ops = map[string]func(int, int) int{
 		a, b := boolCalc(l, r)
 		return boolToInt(a || b)
 	},
+	"<<": func(l, r int) int {
+		return l << r
+	},
+	">>": func(l, r int) int {
+		return l >> r
+	},
 }
 
 func toIfaceSlice(v interface{}) []interface{} {

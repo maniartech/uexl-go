@@ -47,7 +47,7 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for the Equality Operator (==) Operator.
+	// Test for the Equality (==) Operator.
 	got, err = ParseReader("", strings.NewReader("10 == 10"))
 	expected = 1
 	if err != nil {
@@ -57,7 +57,7 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for the Inequality Operator (!=) Operator.
+	// Test for the Inequality (!=) Operator.
 	got, err = ParseReader("", strings.NewReader("10 != 10"))
 	expected = 0
 	if err != nil {
@@ -67,7 +67,7 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for the "Smaller than" Operator (<) Operator.
+	// Test for the "Smaller than" (<) Operator.
 	got, err = ParseReader("", strings.NewReader("7 < 10"))
 	expected = 1
 	if err != nil {
@@ -77,7 +77,7 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for the "Smaller than or equal to" Operator (<=) Operator.
+	// Test for the "Smaller than or equal to" (<=) Operator.
 	got, err = ParseReader("", strings.NewReader("10 <= 10"))
 	expected = 1
 	if err != nil {
@@ -87,7 +87,7 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for the "Greater than" Operator (>) Operator.
+	// Test for the "Greater than" (>) Operator.
 	got, err = ParseReader("", strings.NewReader("10 > 7"))
 	expected = 1
 	if err != nil {
@@ -97,7 +97,7 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for the "Greater than or equal to" Operator (>=) Operator.
+	// Test for the "Greater than or equal to" (>=) Operator.
 	got, err = ParseReader("", strings.NewReader("10 >= 10"))
 	expected = 1
 	if err != nil {
@@ -107,7 +107,7 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for the Logical OR Operator (||) Operator.
+	// Test for the Logical OR (||) Operator.
 	got, err = ParseReader("", strings.NewReader("0 || 1"))
 	expected = 1
 	if err != nil {
@@ -117,9 +117,29 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for the Logical AND Operator (&&) Operator.
+	// Test for the Logical AND (&&) Operator.
 	got, err = ParseReader("", strings.NewReader("0 && 1"))
 	expected = 0
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
+
+	// Test for the Left Shift (<<) Operator.
+	got, err = ParseReader("", strings.NewReader("25 << 2"))
+	expected = 100
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
+
+	// Test for the Left Shift (<<) Operator.
+	got, err = ParseReader("", strings.NewReader("25 >> 2"))
+	expected = 6
 	if err != nil {
 		log.Fatal(err)
 	}
