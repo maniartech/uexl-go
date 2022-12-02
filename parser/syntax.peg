@@ -7,7 +7,7 @@ Input <- expr:Expr EOF {
     return expr, nil
 }
 
-Expr <- _ first:Term rest:( _ AddOp _ Term )* _ {
+Expr <- _ first:Term rest:( _ CmpOp _ Term )* _ {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
@@ -22,7 +22,7 @@ Shift <- first:Cmp rest: ( _ ShiftOp _ Cmp ) * {
     return eval(first, rest), nil
 }
 
-Cmp <- first:Bit rest:( _ CmpOp _ Bit )* {
+Cmp <- first:Bit rest:( _ AddOp _ Bit )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }

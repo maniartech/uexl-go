@@ -80,7 +80,7 @@ var g = &grammar{
 										},
 										&ruleRefExpr{
 											pos:  position{line: 10, col: 31, offset: 119},
-											name: "AddOp",
+											name: "CmpOp",
 										},
 										&ruleRefExpr{
 											pos:  position{line: 10, col: 37, offset: 125},
@@ -231,7 +231,7 @@ var g = &grammar{
 										},
 										&ruleRefExpr{
 											pos:  position{line: 25, col: 27, offset: 433},
-											name: "CmpOp",
+											name: "AddOp",
 										},
 										&ruleRefExpr{
 											pos:  position{line: 25, col: 33, offset: 439},
