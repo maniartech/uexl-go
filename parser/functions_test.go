@@ -146,4 +146,23 @@ func TestParser(t *testing.T) {
 	if got != expected {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
+
+	// Test for complicated expressions.
+	got, err = ParseReader("", strings.NewReader("25 >> 2 == 7 - 1"))
+	expected = 1
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
+
+	got, err = ParseReader("", strings.NewReader("15 + 5 >= 10"))
+	expected = 1
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
 }

@@ -17,7 +17,7 @@ Term <- first:Shift rest:( _ MulOp _ Shift )* {
     return eval(first, rest), nil
 }
 
-Shift <- first:Cmp rest: ( _ ShiftOp _ Cmp ) * {
+Shift <- first:Cmp rest: ( _ ShiftOp _ Cmp )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
