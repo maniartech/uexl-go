@@ -12,7 +12,7 @@ Expr <- _ first:Term rest:( _ CmpOp _ Term )* _ {
     return eval(first, rest), nil
 }
 
-Term <- first:Shift rest:( _ MulOp _ Shift )* {
+Term <- first:Shift rest:( _ AddOp _ Shift )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
@@ -22,7 +22,7 @@ Shift <- first:Cmp rest: ( _ ShiftOp _ Cmp )* {
     return eval(first, rest), nil
 }
 
-Cmp <- first:Bit rest:( _ AddOp _ Bit )* {
+Cmp <- first:Bit rest:( _ MulOp _ Bit )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }

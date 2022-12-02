@@ -165,4 +165,13 @@ func TestParser(t *testing.T) {
 	if got != expected {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
+
+	got, err = ParseReader("", strings.NewReader("14 * 10 + 5"))
+	expected = 145
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
 }
