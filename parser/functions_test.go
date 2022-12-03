@@ -147,7 +147,7 @@ func TestParser(t *testing.T) {
 		t.Errorf("Expected %v, got, %v\n", expected, got)
 	}
 
-	// Test for complicated expressions.
+	// Tests for complicated expressions.
 	got, err = ParseReader("", strings.NewReader("25 >> 2 == 7 - 1"))
 	expected = 1
 	if err != nil {
@@ -168,6 +168,42 @@ func TestParser(t *testing.T) {
 
 	got, err = ParseReader("", strings.NewReader("14 * 10 + 5"))
 	expected = 145
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
+
+	got, err = ParseReader("", strings.NewReader("2 * 10 // 4"))
+	expected = 4
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
+
+	got, err = ParseReader("", strings.NewReader("45 | 25 == 61"))
+	expected = 1
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
+
+	got, err = ParseReader("", strings.NewReader("45 | (25 == 61)"))
+	expected = 45
+	if err != nil {
+		log.Fatal(err)
+	}
+	if got != expected {
+		t.Errorf("Expected %v, got, %v\n", expected, got)
+	}
+
+	got, err = ParseReader("", strings.NewReader("25 < 50 && 60 >= 30 || 10 != 10"))
+	expected = 1
 	if err != nil {
 		log.Fatal(err)
 	}

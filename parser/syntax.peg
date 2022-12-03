@@ -7,32 +7,37 @@ Input <- expr:Expr EOF {
     return expr, nil
 }
 
-Expr <- _ first:Term rest:( _ CmpOp _ Term )* _ {
+Expr <- _ first:Term rest:( _ LogOp _ Term )* _ {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
 
-Term <- first:Shift rest:( _ AddOp _ Shift )* {
+Term <- first:Bit rest:( _ CmpOp _ Bit )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
 
-Shift <- first:Cmp rest: ( _ ShiftOp _ Cmp )* {
+Bit <- first:Shift rest:( _ BitOp _ Shift )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
 
-Cmp <- first:Bit rest:( _ MulOp _ Bit )* {
+Shift <- first:Sum rest: ( _ ShiftOp _ Sum )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
 
-Bit <- first:Log rest:( _ BitOp _ Log )* {
+Sum <- first:Mul rest:( _ AddOp _ Mul )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
 
-Log <- first:Factor rest:( _ LogOp _ Factor )* {
+Mul <- first:Mod rest:( _ MulOp _ Mod )* {
+    cntCodeBlocks++
+    return eval(first, rest), nil
+}
+
+Mod <- first:Factor rest:( _ ModOp _ Factor )* {
     cntCodeBlocks++
     return eval(first, rest), nil
 }
@@ -50,7 +55,12 @@ AddOp <- ( '+' / '-' ) {
     return string(c.text), nil
 }
 
-MulOp <- ( "//" / '*' / '/' ) {
+MulOp <- ( '*' / '/' ) {
+    cntCodeBlocks++
+    return string(c.text), nil
+}
+
+ModOp <- ( "//" ) {
     cntCodeBlocks++
     return string(c.text), nil
 }
