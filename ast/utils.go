@@ -12,3 +12,10 @@ func ToNodesSlice(v interface{}) []Node {
 	}
 	return nodes
 }
+
+func toIfaceSlice(v interface{}) []interface{} {
+	if v == nil {
+		return nil
+	}
+	return v.([]interface{})
+}
