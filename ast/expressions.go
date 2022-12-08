@@ -83,7 +83,7 @@ func ParseExpression(token string, first, rest interface{}, offset, line, col in
 		}
 	}
 
-	PrintNode(l)
+	// PrintNode(l)
 
 	return l, nil
 }

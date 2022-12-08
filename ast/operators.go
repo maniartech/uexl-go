@@ -1,42 +1,23 @@
 package ast
 
-type OperatorType uint8
+type OperatorType string
 
 const (
 
 	// ArithmeticOperator evaluates the expression by applying arithmatic operations
 	// on the oparands.
-	ArithmeticOperator OperatorType = iota // + - * / //
+	ArithmeticOperator = "arithmetic" // + - * / //
 
 	// ComparisonOperator evaluates the expression by comparting the operands.
-	ComparisonOperator // = <> < > <= >=
+	ComparisonOperator = "comparison" // = <> < > <= >=
 
 	// LogicalOperator evaluates the expression by applying logical operations
-	LogicalOperator // AND OR
+	LogicalOperator = "logical" // AND OR
 
 	// BitwiseOperator evaluates the expression by applying bitwise operations
-	BitwiseOperator // & | ^ << >>
+	BitwiseOperator = "bitwise" // & | ^ << >>
 
 )
-
-func (ot OperatorType) String() string {
-	switch ot {
-	case ArithmeticOperator:
-		return "ArithmeticOperator"
-
-	case ComparisonOperator:
-		return "ComparisonOperator"
-
-	case LogicalOperator:
-		return "LogicalOperator"
-
-	case BitwiseOperator:
-		return "BitwiseOperator"
-
-	default:
-		return ErrInvalidOperator
-	}
-}
 
 func getOperatorType(op string) OperatorType {
 	switch op {
@@ -53,6 +34,6 @@ func getOperatorType(op string) OperatorType {
 		return BitwiseOperator
 
 	default:
-		return 0
+		return "unknown"
 	}
 }
