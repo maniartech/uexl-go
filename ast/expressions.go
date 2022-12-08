@@ -14,13 +14,14 @@ type ExpressionNode struct {
 	Right Node `json:"right"`
 }
 
-func NewExpressionNode(operator string, operatorType OperatorType, left, right Node, offset, line, col int) ExpressionNode {
+func NewExpressionNode(token string, operator string, operatorType OperatorType, left, right Node, offset, line, col int) ExpressionNode {
 	node := ExpressionNode{
 		BaseNode: BaseNode{
 			Type:   NodeTypeExpression,
 			Line:   line,
 			Column: col,
 			Offset: offset,
+			Token:  token,
 		},
 		Operator:     operator,
 		OperatorType: operatorType,
@@ -49,10 +50,7 @@ func (n ExpressionNode) Eval(m Map) (any, error) {
 	return 0, nil
 }
 
-func parseExpression(first, rest interface{}, offset, line, col int) (ExpressionNode, error) {
-
-	// fmt.Printf("EVAL => First:%+v Rest:%+v\n", first, rest)
-	// return nil
+func ParseExpression(token string, first, rest interface{}, offset, line, col int) (Node, error) {
 
 	l, ok := first.(Node)
 
@@ -61,28 +59,31 @@ func parseExpression(first, rest interface{}, offset, line, col int) (Expression
 		panic("invalid-expression - assertion-failed")
 	}
 
-	// restSl := ToNodesSlice(rest)
+	restSl := toIfaceSlice(rest)
+	fmt.Println("restSl", restSl)
 
-	// for _, v := range restSl {
-	// restExpr := ToNodesSlice(v)
-	// r, ok := restExpr[3].(Node)
-	// // TODO: handle error
-	// if !ok {
-	// 	panic("invalid-expression - assertion-failed!")
-	// }
-	// op := ""
+	for _, v := range restSl {
+		restExpr := toIfaceSlice(v)
+		r, ok := restExpr[3].(Node)
+		// TODO: handle error
+		if !ok {
+			panic("invalid-expression - assertion-failed!")
+		}
+		op := ""
 
-	// // if o, ok := restExpr[1].([]byte); ok {
-	// // 	op = string(o)
-	// // } else if o, ok := restExpr[1].(string); ok {
-	// // 	op = o
-	// // }
+		if o, ok := restExpr[1].([]byte); ok {
+			op = string(o)
+		} else if o, ok := restExpr[1].(string); ok {
+			op = o
+		}
 
-	// if op != "" {
-	// 	opType := getOperatorType(op)
-	// 	l = NewExpressionNode(op, opType, l, r, offset, line, col)
-	// }
-	// }
+		if op != "" {
+			opType := getOperatorType(op)
+			l = NewExpressionNode(token, op, opType, l, r, offset, line, col)
+		}
+	}
 
-	return l.(ExpressionNode), nil
+	PrintNode(l)
+
+	return l, nil
 }
