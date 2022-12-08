@@ -22,17 +22,25 @@ type NumberNode struct {
 }
 
 // NewNumberNode creates a new NumberNode.
-func NewNumberNode(value Number, offset, line, col int) NumberNode {
+func NewNumberNode(token string, offset, line, col int) (Node, error) {
+	// Numbers have the same syntax as Go, and are parseable using
+	// strconv.ParseFloat
+	value, err := strconv.ParseFloat(token, 64)
+	if err != nil {
+		return nil, err
+	}
+
 	node := NumberNode{
 		BaseNode: BaseNode{
 			Type:   NodeTypeNumber,
 			Line:   line,
 			Column: col,
 			Offset: offset,
+			Token:  token,
 		},
-		Value: value,
+		Value: Number(value),
 	}
-	return node
+	return node, nil
 }
 
 // String returns a string representation of the NumberNode.
