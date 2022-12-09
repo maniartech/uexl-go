@@ -19,55 +19,48 @@ Expr <- _ first:Term rest:( _ LogOp _ Term )* _ {
   cntCodeBlocks++
 
   // Expr:
-  fmt.Println("Expr:", first, rest)
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Term <- first:Bit rest:( _ CmpOp _ Bit )* {
   cntCodeBlocks++
 
-  // Term:
-  fmt.Println("Term:", first, rest)
+  // fmt.Println("Term:", first, rest)
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Bit <- first:Shift rest:( _ BitOp _ Shift )* {
   cntCodeBlocks++
 
-  // Bit:
-  fmt.Println("Bit:", first, rest)
+  // fmt.Println("Bit:", first, rest)
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Shift <- first:Sum rest: ( _ ShiftOp _ Sum )* {
   cntCodeBlocks++
 
-  // Shift:
-  fmt.Println("Shift:", first, rest)
+  // fmt.Println("Shift:", first, rest)
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Sum <- first:Mul rest:( _ AddOp _ Mul )* {
   cntCodeBlocks++
 
-  // Sum:
-  fmt.Println("Sum:", first, rest)
+  // fmt.Println("Sum:", first, rest)
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Mul <- first:Mod rest:( _ MulOp _ Mod )* {
   cntCodeBlocks++
 
-  // Mul:
-  fmt.Println("Mul:", first, rest)
+  // fmt.Println("Mul:", first, rest)
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Mod <- first:Factor rest:( _ ModOp _ Factor )* {
   cntCodeBlocks++
 
-  // Mod:
-  fmt.Println("Mod:", first, rest)
+  // fmt.Println("Mod:", first, rest)
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
