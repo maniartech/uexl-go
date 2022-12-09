@@ -60,7 +60,6 @@ func ParseExpression(token string, first, rest interface{}, offset, line, col in
 	}
 
 	restSl := toIfaceSlice(rest)
-	fmt.Println("restSl", restSl)
 
 	for _, v := range restSl {
 		restExpr := toIfaceSlice(v)
