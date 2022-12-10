@@ -64,6 +64,11 @@ Mod <- first:Factor rest:( _ ModOp _ Factor )* {
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
+// b <- first:Bool {
+//   cntCodeBlocks++
+//   return ast.ParseBoolean(string(c.text), first, c.pos.offset, c.pos.line, c.pos.col)
+// }
+
 Factor <- '(' expr:Expr ')' {
   cntCodeBlocks++
   return expr, nil
@@ -108,6 +113,16 @@ ShiftOp <- ( "<<" / ">>") {
   cntCodeBlocks++
   return string(c.text), nil
 }
+
+// Value <- val:( Bool ) _ {
+//     return NewBooleanNode(string(c.text), first, c.pos.offset, c.pos.line, c.pos.col), nil
+//     //return val, nil
+// }
+
+// Bool <- ( "True" / "False") {
+//   cntCodeBlocks++
+//   return string(c.text), nil
+// }
 
 ///////////////////// Number /////////////////////
 
