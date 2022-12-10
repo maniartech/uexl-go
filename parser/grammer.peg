@@ -109,18 +109,8 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Bool / Number / Null ) {
+Value <- val:( Number / Bool / Null / String ) {
     return val, nil
-}
-
-Bool <- ( "true" / "false") {
-  cntCodeBlocks++
-  return ast.NewBooleanNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
-}
-
-Null <- ( "null" ) {
-  cntCodeBlocks++
-  return ast.NewNullNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ///////////////////// Number /////////////////////
@@ -139,6 +129,49 @@ Integer <- [+-]? DecimalDigit+ {
 Exponent <- 'e'i [+-]? DecimalDigit+
 
 DecimalDigit <- [0-9]
+
+HexDigit <- [0-9a-f]i
+
+///////////////////// Boolean /////////////////////
+
+Bool <- ( "true" / "false") {
+  cntCodeBlocks++
+  return ast.NewBooleanNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+}
+
+///////////////////// Null /////////////////////
+
+Null <- ( "null" ) {
+  cntCodeBlocks++
+  return ast.NewNullNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+}
+
+///////////////////// String /////////////////////
+
+String <- DoubleQuoteString / SingleQuoteString
+
+DoubleQuoteString <- '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
+    c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
+    value, _ := strconv.Unquote(string(c.text))
+    return ast.NewStringNode(value, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+SingleQuoteString <- "'" str:PlainString "'" {
+    return ast.NewStringNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+}
+
+PlainString <- ( !EscapedChar . / '\\' EscapeSequence )* {
+    c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
+    return string(c.text), nil
+}
+
+EscapedChar <- [\x00-\x1f"'\\]
+
+EscapeSequence <- SingleCharEscape / UnicodeEscape
+
+SingleCharEscape <- ["\\/bfnrt]
+
+UnicodeEscape <- 'u' HexDigit HexDigit HexDigit HexDigit
 
 ////////////////////// Whitespace //////////////////////
 
