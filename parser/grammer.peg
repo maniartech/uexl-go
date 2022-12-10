@@ -114,15 +114,14 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-// Value <- val:( Bool ) _ {
-//     return NewBooleanNode(string(c.text), first, c.pos.offset, c.pos.line, c.pos.col), nil
-//     //return val, nil
-// }
+Value <- val:( Bool ) _ {
+    return ast.NewBooleanNode(string(c.text), first, c.pos.offset, c.pos.line, c.pos.col)
+}
 
-// Bool <- ( "True" / "False") {
-//   cntCodeBlocks++
-//   return string(c.text), nil
-// }
+Bool <- ( "True" / "False") {
+  cntCodeBlocks++
+  return string(c.text), nil
+}
 
 ///////////////////// Number /////////////////////
 

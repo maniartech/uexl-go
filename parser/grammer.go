@@ -643,33 +643,83 @@ var g = &grammar{
 			},
 		},
 		{
-			name: "Number",
-			pos:  position{line: 129, col: 1, offset: 2775},
+			name: "Value",
+			pos:  position{line: 117, col: 1, offset: 2477},
 			expr: &actionExpr{
-				pos: position{line: 129, col: 11, offset: 2785},
+				pos: position{line: 117, col: 10, offset: 2486},
+				run: (*parser).callonValue1,
+				expr: &seqExpr{
+					pos: position{line: 117, col: 10, offset: 2486},
+					exprs: []interface{}{
+						&labeledExpr{
+							pos:   position{line: 117, col: 10, offset: 2486},
+							label: "val",
+							expr: &ruleRefExpr{
+								pos:  position{line: 117, col: 16, offset: 2492},
+								name: "Bool",
+							},
+						},
+						&ruleRefExpr{
+							pos:  position{line: 117, col: 23, offset: 2499},
+							name: "_",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Bool",
+			pos:  position{line: 121, col: 1, offset: 2596},
+			expr: &actionExpr{
+				pos: position{line: 121, col: 9, offset: 2604},
+				run: (*parser).callonBool1,
+				expr: &choiceExpr{
+					pos: position{line: 121, col: 11, offset: 2606},
+					alternatives: []interface{}{
+						&litMatcher{
+							pos:        position{line: 121, col: 11, offset: 2606},
+							val:        "True",
+							ignoreCase: false,
+							want:       "\"True\"",
+						},
+						&litMatcher{
+							pos:        position{line: 121, col: 20, offset: 2615},
+							val:        "False",
+							ignoreCase: false,
+							want:       "\"False\"",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Number",
+			pos:  position{line: 128, col: 1, offset: 2728},
+			expr: &actionExpr{
+				pos: position{line: 128, col: 11, offset: 2738},
 				run: (*parser).callonNumber1,
 				expr: &seqExpr{
-					pos: position{line: 129, col: 11, offset: 2785},
+					pos: position{line: 128, col: 11, offset: 2738},
 					exprs: []interface{}{
 						&ruleRefExpr{
-							pos:  position{line: 129, col: 11, offset: 2785},
+							pos:  position{line: 128, col: 11, offset: 2738},
 							name: "Integer",
 						},
 						&zeroOrOneExpr{
-							pos: position{line: 129, col: 19, offset: 2793},
+							pos: position{line: 128, col: 19, offset: 2746},
 							expr: &seqExpr{
-								pos: position{line: 129, col: 21, offset: 2795},
+								pos: position{line: 128, col: 21, offset: 2748},
 								exprs: []interface{}{
 									&litMatcher{
-										pos:        position{line: 129, col: 21, offset: 2795},
+										pos:        position{line: 128, col: 21, offset: 2748},
 										val:        ".",
 										ignoreCase: false,
 										want:       "\".\"",
 									},
 									&oneOrMoreExpr{
-										pos: position{line: 129, col: 25, offset: 2799},
+										pos: position{line: 128, col: 25, offset: 2752},
 										expr: &ruleRefExpr{
-											pos:  position{line: 129, col: 25, offset: 2799},
+											pos:  position{line: 128, col: 25, offset: 2752},
 											name: "DecimalDigit",
 										},
 									},
@@ -677,9 +727,9 @@ var g = &grammar{
 							},
 						},
 						&zeroOrOneExpr{
-							pos: position{line: 129, col: 42, offset: 2816},
+							pos: position{line: 128, col: 42, offset: 2769},
 							expr: &ruleRefExpr{
-								pos:  position{line: 129, col: 42, offset: 2816},
+								pos:  position{line: 128, col: 42, offset: 2769},
 								name: "Exponent",
 							},
 						},
@@ -689,17 +739,17 @@ var g = &grammar{
 		},
 		{
 			name: "Integer",
-			pos:  position{line: 136, col: 1, offset: 2944},
+			pos:  position{line: 135, col: 1, offset: 2897},
 			expr: &actionExpr{
-				pos: position{line: 136, col: 12, offset: 2955},
+				pos: position{line: 135, col: 12, offset: 2908},
 				run: (*parser).callonInteger1,
 				expr: &seqExpr{
-					pos: position{line: 136, col: 12, offset: 2955},
+					pos: position{line: 135, col: 12, offset: 2908},
 					exprs: []interface{}{
 						&zeroOrOneExpr{
-							pos: position{line: 136, col: 12, offset: 2955},
+							pos: position{line: 135, col: 12, offset: 2908},
 							expr: &charClassMatcher{
-								pos:        position{line: 136, col: 12, offset: 2955},
+								pos:        position{line: 135, col: 12, offset: 2908},
 								val:        "[+-]",
 								chars:      []rune{'+', '-'},
 								ignoreCase: false,
@@ -707,9 +757,9 @@ var g = &grammar{
 							},
 						},
 						&oneOrMoreExpr{
-							pos: position{line: 136, col: 18, offset: 2961},
+							pos: position{line: 135, col: 18, offset: 2914},
 							expr: &ruleRefExpr{
-								pos:  position{line: 136, col: 18, offset: 2961},
+								pos:  position{line: 135, col: 18, offset: 2914},
 								name: "DecimalDigit",
 							},
 						},
@@ -719,20 +769,20 @@ var g = &grammar{
 		},
 		{
 			name: "Exponent",
-			pos:  position{line: 140, col: 1, offset: 3018},
+			pos:  position{line: 139, col: 1, offset: 2971},
 			expr: &seqExpr{
-				pos: position{line: 140, col: 13, offset: 3030},
+				pos: position{line: 139, col: 13, offset: 2983},
 				exprs: []interface{}{
 					&litMatcher{
-						pos:        position{line: 140, col: 13, offset: 3030},
+						pos:        position{line: 139, col: 13, offset: 2983},
 						val:        "e",
 						ignoreCase: true,
 						want:       "\"e\"i",
 					},
 					&zeroOrOneExpr{
-						pos: position{line: 140, col: 18, offset: 3035},
+						pos: position{line: 139, col: 18, offset: 2988},
 						expr: &charClassMatcher{
-							pos:        position{line: 140, col: 18, offset: 3035},
+							pos:        position{line: 139, col: 18, offset: 2988},
 							val:        "[+-]",
 							chars:      []rune{'+', '-'},
 							ignoreCase: false,
@@ -740,9 +790,9 @@ var g = &grammar{
 						},
 					},
 					&oneOrMoreExpr{
-						pos: position{line: 140, col: 24, offset: 3041},
+						pos: position{line: 139, col: 24, offset: 2994},
 						expr: &ruleRefExpr{
-							pos:  position{line: 140, col: 24, offset: 3041},
+							pos:  position{line: 139, col: 24, offset: 2994},
 							name: "DecimalDigit",
 						},
 					},
@@ -751,9 +801,9 @@ var g = &grammar{
 		},
 		{
 			name: "DecimalDigit",
-			pos:  position{line: 142, col: 1, offset: 3056},
+			pos:  position{line: 141, col: 1, offset: 3009},
 			expr: &charClassMatcher{
-				pos:        position{line: 142, col: 17, offset: 3072},
+				pos:        position{line: 141, col: 17, offset: 3025},
 				val:        "[0-9]",
 				ranges:     []rune{'0', '9'},
 				ignoreCase: false,
@@ -763,11 +813,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 146, col: 1, offset: 3137},
+			pos:         position{line: 145, col: 1, offset: 3090},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 146, col: 19, offset: 3155},
+				pos: position{line: 145, col: 19, offset: 3108},
 				expr: &charClassMatcher{
-					pos:        position{line: 146, col: 19, offset: 3155},
+					pos:        position{line: 145, col: 19, offset: 3108},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -777,11 +827,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 150, col: 1, offset: 3218},
+			pos:  position{line: 149, col: 1, offset: 3171},
 			expr: &notExpr{
-				pos: position{line: 150, col: 8, offset: 3225},
+				pos: position{line: 149, col: 8, offset: 3178},
 				expr: &anyMatcher{
-					line: 150, col: 9, offset: 3226,
+					line: 149, col: 9, offset: 3179,
 				},
 			},
 		},
@@ -987,6 +1037,27 @@ func (p *parser) callonShiftOp1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
 	return p.cur.onShiftOp1()
+}
+
+func (c *current) onValue1(val interface{}) (interface{}, error) {
+	return ast.NewBooleanNode(string(c.text), first, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+func (p *parser) callonValue1() (interface{}, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onValue1(stack["val"])
+}
+
+func (c *current) onBool1() (interface{}, error) {
+	cntCodeBlocks++
+	return string(c.text), nil
+}
+
+func (p *parser) callonBool1() (interface{}, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onBool1()
 }
 
 func (c *current) onNumber1() (interface{}, error) {
