@@ -1,6 +1,9 @@
 package ast
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 type Boolean bool
 
@@ -28,6 +31,10 @@ func NewBooleanNode(token string, offset, line, col int) (Node, error) {
 	}
 
 	return node, nil
+}
+
+func (n BooleanNode) String() string {
+	return fmt.Sprintf("BooleanNode %t", n.Value)
 }
 
 func (n BooleanNode) Eval(Map) (any, error) {
