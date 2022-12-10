@@ -8,8 +8,6 @@ type Null struct{}
 
 type NullNode struct {
 	BaseNode
-
-	Value Null `json:"value"`
 }
 
 func NewNullNode(token string, offset, line, col int) (Node, error) {
@@ -21,7 +19,6 @@ func NewNullNode(token string, offset, line, col int) (Node, error) {
 			Offset: offset,
 			Token:  token,
 		},
-		// Value: Null,
 	}
 
 	return node, nil
@@ -32,5 +29,5 @@ func (n NullNode) String() string {
 }
 
 func (n NullNode) Eval(Map) (any, error) {
-	return n.Value, nil
+	return nil, nil
 }
