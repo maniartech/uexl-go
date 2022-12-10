@@ -64,10 +64,10 @@ Mod <- first:Factor rest:( _ ModOp _ Factor )* {
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-// b <- first:Bool {
-//   cntCodeBlocks++
-//   return ast.ParseBoolean(string(c.text), first, c.pos.offset, c.pos.line, c.pos.col)
-// }
+b <- first:Bool {
+  cntCodeBlocks++
+  return ast.ParseBoolean(string(c.text), first, c.pos.offset, c.pos.line, c.pos.col)
+}
 
 Factor <- '(' expr:Expr ')' {
   cntCodeBlocks++
