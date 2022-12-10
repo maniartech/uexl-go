@@ -114,7 +114,7 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Bool ) _ {
+Value <- val:( Bool ) {
     return ast.NewBooleanNode(string(c.text), first, c.pos.offset, c.pos.line, c.pos.col)
 }
 

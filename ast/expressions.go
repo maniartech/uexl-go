@@ -89,6 +89,9 @@ func ParseExpression(token string, first, rest interface{}, offset, line, col in
 
 func ParseBoolean(token string, first interface{}, offset, line, col int) (Node, error) {
 	fmt.Println(token)
-	l, _ := first.(Node)
+	l, ok := first.(Node)
+	if l != nil && !ok { // when l is nil, ignore it!
+		panic("invalid-expression - assertion-failed")
+	}
 	return l, nil
 }
