@@ -109,14 +109,18 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Bool / Number ) {
+Value <- val:( Bool / Number / Null ) {
     return val, nil
 }
 
 Bool <- ( "true" / "false") {
   cntCodeBlocks++
-  //return string(c.text), nil
   return ast.NewBooleanNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+}
+
+Null <- ( "null" ) {
+  cntCodeBlocks++
+  return ast.NewNullNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ///////////////////// Number /////////////////////
