@@ -67,9 +67,9 @@ Mod <- first:Factor rest:( _ ModOp _ Factor )* {
 Factor <- '(' expr:Expr ')' {
   cntCodeBlocks++
   return expr, nil
-} / number:Number {
+} / value:Value {
   cntCodeBlocks++
-  return number, nil
+  return value, nil
 }
 
 //////////////// Operators Definitions //////////////////////
@@ -107,6 +107,16 @@ LogOp <- ( "&&" / "||" ) {
 ShiftOp <- ( "<<" / ">>") {
   cntCodeBlocks++
   return string(c.text), nil
+}
+
+Value <- val:( Bool / Number ) {
+    return val, nil
+}
+
+Bool <- ( "true" / "false") {
+  cntCodeBlocks++
+  //return string(c.text), nil
+  return ast.NewBooleanNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ///////////////////// Number /////////////////////
