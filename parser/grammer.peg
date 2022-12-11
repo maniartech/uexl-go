@@ -109,7 +109,7 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Number / Bool / Null / String / Array ) {
+Value <- val:( Number / Bool / Null / String / Array / Identifier ) {
     return val, nil
 }
 
@@ -192,6 +192,14 @@ Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
       res = append(res, vSl[2])
     }
     return ast.NewArrayNode(fmt.Sprintf("%v", vals), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
+}
+
+//////////////////// Identifiers /////////////////////
+
+IdentifierName <- [A-Za-z0-9_]
+
+Identifier <- IdentifierName+ ( '.' IdentifierName+ )? {
+    return ast.NewIdentifierNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ////////////////////// Whitespace //////////////////////
