@@ -22,7 +22,7 @@ Expr <- _ first:Term rest:( _ LogOp _ Term )* _ {
   return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-Term <- first:(Bit / Bool) rest:( _ CmpOp _ (Bit / Bool) )* {
+Term <- first:Bit rest:( _ CmpOp _ Bool )* {
   cntCodeBlocks++
 
   // fmt.Println("Term:", first, rest)
