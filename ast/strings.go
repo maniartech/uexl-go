@@ -13,6 +13,10 @@ type StringNode struct {
 }
 
 func NewStringNode(token string, offset, line, col int) (Node, error) {
+	finalToken := token
+	if finalToken[0] == '\'' && finalToken[len(finalToken)-1] == '\'' {
+		finalToken = finalToken[1 : len(token)-1]
+	}
 	node := StringNode{
 		BaseNode: BaseNode{
 			Type:   NodeTypeString,
@@ -21,7 +25,7 @@ func NewStringNode(token string, offset, line, col int) (Node, error) {
 			Offset: offset,
 			Token:  token,
 		},
-		Value: String(token[1 : len(token)-1]),
+		Value: String(finalToken),
 	}
 
 	return node, nil
