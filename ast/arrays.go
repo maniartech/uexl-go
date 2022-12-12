@@ -1,5 +1,7 @@
 package ast
 
+import "fmt"
+
 type Array []Node
 
 type ArrayNode struct {
@@ -22,6 +24,10 @@ func NewArrayNode(token string, items []Node, offset, line, col int) (Node, erro
 	}
 
 	return node, nil
+}
+
+func (n ArrayNode) String() string {
+	return fmt.Sprintf("ArrayNode %v", n.Value)
 }
 
 func (n ArrayNode) Eval(Map) (any, error) {
