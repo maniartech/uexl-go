@@ -1147,11 +1147,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 199, col: 1, offset: 4675},
+			pos:         position{line: 195, col: 1, offset: 4598},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 199, col: 19, offset: 4693},
+				pos: position{line: 195, col: 19, offset: 4616},
 				expr: &charClassMatcher{
-					pos:        position{line: 199, col: 19, offset: 4693},
+					pos:        position{line: 195, col: 19, offset: 4616},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -1161,11 +1161,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 203, col: 1, offset: 4756},
+			pos:  position{line: 199, col: 1, offset: 4679},
 			expr: &notExpr{
-				pos: position{line: 203, col: 8, offset: 4763},
+				pos: position{line: 199, col: 8, offset: 4686},
 				expr: &anyMatcher{
-					line: 203, col: 9, offset: 4764,
+					line: 199, col: 9, offset: 4687,
 				},
 			},
 		},
@@ -1464,12 +1464,8 @@ func (p *parser) callonPlainString1() (interface{}, error) {
 func (c *current) onArray1(vals interface{}) (interface{}, error) {
 	valsSl := ast.ToIfaceSlice(vals)
 
-	for _, x := range valsSl {
-		fmt.Println(x)
-	}
-
 	if len(valsSl) == 0 {
-		return ast.NewArrayNode(fmt.Sprintf("%v", vals), []ast.Node{}, c.pos.offset, c.pos.line, c.pos.col)
+		return ast.NewArrayNode(string(c.text), []ast.Node{}, c.pos.offset, c.pos.line, c.pos.col)
 	}
 	res := []interface{}{valsSl[0]}
 	restSl := ast.ToIfaceSlice(valsSl[1])
@@ -1477,7 +1473,7 @@ func (c *current) onArray1(vals interface{}) (interface{}, error) {
 		vSl := ast.ToIfaceSlice(v)
 		res = append(res, vSl[2])
 	}
-	return ast.NewArrayNode(fmt.Sprintf("%v", vals), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
+	return ast.NewArrayNode(string(c.text), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 func (p *parser) callonArray1() (interface{}, error) {

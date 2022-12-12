@@ -21,7 +21,7 @@ func NewStringNode(token string, offset, line, col int) (Node, error) {
 			Offset: offset,
 			Token:  token,
 		},
-		Value: String(token),
+		Value: String(token[1 : len(token)-1]),
 	}
 
 	return node, nil

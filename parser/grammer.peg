@@ -178,12 +178,8 @@ UnicodeEscape <- 'u' HexDigit HexDigit HexDigit HexDigit
 Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
     valsSl := ast.ToIfaceSlice(vals)
 
-    for _, x := range valsSl {
-      fmt.Println(x)
-    }
-
     if len(valsSl) == 0 {
-      return ast.NewArrayNode(fmt.Sprintf("%v", vals), []ast.Node{}, c.pos.offset, c.pos.line, c.pos.col)
+      return ast.NewArrayNode(string(c.text), []ast.Node{}, c.pos.offset, c.pos.line, c.pos.col)
     }
     res := []interface{}{valsSl[0]}
     restSl := ast.ToIfaceSlice(valsSl[1])
@@ -191,7 +187,7 @@ Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
       vSl := ast.ToIfaceSlice(v)
       res = append(res, vSl[2])
     }
-    return ast.NewArrayNode(fmt.Sprintf("%v", vals), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
+    return ast.NewArrayNode(string(c.text), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ////////////////////// Whitespace //////////////////////
