@@ -1150,88 +1150,88 @@ var g = &grammar{
 		},
 		{
 			name: "Object",
-			pos:  position{line: 197, col: 1, offset: 4626},
+			pos:  position{line: 193, col: 1, offset: 4549},
 			expr: &actionExpr{
-				pos: position{line: 197, col: 11, offset: 4636},
+				pos: position{line: 193, col: 11, offset: 4559},
 				run: (*parser).callonObject1,
 				expr: &seqExpr{
-					pos: position{line: 197, col: 11, offset: 4636},
+					pos: position{line: 193, col: 11, offset: 4559},
 					exprs: []interface{}{
 						&litMatcher{
-							pos:        position{line: 197, col: 11, offset: 4636},
+							pos:        position{line: 193, col: 11, offset: 4559},
 							val:        "{",
 							ignoreCase: false,
 							want:       "\"{\"",
 						},
 						&ruleRefExpr{
-							pos:  position{line: 197, col: 15, offset: 4640},
+							pos:  position{line: 193, col: 15, offset: 4563},
 							name: "_",
 						},
 						&labeledExpr{
-							pos:   position{line: 197, col: 17, offset: 4642},
+							pos:   position{line: 193, col: 17, offset: 4565},
 							label: "vals",
 							expr: &zeroOrOneExpr{
-								pos: position{line: 197, col: 22, offset: 4647},
+								pos: position{line: 193, col: 22, offset: 4570},
 								expr: &seqExpr{
-									pos: position{line: 197, col: 24, offset: 4649},
+									pos: position{line: 193, col: 24, offset: 4572},
 									exprs: []interface{}{
 										&ruleRefExpr{
-											pos:  position{line: 197, col: 24, offset: 4649},
+											pos:  position{line: 193, col: 24, offset: 4572},
 											name: "String",
 										},
 										&ruleRefExpr{
-											pos:  position{line: 197, col: 31, offset: 4656},
+											pos:  position{line: 193, col: 31, offset: 4579},
 											name: "_",
 										},
 										&litMatcher{
-											pos:        position{line: 197, col: 33, offset: 4658},
+											pos:        position{line: 193, col: 33, offset: 4581},
 											val:        ":",
 											ignoreCase: false,
 											want:       "\":\"",
 										},
 										&ruleRefExpr{
-											pos:  position{line: 197, col: 37, offset: 4662},
+											pos:  position{line: 193, col: 37, offset: 4585},
 											name: "_",
 										},
 										&ruleRefExpr{
-											pos:  position{line: 197, col: 39, offset: 4664},
+											pos:  position{line: 193, col: 39, offset: 4587},
 											name: "Expr",
 										},
 										&zeroOrMoreExpr{
-											pos: position{line: 197, col: 44, offset: 4669},
+											pos: position{line: 193, col: 44, offset: 4592},
 											expr: &seqExpr{
-												pos: position{line: 197, col: 46, offset: 4671},
+												pos: position{line: 193, col: 46, offset: 4594},
 												exprs: []interface{}{
 													&litMatcher{
-														pos:        position{line: 197, col: 46, offset: 4671},
+														pos:        position{line: 193, col: 46, offset: 4594},
 														val:        ",",
 														ignoreCase: false,
 														want:       "\",\"",
 													},
 													&ruleRefExpr{
-														pos:  position{line: 197, col: 50, offset: 4675},
+														pos:  position{line: 193, col: 50, offset: 4598},
 														name: "_",
 													},
 													&ruleRefExpr{
-														pos:  position{line: 197, col: 52, offset: 4677},
+														pos:  position{line: 193, col: 52, offset: 4600},
 														name: "String",
 													},
 													&ruleRefExpr{
-														pos:  position{line: 197, col: 59, offset: 4684},
+														pos:  position{line: 193, col: 59, offset: 4607},
 														name: "_",
 													},
 													&litMatcher{
-														pos:        position{line: 197, col: 61, offset: 4686},
+														pos:        position{line: 193, col: 61, offset: 4609},
 														val:        ":",
 														ignoreCase: false,
 														want:       "\":\"",
 													},
 													&ruleRefExpr{
-														pos:  position{line: 197, col: 65, offset: 4690},
+														pos:  position{line: 193, col: 65, offset: 4613},
 														name: "_",
 													},
 													&ruleRefExpr{
-														pos:  position{line: 197, col: 67, offset: 4692},
+														pos:  position{line: 193, col: 67, offset: 4615},
 														name: "Expr",
 													},
 												},
@@ -1242,7 +1242,7 @@ var g = &grammar{
 							},
 						},
 						&litMatcher{
-							pos:        position{line: 197, col: 78, offset: 4703},
+							pos:        position{line: 193, col: 78, offset: 4626},
 							val:        "}",
 							ignoreCase: false,
 							want:       "\"}\"",
@@ -1254,11 +1254,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 215, col: 1, offset: 5396},
+			pos:         position{line: 211, col: 1, offset: 5319},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 215, col: 19, offset: 5414},
+				pos: position{line: 211, col: 19, offset: 5337},
 				expr: &charClassMatcher{
-					pos:        position{line: 215, col: 19, offset: 5414},
+					pos:        position{line: 211, col: 19, offset: 5337},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -1268,11 +1268,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 219, col: 1, offset: 5477},
+			pos:  position{line: 215, col: 1, offset: 5400},
 			expr: &notExpr{
-				pos: position{line: 219, col: 8, offset: 5484},
+				pos: position{line: 215, col: 8, offset: 5407},
 				expr: &anyMatcher{
-					line: 219, col: 9, offset: 5485,
+					line: 215, col: 9, offset: 5408,
 				},
 			},
 		},
@@ -1571,12 +1571,8 @@ func (p *parser) callonPlainString1() (interface{}, error) {
 func (c *current) onArray1(vals interface{}) (interface{}, error) {
 	valsSl := ast.ToIfaceSlice(vals)
 
-	for _, x := range valsSl {
-		fmt.Println(x)
-	}
-
 	if len(valsSl) == 0 {
-		return ast.NewArrayNode(fmt.Sprintf("%v", vals), []ast.Node{}, c.pos.offset, c.pos.line, c.pos.col)
+		return ast.NewArrayNode(string(c.text), []ast.Node{}, c.pos.offset, c.pos.line, c.pos.col)
 	}
 	res := []interface{}{valsSl[0]}
 	restSl := ast.ToIfaceSlice(valsSl[1])
@@ -1584,7 +1580,7 @@ func (c *current) onArray1(vals interface{}) (interface{}, error) {
 		vSl := ast.ToIfaceSlice(v)
 		res = append(res, vSl[2])
 	}
-	return ast.NewArrayNode(fmt.Sprintf("%v", vals), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
+	return ast.NewArrayNode(string(c.text), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 func (p *parser) callonArray1() (interface{}, error) {
