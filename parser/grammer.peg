@@ -176,34 +176,11 @@ UnicodeEscape <- 'u' HexDigit HexDigit HexDigit HexDigit
 ////////////////////// Array //////////////////////
 
 Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
-    valsSl := ast.ToIfaceSlice(vals)
-
-    if len(valsSl) == 0 {
-      return ast.NewArrayNode(string(c.text), []ast.Node{}, c.pos.offset, c.pos.line, c.pos.col)
-    }
-    res := []interface{}{valsSl[0]}
-    restSl := ast.ToIfaceSlice(valsSl[1])
-    for _, v := range restSl {
-      vSl := ast.ToIfaceSlice(v)
-      res = append(res, vSl[2])
-    }
-    return ast.NewArrayNode(string(c.text), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
+    return parseArray(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}' {
-    valsSl := ast.ToIfaceSlice(vals)
-    res := make([]ast.ObjectItem, 0, len(valsSl))
-    if len(valsSl) == 0 {
-        return ast.NewObjectNode(string(c.text), res, c.pos.offset, c.pos.line, c.pos.col)
-    }
-    res = append(res, ast.ObjectItem{ Key: valsSl[0].(ast.StringNode).Value, Value: valsSl[4].(ast.Node) })
-
-    restSl := ast.ToIfaceSlice(valsSl[5])
-    for _, v := range restSl {
-        vSl := ast.ToIfaceSlice(v)
-        res = append(res, ast.ObjectItem{ Key: vSl[2].(ast.StringNode).Value, Value: vSl[6].(ast.Node) })
-    }
-    return ast.NewObjectNode(string(c.text), res, c.pos.offset, c.pos.line, c.pos.col)
+    return parseObject(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ////////////////////// Whitespace //////////////////////
