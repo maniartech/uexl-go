@@ -109,7 +109,7 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Number / Bool / Null / String / Array ) {
+Value <- val:( Number / Bool / Null / String / Array / Object ) {
     return val, nil
 }
 
@@ -176,18 +176,11 @@ UnicodeEscape <- 'u' HexDigit HexDigit HexDigit HexDigit
 ////////////////////// Array //////////////////////
 
 Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
-    valsSl := ast.ToIfaceSlice(vals)
+    return parseArray(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
+}
 
-    if len(valsSl) == 0 {
-      return ast.NewArrayNode(string(c.text), []ast.Node{}, c.pos.offset, c.pos.line, c.pos.col)
-    }
-    res := []interface{}{valsSl[0]}
-    restSl := ast.ToIfaceSlice(valsSl[1])
-    for _, v := range restSl {
-      vSl := ast.ToIfaceSlice(v)
-      res = append(res, vSl[2])
-    }
-    return ast.NewArrayNode(string(c.text), ast.ToNodesSlice(res), c.pos.offset, c.pos.line, c.pos.col)
+Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}' {
+    return parseObject(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ////////////////////// Whitespace //////////////////////
