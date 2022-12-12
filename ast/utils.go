@@ -13,7 +13,7 @@ func ToNodesSlice(v interface{}) []Node {
 	return nodes
 }
 
-func toIfaceSlice(v interface{}) []interface{} {
+func ToIfaceSlice(v interface{}) []interface{} {
 	if v == nil {
 		return nil
 	}

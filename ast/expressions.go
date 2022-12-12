@@ -59,10 +59,10 @@ func ParseExpression(token string, first, rest interface{}, offset, line, col in
 		panic("invalid-expression - assertion-failed")
 	}
 
-	restSl := toIfaceSlice(rest)
+	restSl := ToIfaceSlice(rest)
 
 	for _, v := range restSl {
-		restExpr := toIfaceSlice(v)
+		restExpr := ToIfaceSlice(v)
 		r, ok := restExpr[3].(Node)
 		// TODO: handle error
 		if !ok {
