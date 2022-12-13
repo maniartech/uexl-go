@@ -19,7 +19,7 @@ const (
 
 )
 
-func getOperatorType(op string) OperatorType {
+func GetOperatorType(op string) OperatorType {
 	switch op {
 	case "+", "-", "*", "/", "//":
 		return ArithmeticOperator
