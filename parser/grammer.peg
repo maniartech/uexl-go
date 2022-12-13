@@ -109,7 +109,7 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Number / Bool / Null / String ) {
+Value <- val:( Number / Bool / Null / String / Array / Object ) {
     return val, nil
 }
 
@@ -172,6 +172,16 @@ EscapeSequence <- SingleCharEscape / UnicodeEscape
 SingleCharEscape <- ["\\/bfnrt]
 
 UnicodeEscape <- 'u' HexDigit HexDigit HexDigit HexDigit
+
+////////////////////// Array //////////////////////
+
+Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
+    return parseArray(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}' {
+    return parseObject(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
+}
 
 ////////////////////// Whitespace //////////////////////
 
