@@ -8,6 +8,7 @@ import (
 )
 
 func TestArray(t *testing.T) {
+	// Test case for [1, 2, 3]
 	got, _ := ParseReader("", strings.NewReader("[1, 2, 3]"))
 	gotNode := got.(ast.ArrayNode)
 	if gotNode.Value[0].(ast.NumberNode).Value != 1 {
@@ -20,6 +21,7 @@ func TestArray(t *testing.T) {
 		t.Errorf("Expected 3, got %v", gotNode.Value[2].(ast.NumberNode).Value)
 	}
 
+	// Test case for [1 + 2, 3 + 4, true || false]
 	got, _ = ParseReader("", strings.NewReader("[1 + 2, 3 + 4, true || false]"))
 	gotNode = got.(ast.ArrayNode)
 	gotExpNode1 := gotNode.Value[0].(ast.ExpressionNode)
@@ -88,9 +90,7 @@ func TestArray(t *testing.T) {
 		t.Errorf("Value: Expected false, got %v", expNode3RightValue)
 	}
 
-	got, _ = ParseReader("", strings.NewReader("[1 + 2, 3 + 4, true || false]"))
-	gotNode = got.(ast.ArrayNode)
-
+	// Test case for [null, ['A', 'B']]
 	got, _ = ParseReader("", strings.NewReader("[null, ['A', 'B']]"))
 	gotNode = got.(ast.ArrayNode)
 	gotNode1 := gotNode.Value[0].(ast.NullNode)
@@ -119,5 +119,68 @@ func TestArray(t *testing.T) {
 	}
 	if gotNode2RightValue != "B" {
 		t.Errorf("Value: Expected B, got %v", gotNode2RightValue)
+	}
+
+	// Test case for [[1, 2, 3], [4, 5, 6]]
+	got, _ = ParseReader("", strings.NewReader("[[1, 2, 3], [4, 5, 6]]"))
+	gotNode = got.(ast.ArrayNode)
+	firstArr := gotNode.Value[0].(ast.ArrayNode)
+	firstArrToken := firstArr.Token
+	if firstArrToken != "[1, 2, 3]" {
+		t.Errorf("Token: Expected [1, 2, 3], got %v", firstArrToken)
+	}
+	firstArr1 := firstArr.Value[0].(ast.NumberNode).Value
+	firstArr1Token := firstArr.Value[0].(ast.NumberNode).Token
+	if firstArr1Token != "1" {
+		t.Errorf("Token: Expected 1, got %v", firstArr1Token)
+	}
+	if firstArr1 != 1 {
+		t.Errorf("Value: Expected 1, got %v", firstArr1)
+	}
+	firstArr2 := firstArr.Value[1].(ast.NumberNode).Value
+	firstArr2Token := firstArr.Value[1].(ast.NumberNode).Token
+	if firstArr2Token != "2" {
+		t.Errorf("Token: Expected 2, got %v", firstArr2Token)
+	}
+	if firstArr2 != 2 {
+		t.Errorf("Value: Expected 2, got %v", firstArr2)
+	}
+	firstArr3 := firstArr.Value[2].(ast.NumberNode).Value
+	firstArr3Token := firstArr.Value[2].(ast.NumberNode).Token
+	if firstArr3Token != "3" {
+		t.Errorf("Token: Expected 3, got %v", firstArr3Token)
+	}
+	if firstArr3 != 3 {
+		t.Errorf("Value: Expected 3, got %v", firstArr3)
+	}
+
+	secondArr := gotNode.Value[1].(ast.ArrayNode)
+	secondArrToken := secondArr.Token
+	if secondArrToken != "[4, 5, 6]" {
+		t.Errorf("Token: Expected [4, 5, 6], got %v", secondArrToken)
+	}
+	secondArr1 := secondArr.Value[0].(ast.NumberNode).Value
+	secondArr1Token := secondArr.Value[0].(ast.NumberNode).Token
+	if secondArr1Token != "4" {
+		t.Errorf("Token: Expected 4, got %v", secondArr1Token)
+	}
+	if secondArr1 != 4 {
+		t.Errorf("Value: Expected 4, got %v", secondArr1)
+	}
+	secondArr2 := secondArr.Value[1].(ast.NumberNode).Value
+	secondArr2Token := secondArr.Value[1].(ast.NumberNode).Token
+	if secondArr2Token != "5" {
+		t.Errorf("Token: Expected 5, got %v", secondArr2Token)
+	}
+	if secondArr2 != 5 {
+		t.Errorf("Value: Expected 5, got %v", secondArr2)
+	}
+	secondArr3 := secondArr.Value[2].(ast.NumberNode).Value
+	secondArr3Token := secondArr.Value[2].(ast.NumberNode).Token
+	if secondArr3Token != "6" {
+		t.Errorf("Token: Expected 6, got %v", secondArr3Token)
+	}
+	if secondArr3 != 6 {
+		t.Errorf("Value: Expected 6, got %v", secondArr3)
 	}
 }
