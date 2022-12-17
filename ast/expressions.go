@@ -12,6 +12,8 @@ type ExpressionNode struct {
 	Left Node `json:"left"`
 
 	Right Node `json:"right"`
+
+	PipeType string `json:"pipeType"`
 }
 
 func NewExpressionNode(token string, operator string, operatorType OperatorType, left, right Node, offset, line, col int) ExpressionNode {

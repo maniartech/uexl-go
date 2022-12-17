@@ -10,7 +10,7 @@ import (
 
 /////////////////// Expressions //////////////////////
 
-Input <- expr:Expr EOF {
+Input <- expr:PipeExpr EOF {
   cntCodeBlocks++
   return expr, nil
 }
@@ -72,6 +72,21 @@ Factor <- '(' expr:Expr ')' {
   return value, nil
 }
 
+PipeExpr <- expr:Expr pipe:Pipe+ {
+  cntCodeBlocks++
+  fmt.Println("+++", expr)
+  fmt.Println(">>>", pipe)
+  return expr, nil
+}
+
+PipeType <- [a-z]+
+
+Pipe <- '|' pipeType: PipeType ':' expr:Expr {
+  fmt.Println("***", expr)
+  fmt.Println("---", resolveAscii(pipeType))
+  return nil, nil
+}
+
 //////////////// Operators Definitions //////////////////////
 
 AddOp <- ( '+' / '-' ) {
@@ -109,7 +124,7 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Number / Bool / Null / String / Array / Object ) {
+Value <- val:( Number / Bool / Null / String / Array / Object / Pipe) {
     return val, nil
 }
 
@@ -182,6 +197,14 @@ Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
 Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}' {
     return parseObject(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
+
+// Pipe <- _ vals:( '|' _ pipeType:( _ Expr _))* {
+//   return ast.NewPipeNode(c.text, pipeType, c.pos.offset, c.pos.line, c.pos.col)
+// }
+
+// Pipe <- Expr _ ('|' pipeType:( _ Expr _))* {
+//   return ast.NewPipeNode(c.text, pipeType, c.pos.offset, c.pos.line, c.pos.col)
+// }
 
 ////////////////////// Whitespace //////////////////////
 

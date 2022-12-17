@@ -21,4 +21,6 @@ const (
 	NodeTypeIdentifier = "identifier" // Identifier node
 	NodeTypeFunc       = "function"   // Function node
 	NodeTypeOperator   = "operator"   // Operator node
+	NodeTypePipe       = "pipe"       // Pipe node
+
 )
