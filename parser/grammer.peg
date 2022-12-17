@@ -6,6 +6,9 @@ import (
 
     "github.com/maniartech/uexl_go/ast"
 )
+
+var rightExpr ast.Node
+var pType string
 }
 
 /////////////////// Expressions //////////////////////
@@ -70,20 +73,21 @@ Factor <- '(' expr:Expr ')' {
 } / value:Value {
   cntCodeBlocks++
   return value, nil
-}
+} / pipe:Pipe {
+  cntCodeBlocks++
+  return pipe, nil
+} 
 
 PipeExpr <- expr:Expr pipe:Pipe+ {
   cntCodeBlocks++
-  fmt.Println("+++", expr)
-  fmt.Println(">>>", pipe)
-  return expr, nil
+  return ast.NewPipeNode(string(c.text), pType, expr.(ast.Node), rightExpr, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 PipeType <- [a-z]+
 
 Pipe <- '|' pipeType: PipeType ':' expr:Expr {
-  fmt.Println("***", expr)
-  fmt.Println("---", resolveAscii(pipeType))
+  rightExpr = expr.(ast.Node)
+  pType = resolveAscii(pipeType)
   return nil, nil
 }
 
