@@ -13,7 +13,10 @@ var pType string
 
 /////////////////// Expressions //////////////////////
 
-Input <- expr:PipeExpr EOF {
+Input <- expr:Expr EOF {
+  cntCodeBlocks++
+  return expr, nil
+} / expr:PipeExpr EOF {
   cntCodeBlocks++
   return expr, nil
 }
@@ -87,7 +90,6 @@ PipeType <- [a-z]+
 
 Pipe <- '|' pipeType: PipeType* ':' expr:Expr {
   rightExpr = expr.(ast.Node)
-  fmt.Println(pipeType)
   if len(pipeType.([]interface{})) == 0 {
     pType = "pipe"
   } else {
