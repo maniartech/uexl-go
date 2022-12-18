@@ -85,9 +85,14 @@ PipeExpr <- expr:Expr pipe:Pipe+ {
 
 PipeType <- [a-z]+
 
-Pipe <- '|' pipeType: PipeType ':' expr:Expr {
+Pipe <- '|' pipeType: PipeType* ':' expr:Expr {
   rightExpr = expr.(ast.Node)
-  pType = resolveAscii(pipeType)
+  fmt.Println(pipeType)
+  if len(pipeType.([]interface{})) == 0 {
+    pType = "pipe"
+  } else {
+    pType = resolveAscii(pipeType)
+  }
   return nil, nil
 }
 
@@ -201,14 +206,6 @@ Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
 Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}' {
     return parseObject(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
-
-// Pipe <- _ vals:( '|' _ pipeType:( _ Expr _))* {
-//   return ast.NewPipeNode(c.text, pipeType, c.pos.offset, c.pos.line, c.pos.col)
-// }
-
-// Pipe <- Expr _ ('|' pipeType:( _ Expr _))* {
-//   return ast.NewPipeNode(c.text, pipeType, c.pos.offset, c.pos.line, c.pos.col)
-// }
 
 ////////////////////// Whitespace //////////////////////
 
