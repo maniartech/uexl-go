@@ -130,4 +130,56 @@ func TestPipe(t *testing.T) {
 	if num2 != 4 {
 		t.Errorf("Value: Expected 4, got %v", num1)
 	}
+
+	got, _ = ParseReader("", strings.NewReader("{'name': 'abc', 'age': 30}|filter:true"))
+	gotNode = got.(ast.PipeNode)
+	gotNodeType = gotNode.Type
+	if gotNodeType != "pipe" {
+		t.Errorf("Token: Expected pipe, got %v", gotNodeType)
+	}
+
+	gotNodeToken = gotNode.Token
+	if gotNodeToken != "{'name': 'abc', 'age': 30}|filter:true" {
+		t.Errorf("Token: Expected {'name': 'abc', 'age': 30}|filter:true, got %v", gotNodeToken)
+	}
+
+	gotNodePipeType = gotNode.PipeType
+	if gotNodePipeType != "filter" {
+		t.Errorf("Pipe Type: Expected filter, got %v", gotNodePipeType)
+	}
+
+	gotNodeExpressions1Obj := gotNode.Expressions[0].(ast.ObjectNode)
+	gotNodeExpressionsToken1 = gotNodeExpressions1Obj.Token
+	if gotNodeExpressionsToken1 != "{'name': 'abc', 'age': 30}" {
+		t.Errorf("Token: Expected {'name': 'abc', 'age': 30}, got %v", gotNodeExpressionsToken1)
+	}
+
+	keys := gotNodeExpressions1Obj.Items
+	key1 := keys[0].Key
+	if key1 != "name" {
+		t.Errorf("Key: Expected name, got %v", key1)
+	}
+	value1 := keys[0].Value.(ast.StringNode).Value
+	if value1 != "abc" {
+		t.Errorf("Value: Expected abc, got %v", value1)
+	}
+
+	key2 := keys[1].Key
+	if key2 != "age" {
+		t.Errorf("Key: Expected age, got %v", key2)
+	}
+	value2 := keys[1].Value.(ast.NumberNode).Value
+	if value2 != 30 {
+		t.Errorf("Value: Expected 30, got %v", value2)
+	}
+
+	gotNodeExpressions1Bool := gotNode.Expressions[1].(ast.BooleanNode)
+	gotNodeExpressionsToken1 = gotNodeExpressions1Bool.Token
+	gotNodeExpressions1BoolVal := gotNodeExpressions1Bool.Value
+	if gotNodeExpressionsToken1 != "true" {
+		t.Errorf("Token: Expected true, got %v", gotNodeExpressionsToken1)
+	}
+	if gotNodeExpressions1BoolVal != true {
+		t.Errorf("Token: Expected true, got %v", gotNodeExpressions1BoolVal)
+	}
 }
