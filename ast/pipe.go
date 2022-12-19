@@ -30,7 +30,7 @@ func NewPipeNode(token, pType string, left, right Node, offset, line, col int) (
 }
 
 func (n PipeNode) String() string {
-	return fmt.Sprintf("PipeNode %v", n.PipeType)
+	return fmt.Sprintf("PipeNode %v", n.Expressions)
 }
 func (n PipeNode) Eval(Map) (any, error) {
 	return nil, nil
