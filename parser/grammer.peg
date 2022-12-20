@@ -86,7 +86,9 @@ PipeExpr <- expr:Expr pipe:Pipe+ {
   cntCodeBlocks++
   pTypeBufferTmp := pTypeBuffer
   pTypeBuffer = nil
-  return ast.NewPipeNode(string(c.text), pTypeBufferTmp, expr.(ast.Node), nodeBuffer, c.pos.offset, c.pos.line, c.pos.col)
+  nodeBufferTmp := nodeBuffer
+  nodeBuffer = nil
+  return ast.NewPipeNode(string(c.text), pTypeBufferTmp, expr.(ast.Node), nodeBufferTmp, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 PipeType <- [a-z]+
