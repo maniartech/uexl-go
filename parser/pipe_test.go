@@ -23,7 +23,7 @@ func TestPipe(t *testing.T) {
 	}
 
 	gotNodePipeType := gotNode.PipeType
-	if gotNodePipeType != "map" {
+	if gotNodePipeType[0] != "map" {
 		t.Errorf("Pipe Type: Expected map, got %v", gotNodePipeType)
 	}
 
@@ -100,7 +100,7 @@ func TestPipe(t *testing.T) {
 	}
 
 	gotNodePipeType = gotNode.PipeType
-	if gotNodePipeType != "pipe" {
+	if gotNodePipeType[0] != "pipe" {
 		t.Errorf("Pipe Type: Expected pipe, got %v", gotNodePipeType)
 	}
 
@@ -144,7 +144,7 @@ func TestPipe(t *testing.T) {
 	}
 
 	gotNodePipeType = gotNode.PipeType
-	if gotNodePipeType != "filter" {
+	if gotNodePipeType[0] != "filter" {
 		t.Errorf("Pipe Type: Expected filter, got %v", gotNodePipeType)
 	}
 
@@ -171,15 +171,5 @@ func TestPipe(t *testing.T) {
 	value2 := keys[1].Value.(ast.NumberNode).Value
 	if value2 != 30 {
 		t.Errorf("Value: Expected 30, got %v", value2)
-	}
-
-	gotNodeExpressions1Bool := gotNode.Expressions[1].(ast.BooleanNode)
-	gotNodeExpressionsToken1 = gotNodeExpressions1Bool.Token
-	gotNodeExpressions1BoolVal := gotNodeExpressions1Bool.Value
-	if gotNodeExpressionsToken1 != "true" {
-		t.Errorf("Token: Expected true, got %v", gotNodeExpressionsToken1)
-	}
-	if gotNodeExpressions1BoolVal != true {
-		t.Errorf("Token: Expected true, got %v", gotNodeExpressions1BoolVal)
 	}
 }

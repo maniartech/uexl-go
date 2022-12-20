@@ -6,11 +6,11 @@ import (
 
 type PipeNode struct {
 	BaseNode
-	PipeType    string `json:"pipeType"`
-	Expressions []Node `json:"expressions"`
+	PipeType    []string `json:"pipeType"`
+	Expressions []Node   `json:"expressions"`
 }
 
-func NewPipeNode(token, pType string, left Node, buffer []Node, offset, line, col int) (Node, error) {
+func NewPipeNode(token string, pType []string, left Node, buffer []Node, offset, line, col int) (Node, error) {
 	node := PipeNode{
 		BaseNode: BaseNode{
 			Type:   NodeTypePipe,

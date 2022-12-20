@@ -9,6 +9,7 @@ import (
 
 var nodeBuffer []ast.Node
 var pType string
+var pTypeBuffer []string
 }
 
 /////////////////// Expressions //////////////////////
@@ -83,19 +84,21 @@ Factor <- '(' expr:Expr ')' {
 
 PipeExpr <- expr:Expr pipe:Pipe+ {
   cntCodeBlocks++
-  return ast.NewPipeNode(string(c.text), pType, expr.(ast.Node), nodeBuffer, c.pos.offset, c.pos.line, c.pos.col)
+  pTypeBufferTmp := pTypeBuffer
+  pTypeBuffer = nil
+  return ast.NewPipeNode(string(c.text), pTypeBufferTmp, expr.(ast.Node), nodeBuffer, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 PipeType <- [a-z]+
 
 Pipe <- '|' pipeType: PipeType* ':' expr:Expr {
   nodeBuffer = append(nodeBuffer, expr.(ast.Node))
-  // rightExpr = expr.(ast.Node)
   if len(pipeType.([]interface{})) == 0 {
     pType = "pipe"
   } else {
     pType = resolveAscii(pipeType)
   }
+  pTypeBuffer = append(pTypeBuffer, pType)
   return nil, nil
 }
 
