@@ -10,7 +10,7 @@ type PipeNode struct {
 	Expressions []Node `json:"expressions"`
 }
 
-func NewPipeNode(token, pType string, left, right Node, offset, line, col int) (Node, error) {
+func NewPipeNode(token, pType string, left Node, buffer []Node, offset, line, col int) (Node, error) {
 	node := PipeNode{
 		BaseNode: BaseNode{
 			Type:   NodeTypePipe,
@@ -24,7 +24,7 @@ func NewPipeNode(token, pType string, left, right Node, offset, line, col int) (
 	}
 
 	node.Expressions = append(node.Expressions, left)
-	node.Expressions = append(node.Expressions, right)
+	node.Expressions = append(node.Expressions, buffer...)
 
 	return node, nil
 }

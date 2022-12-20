@@ -7,7 +7,7 @@ import (
     "github.com/maniartech/uexl_go/ast"
 )
 
-var rightExpr ast.Node
+var nodeBuffer []ast.Node
 var pType string
 }
 
@@ -83,13 +83,14 @@ Factor <- '(' expr:Expr ')' {
 
 PipeExpr <- expr:Expr pipe:Pipe+ {
   cntCodeBlocks++
-  return ast.NewPipeNode(string(c.text), pType, expr.(ast.Node), rightExpr, c.pos.offset, c.pos.line, c.pos.col)
+  return ast.NewPipeNode(string(c.text), pType, expr.(ast.Node), nodeBuffer, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 PipeType <- [a-z]+
 
 Pipe <- '|' pipeType: PipeType* ':' expr:Expr {
-  rightExpr = expr.(ast.Node)
+  nodeBuffer = append(nodeBuffer, expr.(ast.Node))
+  // rightExpr = expr.(ast.Node)
   if len(pipeType.([]interface{})) == 0 {
     pType = "pipe"
   } else {
