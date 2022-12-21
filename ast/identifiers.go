@@ -4,8 +4,8 @@ import "fmt"
 
 type IdentifierNode struct {
 	BaseNode
-	Name  string
-	Value string
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 func NewIdentifierNode(token, name, value string, offset, line, col int) (Node, error) {
