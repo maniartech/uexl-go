@@ -141,7 +141,7 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Number / Bool / Null / String / Array / Object / Pipe) {
+Value <- val:( Number / Bool / Null / String / Array / Object / Pipe / Identifier) {
     return val, nil
 }
 
@@ -211,8 +211,16 @@ Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
     return parseArray(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
 
+////////////////////// Object //////////////////////
+
 Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}' {
     return parseObject(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+////////////////////// Identifier //////////////////////
+
+Identifier <- name:[a-zA-Z0-9$_@]+ value:('.' [a-zA-Z0-9$_@]+)* {
+  return parseIdentifier(c.text, name, value, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ////////////////////// Whitespace //////////////////////
