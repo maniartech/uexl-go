@@ -219,8 +219,8 @@ Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}'
 
 ////////////////////// Identifier //////////////////////
 
-Identifier <- name:[a-zA-Z0-9$_@]+ value:('.' [a-zA-Z0-9$_@]+)* {
-  return parseIdentifier(c.text, name, value, c.pos.offset, c.pos.line, c.pos.col)
+Identifier <- [a-zA-Z0-9$_@]+ ('.'  [a-zA-Z0-9$_@]+)* {
+  return ast.NewIdentifierNode(string(c.text), string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ////////////////////// Whitespace //////////////////////

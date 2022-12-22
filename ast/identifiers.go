@@ -4,11 +4,10 @@ import "fmt"
 
 type IdentifierNode struct {
 	BaseNode
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name string `json:"name"`
 }
 
-func NewIdentifierNode(token, name, value string, offset, line, col int) (Node, error) {
+func NewIdentifierNode(token, name string, offset, line, col int) (Node, error) {
 	node := IdentifierNode{
 		BaseNode: BaseNode{
 			Type:   NodeTypeIdentifier,
@@ -17,17 +16,16 @@ func NewIdentifierNode(token, name, value string, offset, line, col int) (Node, 
 			Column: col,
 			Token:  token,
 		},
-		Name:  name,
-		Value: value,
+		Name: name,
 	}
 
 	return node, nil
 }
 
 func (n IdentifierNode) String() string {
-	return fmt.Sprintf("IdentifierNode %v", n.Value)
+	return fmt.Sprintf("IdentifierNode %v", n.Name)
 }
 
 func (n IdentifierNode) Eval(Map) (any, error) {
-	return n.Value, nil
+	return n.Name, nil
 }

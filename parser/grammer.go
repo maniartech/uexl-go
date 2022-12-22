@@ -1400,45 +1400,37 @@ var g = &grammar{
 				expr: &seqExpr{
 					pos: position{line: 222, col: 15, offset: 5237},
 					exprs: []interface{}{
-						&labeledExpr{
-							pos:   position{line: 222, col: 15, offset: 5237},
-							label: "name",
-							expr: &oneOrMoreExpr{
-								pos: position{line: 222, col: 20, offset: 5242},
-								expr: &charClassMatcher{
-									pos:        position{line: 222, col: 20, offset: 5242},
-									val:        "[a-zA-Z0-9$_@]",
-									chars:      []rune{'$', '_', '@'},
-									ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
-									ignoreCase: false,
-									inverted:   false,
-								},
+						&oneOrMoreExpr{
+							pos: position{line: 222, col: 15, offset: 5237},
+							expr: &charClassMatcher{
+								pos:        position{line: 222, col: 15, offset: 5237},
+								val:        "[a-zA-Z0-9$_@]",
+								chars:      []rune{'$', '_', '@'},
+								ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
+								ignoreCase: false,
+								inverted:   false,
 							},
 						},
-						&labeledExpr{
-							pos:   position{line: 222, col: 36, offset: 5258},
-							label: "value",
-							expr: &zeroOrMoreExpr{
-								pos: position{line: 222, col: 42, offset: 5264},
-								expr: &seqExpr{
-									pos: position{line: 222, col: 43, offset: 5265},
-									exprs: []interface{}{
-										&litMatcher{
-											pos:        position{line: 222, col: 43, offset: 5265},
-											val:        ".",
+						&zeroOrMoreExpr{
+							pos: position{line: 222, col: 31, offset: 5253},
+							expr: &seqExpr{
+								pos: position{line: 222, col: 32, offset: 5254},
+								exprs: []interface{}{
+									&litMatcher{
+										pos:        position{line: 222, col: 32, offset: 5254},
+										val:        ".",
+										ignoreCase: false,
+										want:       "\".\"",
+									},
+									&oneOrMoreExpr{
+										pos: position{line: 222, col: 37, offset: 5259},
+										expr: &charClassMatcher{
+											pos:        position{line: 222, col: 37, offset: 5259},
+											val:        "[a-zA-Z0-9$_@]",
+											chars:      []rune{'$', '_', '@'},
+											ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
 											ignoreCase: false,
-											want:       "\".\"",
-										},
-										&oneOrMoreExpr{
-											pos: position{line: 222, col: 47, offset: 5269},
-											expr: &charClassMatcher{
-												pos:        position{line: 222, col: 47, offset: 5269},
-												val:        "[a-zA-Z0-9$_@]",
-												chars:      []rune{'$', '_', '@'},
-												ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
-												ignoreCase: false,
-												inverted:   false,
-											},
+											inverted:   false,
 										},
 									},
 								},
@@ -1451,11 +1443,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 228, col: 1, offset: 5433},
+			pos:         position{line: 228, col: 1, offset: 5440},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 228, col: 19, offset: 5451},
+				pos: position{line: 228, col: 19, offset: 5458},
 				expr: &charClassMatcher{
-					pos:        position{line: 228, col: 19, offset: 5451},
+					pos:        position{line: 228, col: 19, offset: 5458},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -1465,11 +1457,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 232, col: 1, offset: 5514},
+			pos:  position{line: 232, col: 1, offset: 5521},
 			expr: &notExpr{
-				pos: position{line: 232, col: 8, offset: 5521},
+				pos: position{line: 232, col: 8, offset: 5528},
 				expr: &anyMatcher{
-					line: 232, col: 9, offset: 5522,
+					line: 232, col: 9, offset: 5529,
 				},
 			},
 		},
@@ -1839,14 +1831,14 @@ func (p *parser) callonObject1() (interface{}, error) {
 	return p.cur.onObject1(stack["vals"])
 }
 
-func (c *current) onIdentifier1(name, value interface{}) (interface{}, error) {
-	return parseIdentifier(c.text, name, value, c.pos.offset, c.pos.line, c.pos.col)
+func (c *current) onIdentifier1() (interface{}, error) {
+	return ast.NewIdentifierNode(string(c.text), string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 func (p *parser) callonIdentifier1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	return p.cur.onIdentifier1(stack["name"], stack["value"])
+	return p.cur.onIdentifier1()
 }
 
 var (

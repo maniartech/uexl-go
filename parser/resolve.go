@@ -10,12 +10,3 @@ func resolveAscii(bytes interface{}) string {
 
 	return pType
 }
-
-func resolveAscii1(bytes interface{}) string {
-	var val string
-	for _, eachByte := range bytes.([]interface{}) {
-		val += string(eachByte.([]byte))
-	}
-
-	return val
-}
