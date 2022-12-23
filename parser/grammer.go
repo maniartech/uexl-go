@@ -1443,11 +1443,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 228, col: 1, offset: 5440},
+			pos:         position{line: 228, col: 1, offset: 5424},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 228, col: 19, offset: 5458},
+				pos: position{line: 228, col: 19, offset: 5442},
 				expr: &charClassMatcher{
-					pos:        position{line: 228, col: 19, offset: 5458},
+					pos:        position{line: 228, col: 19, offset: 5442},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -1457,11 +1457,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 232, col: 1, offset: 5521},
+			pos:  position{line: 232, col: 1, offset: 5505},
 			expr: &notExpr{
-				pos: position{line: 232, col: 8, offset: 5528},
+				pos: position{line: 232, col: 8, offset: 5512},
 				expr: &anyMatcher{
-					line: 232, col: 9, offset: 5529,
+					line: 232, col: 9, offset: 5513,
 				},
 			},
 		},
@@ -1832,7 +1832,7 @@ func (p *parser) callonObject1() (interface{}, error) {
 }
 
 func (c *current) onIdentifier1() (interface{}, error) {
-	return ast.NewIdentifierNode(string(c.text), string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+	return ast.NewIdentifierNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 func (p *parser) callonIdentifier1() (interface{}, error) {

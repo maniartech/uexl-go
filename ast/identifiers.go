@@ -7,7 +7,7 @@ type IdentifierNode struct {
 	Name string `json:"name"`
 }
 
-func NewIdentifierNode(token, name string, offset, line, col int) (Node, error) {
+func NewIdentifierNode(token string, offset, line, col int) (Node, error) {
 	node := IdentifierNode{
 		BaseNode: BaseNode{
 			Type:   NodeTypeIdentifier,
@@ -16,7 +16,7 @@ func NewIdentifierNode(token, name string, offset, line, col int) (Node, error) 
 			Column: col,
 			Token:  token,
 		},
-		Name: name,
+		Name: token,
 	}
 
 	return node, nil

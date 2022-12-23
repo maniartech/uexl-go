@@ -220,7 +220,7 @@ Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}'
 ////////////////////// Identifier //////////////////////
 
 Identifier <- [a-zA-Z0-9$_@]+ ('.'  [a-zA-Z0-9$_@]+)* {
-  return ast.NewIdentifierNode(string(c.text), string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+  return ast.NewIdentifierNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ////////////////////// Whitespace //////////////////////
