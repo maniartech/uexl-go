@@ -33,5 +33,5 @@ func (n PipeNode) String() string {
 	return fmt.Sprintf("PipeNode %v", n.Expressions)
 }
 func (n PipeNode) Eval(Map) (any, error) {
-	return nil, nil
+	return n.Expressions, nil
 }
