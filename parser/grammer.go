@@ -1392,46 +1392,47 @@ var g = &grammar{
 			},
 		},
 		{
-			name: "Identifier",
+			name: "IdSet",
 			pos:  position{line: 222, col: 1, offset: 5223},
+			expr: &oneOrMoreExpr{
+				pos: position{line: 222, col: 10, offset: 5232},
+				expr: &charClassMatcher{
+					pos:        position{line: 222, col: 10, offset: 5232},
+					val:        "[a-zA-Z0-9$_@]",
+					chars:      []rune{'$', '_', '@'},
+					ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
+					ignoreCase: false,
+					inverted:   false,
+				},
+			},
+		},
+		{
+			name: "Identifier",
+			pos:  position{line: 224, col: 1, offset: 5249},
 			expr: &actionExpr{
-				pos: position{line: 222, col: 15, offset: 5237},
+				pos: position{line: 224, col: 15, offset: 5263},
 				run: (*parser).callonIdentifier1,
 				expr: &seqExpr{
-					pos: position{line: 222, col: 15, offset: 5237},
+					pos: position{line: 224, col: 15, offset: 5263},
 					exprs: []interface{}{
-						&oneOrMoreExpr{
-							pos: position{line: 222, col: 15, offset: 5237},
-							expr: &charClassMatcher{
-								pos:        position{line: 222, col: 15, offset: 5237},
-								val:        "[a-zA-Z0-9$_@]",
-								chars:      []rune{'$', '_', '@'},
-								ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
-								ignoreCase: false,
-								inverted:   false,
-							},
+						&ruleRefExpr{
+							pos:  position{line: 224, col: 15, offset: 5263},
+							name: "IdSet",
 						},
-						&zeroOrMoreExpr{
-							pos: position{line: 222, col: 31, offset: 5253},
+						&oneOrMoreExpr{
+							pos: position{line: 224, col: 21, offset: 5269},
 							expr: &seqExpr{
-								pos: position{line: 222, col: 32, offset: 5254},
+								pos: position{line: 224, col: 22, offset: 5270},
 								exprs: []interface{}{
 									&litMatcher{
-										pos:        position{line: 222, col: 32, offset: 5254},
+										pos:        position{line: 224, col: 22, offset: 5270},
 										val:        ".",
 										ignoreCase: false,
 										want:       "\".\"",
 									},
-									&oneOrMoreExpr{
-										pos: position{line: 222, col: 37, offset: 5259},
-										expr: &charClassMatcher{
-											pos:        position{line: 222, col: 37, offset: 5259},
-											val:        "[a-zA-Z0-9$_@]",
-											chars:      []rune{'$', '_', '@'},
-											ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
-											ignoreCase: false,
-											inverted:   false,
-										},
+									&ruleRefExpr{
+										pos:  position{line: 224, col: 27, offset: 5275},
+										name: "IdSet",
 									},
 								},
 							},
@@ -1443,11 +1444,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 228, col: 1, offset: 5424},
+			pos:         position{line: 230, col: 1, offset: 5430},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 228, col: 19, offset: 5442},
+				pos: position{line: 230, col: 19, offset: 5448},
 				expr: &charClassMatcher{
-					pos:        position{line: 228, col: 19, offset: 5442},
+					pos:        position{line: 230, col: 19, offset: 5448},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -1457,11 +1458,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 232, col: 1, offset: 5505},
+			pos:  position{line: 234, col: 1, offset: 5511},
 			expr: &notExpr{
-				pos: position{line: 232, col: 8, offset: 5512},
+				pos: position{line: 234, col: 8, offset: 5518},
 				expr: &anyMatcher{
-					line: 232, col: 9, offset: 5513,
+					line: 234, col: 9, offset: 5519,
 				},
 			},
 		},

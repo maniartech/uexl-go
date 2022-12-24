@@ -6,7 +6,7 @@ import (
 )
 
 func TestPipe(t *testing.T) {
-	pType := []string{"pipe", "pipe"}
+	pType := []string{"pipe", "empty"}
 
 	arrItem1, _ := NewNumberNode("1", 0, 0, 0)
 	arrItem2, _ := NewNumberNode("2", 0, 0, 0)
@@ -18,11 +18,11 @@ func TestPipe(t *testing.T) {
 	rightNode2, _ := NewNullNode("null", 0, 0, 0)
 	rightNodes := []Node{rightNode1, rightNode2}
 
-	node, _ := NewPipeNode("[1, 2, 3]|:'hello'|:null", pType, leftNode, rightNodes, 0, 1, 1)
+	node, _ := NewPipeNode("[1, 2, 3]|:'hello'|empty:null", pType, leftNode, rightNodes, 0, 1, 1)
 	nodePipe := node.(PipeNode)
 
 	nodeToken := nodePipe.Token
-	if nodeToken != "[1, 2, 3]|:'hello'|:null" {
+	if nodeToken != "[1, 2, 3]|:'hello'|empty:null" {
 		t.Errorf("Token: Expected [1, 2, 3]|:'hello'|:null, got %v", nodeToken)
 	}
 

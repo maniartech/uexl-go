@@ -49,10 +49,17 @@ func TestExpressions(t *testing.T) {
 		t.Errorf("Stringer: Expected %v, got %v", expectedExpr, nodeExprStringer)
 	}
 
-	// firstVal, _ := NewNumberNode("1", 0, 0, 0)
-	// secondVal, _ := NewNumberNode("2", 0, 0, 0)
-	// v1 := []interface{}{firstVal}
-	// v2 := []interface{}{secondVal}
-	// val, _ := ParseExpression("1 + 2", v1, v2, 0, 1, 1)
+	firstVal, _ := NewNumberNode("1", 0, 0, 0)
+	val, _ := ParseExpression("1", firstVal, nil, 0, 1, 1)
+	evalVal, _ := val.Eval(tmp)
+	if evalVal.(Number) != 1 {
+		t.Errorf("Value: Expected 1, got %v", evalVal)
+	}
+
+	// firstVal, _ = NewNumberNode("1", 0, 0, 0)
+	// val1, _ := NewNumberNode("2", 0, 0, 0)
+	// val2, _ := NewNumberNode("3", 0, 0, 0)
+	// restVal := []Node{val1, val2}
+	// val, _ = ParseExpression("1 + 2 + 3", firstVal, restVal, 0, 1, 1)
 	// fmt.Println(val)
 }
