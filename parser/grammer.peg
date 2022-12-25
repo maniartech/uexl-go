@@ -93,10 +93,9 @@ PipeType <- [a-z]+
 
 Pipe <- '|' pipeType: PipeType* ':' expr:Expr {
   nodeBuffer = append(nodeBuffer, expr.(ast.Node))
-  if len(pipeType.([]interface{})) == 0 {
-    pType = "pipe"
-  } else {
-    pType = resolveAscii(pipeType)
+  pType = "pipe"
+  if len(pipeType.([]interface{})) != 0 {
+    pType = resolveAscii(pipeType) 
   }
   pTypeBuffer = append(pTypeBuffer, pType)
   return nil, nil
