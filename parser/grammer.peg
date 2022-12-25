@@ -84,11 +84,9 @@ Factor <- '(' expr:Expr ')' {
 
 PipeExpr <- expr:Expr pipe:Pipe+ {
   cntCodeBlocks++
-  pTypeBufferTmp := pTypeBuffer
-  pTypeBuffer = nil
-  nodeBufferTmp := nodeBuffer
-  nodeBuffer = nil
-  return ast.NewPipeNode(string(c.text), pTypeBufferTmp, expr.(ast.Node), nodeBufferTmp, c.pos.offset, c.pos.line, c.pos.col)
+  pipeNode, err := ast.NewPipeNode(string(c.text), pTypeBuffer, expr.(ast.Node), nodeBuffer, c.pos.offset, c.pos.line, c.pos.col)
+  pTypeBuffer, nodeBuffer = nil, nil
+  return pipeNode, err
 }
 
 PipeType <- [a-z]+
