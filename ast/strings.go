@@ -7,7 +7,7 @@ import (
 type String string
 
 type StringNode struct {
-	BaseNode
+	*BaseNode
 
 	Value String `json:"value"`
 }
@@ -18,7 +18,7 @@ func NewStringNode(token string, offset, line, col int) (Node, error) {
 		finalToken = finalToken[1 : len(token)-1]
 	}
 	node := StringNode{
-		BaseNode: BaseNode{
+		BaseNode: &BaseNode{
 			Type:   NodeTypeString,
 			Line:   line,
 			Column: col,

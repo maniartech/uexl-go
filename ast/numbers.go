@@ -15,7 +15,7 @@ func (n Number) String() string {
 
 // NumberNode represent a number literal.
 type NumberNode struct {
-	BaseNode
+	*BaseNode
 
 	// Value is the value set to the NumberNode.
 	Value Number `json:"value"`
@@ -31,7 +31,7 @@ func NewNumberNode(token string, offset, line, col int) (Node, error) {
 	}
 
 	node := NumberNode{
-		BaseNode: BaseNode{
+		BaseNode: &BaseNode{
 			Type:   NodeTypeNumber,
 			Line:   line,
 			Column: col,

@@ -5,14 +5,14 @@ import "fmt"
 type Array []Node
 
 type ArrayNode struct {
-	BaseNode
+	*BaseNode
 
 	Value Array `json:"value"`
 }
 
 func NewArrayNode(token string, items []Node, offset, line, col int) (Node, error) {
 	node := ArrayNode{
-		BaseNode: BaseNode{
+		BaseNode: &BaseNode{
 			Type:   NodeTypeArray,
 			Line:   line,
 			Column: col,

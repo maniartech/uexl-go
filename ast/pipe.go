@@ -5,14 +5,14 @@ import (
 )
 
 type PipeNode struct {
-	BaseNode
+	*BaseNode
 	PipeType    []string `json:"pipeType"`
 	Expressions []Node   `json:"expressions"`
 }
 
 func NewPipeNode(token string, pType []string, left Node, buffer []Node, offset, line, col int) (Node, error) {
 	node := PipeNode{
-		BaseNode: BaseNode{
+		BaseNode: &BaseNode{
 			Type:   NodeTypePipe,
 			Line:   line,
 			Column: col,
