@@ -8,6 +8,7 @@ import (
 )
 
 func TestPipe(t *testing.T) {
+	// Test Case for [1, 2, 3]|map:(1 + 2)
 	got, _ := ParseReader("", strings.NewReader("[1, 2, 3]|map:(1 + 2)"))
 	gotNode := got.(ast.PipeNode)
 
@@ -19,11 +20,6 @@ func TestPipe(t *testing.T) {
 	gotNodeToken := gotNode.Token
 	if gotNodeToken != "[1, 2, 3]|map:(1 + 2)" {
 		t.Errorf("Token: Expected [1, 2, 3]|map:(1 + 2), got %v", gotNodeToken)
-	}
-
-	gotNodePipeType := gotNode.PipeType
-	if gotNodePipeType[0] != "map" {
-		t.Errorf("Pipe Type: Expected map, got %v", gotNodePipeType)
 	}
 
 	gotNodeExpressions1 := gotNode.Expressions[0].(ast.ArrayNode)
@@ -60,6 +56,12 @@ func TestPipe(t *testing.T) {
 
 	gotNodeExpressions2 := gotNode.Expressions[1].(ast.ExpressionNode)
 	gotNodeExpressions2Token := gotNodeExpressions2.Token
+
+	pipeType := gotNodeExpressions2.BaseNode.PipeType
+	if pipeType != "map" {
+		t.Errorf("Pipe Type: Expected map, got, %v", pipeType)
+	}
+
 	op := gotNodeExpressions2.Operator
 	if op != "+" {
 		t.Errorf("Operator: Expected +, got %v", op)
@@ -86,6 +88,7 @@ func TestPipe(t *testing.T) {
 		t.Errorf("Value: Expected 2, got %v", gotNodeExpressions2_2Value)
 	}
 
+	// Test Case for (25 * 4)|:'sum'
 	got, _ = ParseReader("", strings.NewReader("(25 * 4)|:'sum'"))
 	gotNode = got.(ast.PipeNode)
 	gotNodeType = gotNode.Type
@@ -96,11 +99,6 @@ func TestPipe(t *testing.T) {
 	gotNodeToken = gotNode.Token
 	if gotNodeToken != "(25 * 4)|:'sum'" {
 		t.Errorf("Token: Expected (25 * 4)|:'sum', got %v", gotNodeToken)
-	}
-
-	gotNodePipeType = gotNode.PipeType
-	if gotNodePipeType[0] != "pipe" {
-		t.Errorf("Pipe Type: Expected pipe, got %v", gotNodePipeType)
 	}
 
 	gotNodeExpressions1Exp := gotNode.Expressions[0].(ast.ExpressionNode)
@@ -130,6 +128,23 @@ func TestPipe(t *testing.T) {
 		t.Errorf("Value: Expected 4, got %v", num1)
 	}
 
+	gotNodeExpressions2Exp := gotNode.Expressions[1].(ast.StringNode)
+	gotNodeExpressions2ExpToken := gotNodeExpressions2Exp.Token
+	if gotNodeExpressions2ExpToken != "'sum'" {
+		t.Errorf("Token: Expected 'sum', got %v", gotNodeExpressions2ExpToken)
+	}
+
+	gotNodeExpressions2ExpValue := gotNodeExpressions2Exp.Value
+	if gotNodeExpressions2ExpValue != "sum" {
+		t.Errorf("Token: Expected sum, got %v", gotNodeExpressions2ExpValue)
+	}
+
+	pipeType = gotNodeExpressions2Exp.BaseNode.PipeType
+	if pipeType != "pipe" {
+		t.Errorf("Pipe Type: Expected pipe, got, %v", pipeType)
+	}
+
+	// Test Case for {'name': 'abc', 'age': 30}|filter:true
 	got, _ = ParseReader("", strings.NewReader("{'name': 'abc', 'age': 30}|filter:true"))
 	gotNode = got.(ast.PipeNode)
 	gotNodeType = gotNode.Type
@@ -140,11 +155,6 @@ func TestPipe(t *testing.T) {
 	gotNodeToken = gotNode.Token
 	if gotNodeToken != "{'name': 'abc', 'age': 30}|filter:true" {
 		t.Errorf("Token: Expected {'name': 'abc', 'age': 30}|filter:true, got %v", gotNodeToken)
-	}
-
-	gotNodePipeType = gotNode.PipeType
-	if gotNodePipeType[0] != "filter" {
-		t.Errorf("Pipe Type: Expected filter, got %v", gotNodePipeType)
 	}
 
 	gotNodeExpressions1Obj := gotNode.Expressions[0].(ast.ObjectNode)
@@ -172,6 +182,23 @@ func TestPipe(t *testing.T) {
 		t.Errorf("Value: Expected 30, got %v", value2)
 	}
 
+	gotNodeExpressions2Obj := gotNode.Expressions[1].(ast.BooleanNode)
+	gotNodeExpressions2ObjToken := gotNodeExpressions2Obj.Token
+	if gotNodeExpressions2ObjToken != "true" {
+		t.Errorf("Token: Expected true, got %v", gotNodeExpressions2ObjToken)
+	}
+
+	gotNodeExpressions2ObjValue := gotNodeExpressions2Obj.Value
+	if gotNodeExpressions2ObjValue != true {
+		t.Errorf("Token: Expected true, got %v", gotNodeExpressions2ObjValue)
+	}
+
+	pipeType = gotNodeExpressions2Obj.BaseNode.PipeType
+	if pipeType != "filter" {
+		t.Errorf("Pipe Type: Expected filter, got, %v", pipeType)
+	}
+
+	// Test Case for [1, 3, 5]|map:(0 / 1)|empty:null
 	got, _ = ParseReader("", strings.NewReader("[1, 3, 5]|map:(0 / 1)|empty:null"))
 	gotNode = got.(ast.PipeNode)
 
@@ -183,14 +210,6 @@ func TestPipe(t *testing.T) {
 	gotNodeToken = gotNode.Token
 	if gotNodeToken != "[1, 3, 5]|map:(0 / 1)|empty:null" {
 		t.Errorf("Token: Expected [1, 3, 5]|map:(0 / 1)|empty:null, got %v", gotNodeToken)
-	}
-
-	gotNodePipeType = gotNode.PipeType
-	if gotNodePipeType[0] != "map" {
-		t.Errorf("Pipe Type 1: Expected map, got %v", gotNodePipeType[0])
-	}
-	if gotNodePipeType[1] != "empty" {
-		t.Errorf("Pipe Type 2: Expected empty, got %v", gotNodePipeType[1])
 	}
 
 	gotNodeExpressions1 = gotNode.Expressions[0].(ast.ArrayNode)
@@ -235,6 +254,11 @@ func TestPipe(t *testing.T) {
 		t.Errorf("Token: Expected 0 / 1, got %v", gotNodeExpressions2Token)
 	}
 
+	pipeType = gotNodeExpressions2.BaseNode.PipeType
+	if pipeType != "map" {
+		t.Errorf("Pipe Type: Expected map, got, %v", pipeType)
+	}
+
 	gotNodeExpressions2_1 = gotNodeExpressions2.Left.(ast.NumberNode).Token
 	gotNodeExpressions2_1Value = gotNodeExpressions2.Left.(ast.NumberNode).Value
 	if gotNodeExpressions2_1 != "0" {
@@ -259,6 +283,12 @@ func TestPipe(t *testing.T) {
 		t.Errorf("Token: Expected null, got %v", gotNodeExpressions3Token)
 	}
 
+	pipeType = gotNodeExpressions3.BaseNode.PipeType
+	if pipeType != "empty" {
+		t.Errorf("Pipe Type: Expected empty, got, %v", pipeType)
+	}
+
+	// Test Case for 'a'|x:'b'|:'c'|y:'d'
 	got, _ = ParseReader("", strings.NewReader("'a'|x:'b'|:'c'|y:'d'"))
 	gotNode = got.(ast.PipeNode)
 
@@ -272,17 +302,6 @@ func TestPipe(t *testing.T) {
 		t.Errorf("Token: Expected 'a'|x:'b'|:'c'|y:'d', got %v", gotNodeToken)
 	}
 
-	gotNodePipeType = gotNode.PipeType
-	if gotNodePipeType[0] != "x" {
-		t.Errorf("Pipe Type 1: Expected x, got %v", gotNodePipeType[0])
-	}
-	if gotNodePipeType[1] != "pipe" {
-		t.Errorf("Pipe Type 2: Expected pipe, got %v", gotNodePipeType[1])
-	}
-	if gotNodePipeType[2] != "y" {
-		t.Errorf("Pipe Type 3: Expected y, got %v", gotNodePipeType[2])
-	}
-
 	strings := gotNode.Expressions
 	str1 := strings[0].(ast.StringNode).Value
 	str1Token := strings[0].(ast.StringNode).Token
@@ -292,6 +311,7 @@ func TestPipe(t *testing.T) {
 	if str1 != "a" {
 		t.Errorf("Value: Expected a, got %v", str1)
 	}
+
 	str2 := strings[1].(ast.StringNode).Value
 	str2Token := strings[1].(ast.StringNode).Token
 	if str2Token != "'b'" {
@@ -300,6 +320,11 @@ func TestPipe(t *testing.T) {
 	if str2 != "b" {
 		t.Errorf("Value: Expected b, got %v", str2)
 	}
+	pipeType = strings[1].(ast.StringNode).BaseNode.PipeType
+	if pipeType != "x" {
+		t.Errorf("Pipe Type: Expected x, got %v", pipeType)
+	}
+
 	str3 := strings[2].(ast.StringNode).Value
 	str3Token := strings[2].(ast.StringNode).Token
 	if str3Token != "'c'" {
@@ -308,6 +333,11 @@ func TestPipe(t *testing.T) {
 	if str3 != "c" {
 		t.Errorf("Value: Expected c, got %v", str3)
 	}
+	pipeType = strings[2].(ast.StringNode).BaseNode.PipeType
+	if pipeType != "pipe" {
+		t.Errorf("Pipe Type: Expected pipe, got %v", pipeType)
+	}
+
 	str4 := strings[3].(ast.StringNode).Value
 	str4Token := strings[3].(ast.StringNode).Token
 	if str4Token != "'d'" {
@@ -315,5 +345,9 @@ func TestPipe(t *testing.T) {
 	}
 	if str4 != "d" {
 		t.Errorf("Value: Expected d, got %v", str4)
+	}
+	pipeType = strings[3].(ast.StringNode).BaseNode.PipeType
+	if pipeType != "y" {
+		t.Errorf("Pipe Type: Expected y, got %v", pipeType)
 	}
 }

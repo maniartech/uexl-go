@@ -6,8 +6,7 @@ import (
 
 type PipeNode struct {
 	*BaseNode
-	PipeType    []string `json:"pipeType"`
-	Expressions []Node   `json:"expressions"`
+	Expressions []Node `json:"expressions"`
 }
 
 func NewPipeNode(token string, pType []string, left Node, buffer []Node, offset, line, col int) (Node, error) {
@@ -19,12 +18,15 @@ func NewPipeNode(token string, pType []string, left Node, buffer []Node, offset,
 			Offset: offset,
 			Token:  token,
 		},
-
-		PipeType: pType,
 	}
 
 	node.Expressions = append(node.Expressions, left)
 	node.Expressions = append(node.Expressions, buffer...)
+
+	totalExprs := len(node.Expressions)
+	for i := 1; i < totalExprs; i++ {
+		node.Expressions[i].GetBaseNode().PipeType = pType[i-1]
+	}
 
 	return node, nil
 }
