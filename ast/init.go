@@ -25,6 +25,8 @@ type BaseNode struct {
 
 	// Type is the type of the node.
 	Type NodeType `json:"type"`
+
+	PipeType string `json:"pipeType"`
 }
 
 func (n BaseNode) GetBaseNode() BaseNode {
