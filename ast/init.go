@@ -7,7 +7,7 @@ type Map map[string]any
 type Node interface {
 	Eval(Map) (any, error)
 
-	GetBaseNode() BaseNode
+	GetBaseNode() *BaseNode
 }
 
 type BaseNode struct {
@@ -25,9 +25,11 @@ type BaseNode struct {
 
 	// Type is the type of the node.
 	Type NodeType `json:"type"`
+
+	PipeType string `json:"pipeType"`
 }
 
-func (n BaseNode) GetBaseNode() BaseNode {
+func (n *BaseNode) GetBaseNode() *BaseNode {
 	return n
 }
 

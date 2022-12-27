@@ -11,14 +11,14 @@ type ObjectItem struct {
 }
 
 type ObjectNode struct {
-	BaseNode
+	*BaseNode
 
 	Items []ObjectItem
 }
 
 func NewObjectNode(token string, items []ObjectItem, offset, line, col int) (Node, error) {
 	node := ObjectNode{
-		BaseNode: BaseNode{
+		BaseNode: &BaseNode{
 			Type:   NodeTypeObject,
 			Line:   line,
 			Column: col,

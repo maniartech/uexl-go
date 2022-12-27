@@ -3,7 +3,7 @@ package ast
 import "fmt"
 
 type ExpressionNode struct {
-	BaseNode
+	*BaseNode
 
 	OperatorType OperatorType `json:"operatorType"`
 
@@ -16,7 +16,7 @@ type ExpressionNode struct {
 
 func NewExpressionNode(token string, operator string, operatorType OperatorType, left, right Node, offset, line, col int) ExpressionNode {
 	node := ExpressionNode{
-		BaseNode: BaseNode{
+		BaseNode: &BaseNode{
 			Type:   NodeTypeExpression,
 			Line:   line,
 			Column: col,

@@ -8,7 +8,7 @@ import (
 type Boolean bool
 
 type BooleanNode struct {
-	BaseNode
+	*BaseNode
 
 	Value Boolean `json:"value"`
 }
@@ -20,7 +20,7 @@ func NewBooleanNode(token string, offset, line, col int) (Node, error) {
 	}
 
 	node := BooleanNode{
-		BaseNode: BaseNode{
+		BaseNode: &BaseNode{
 			Type:   NodeTypeBoolean,
 			Line:   line,
 			Column: col,

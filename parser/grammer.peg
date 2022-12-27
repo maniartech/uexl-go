@@ -6,11 +6,18 @@ import (
 
     "github.com/maniartech/uexl_go/ast"
 )
+
+var nodeBuffer []ast.Node
+var pType string
+var pTypeBuffer []string
 }
 
 /////////////////// Expressions //////////////////////
 
 Input <- expr:Expr EOF {
+  cntCodeBlocks++
+  return expr, nil
+} / expr:PipeExpr EOF {
   cntCodeBlocks++
   return expr, nil
 }
@@ -70,6 +77,23 @@ Factor <- '(' expr:Expr ')' {
 } / value:Value {
   cntCodeBlocks++
   return value, nil
+} / pipe:Pipe {
+  cntCodeBlocks++
+  return pipe, nil
+} 
+
+PipeExpr <- expr:Expr pipe:Pipe+ {
+  cntCodeBlocks++
+  pipeNode, err := ast.NewPipeNode(string(c.text), pTypeBuffer, expr.(ast.Node), nodeBuffer, c.pos.offset, c.pos.line, c.pos.col)
+  pTypeBuffer, nodeBuffer = nil, nil
+  return pipeNode, err
+}
+
+PipeType <- [a-z]+
+
+Pipe <- '|' pipeType: PipeType* ':' expr:Expr {
+  parsePipe(expr, pipeType)
+  return nil, nil
 }
 
 //////////////// Operators Definitions //////////////////////
@@ -109,7 +133,7 @@ ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
 
-Value <- val:( Number / Bool / Null / String / Array / Object ) {
+Value <- val:( Number / Bool / Null / String / Array / Object / Pipe) {
     return val, nil
 }
 

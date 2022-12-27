@@ -7,12 +7,12 @@ import (
 type Null struct{}
 
 type NullNode struct {
-	BaseNode
+	*BaseNode
 }
 
 func NewNullNode(token string, offset, line, col int) (Node, error) {
 	node := NullNode{
-		BaseNode: BaseNode{
+		BaseNode: &BaseNode{
 			Type:   NodeTypeNull,
 			Line:   line,
 			Column: col,
