@@ -57,9 +57,7 @@ Factor <- '(' expr:Expr ')' {
 }
 
 PipedExpr <- '|' pipeType:PipeType? ':' expr:Expr {
-  node := expr.(ast.Node)
-  node.SetPipeType(pipeType.(string))
-  return node, nil
+  return parsePipe(pipeType, expr), nil
 }
 
 PipeType <- [a-z]+ {

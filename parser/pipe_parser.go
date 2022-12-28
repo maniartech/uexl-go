@@ -1,12 +1,14 @@
 package parser
 
-// func parsePipe(expr, pipeType interface{}) {
-// 	nodeBuffer = append(nodeBuffer, expr.(ast.Node))
-// 	pType = "pipe"
-// 	if len(pipeType.([]interface{})) != 0 {
-// 		pType = resolveAscii(pipeType)
-// 	}
-// 	pTypeBuffer = append(pTypeBuffer, pType)
-// }
+import "github.com/maniartech/uexl_go/ast"
 
-// func parsePipe(pipeType string)
+func parsePipe(pipeType, expr interface{}) ast.Node {
+	node := expr.(ast.Node)
+	pType := "map"
+	if pipeType != nil {
+		pType = pipeType.(string)
+	}
+
+	node.SetPipeType(pType)
+	return node
+}
