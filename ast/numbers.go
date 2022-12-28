@@ -1,7 +1,6 @@
 package ast
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -22,7 +21,7 @@ type NumberNode struct {
 }
 
 // NewNumberNode creates a new NumberNode.
-func NewNumberNode(token string, offset, line, col int) (Node, error) {
+func NewNumberNode(token string, offset, line, col int) (*NumberNode, error) {
 	// Numbers have the same syntax as Go, and are parseable using
 	// strconv.ParseFloat
 	value, err := strconv.ParseFloat(token, 64)
@@ -30,7 +29,7 @@ func NewNumberNode(token string, offset, line, col int) (Node, error) {
 		return nil, err
 	}
 
-	node := NumberNode{
+	node := &NumberNode{
 		BaseNode: &BaseNode{
 			Type:   NodeTypeNumber,
 			Line:   line,
@@ -41,11 +40,6 @@ func NewNumberNode(token string, offset, line, col int) (Node, error) {
 		Value: Number(value),
 	}
 	return node, nil
-}
-
-// String returns a string representation of the NumberNode.
-func (n NumberNode) String() string {
-	return fmt.Sprintf("NumberNode %s", n.Value)
 }
 
 // Eval evalues the NumberNode.
