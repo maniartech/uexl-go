@@ -14,8 +14,8 @@ type ExpressionNode struct {
 	Right Node `json:"right"`
 }
 
-func NewExpressionNode(token string, operator string, operatorType OperatorType, left, right Node, offset, line, col int) ExpressionNode {
-	node := ExpressionNode{
+func NewExpressionNode(token string, operator string, operatorType OperatorType, left, right Node, offset, line, col int) *ExpressionNode {
+	node := &ExpressionNode{
 		BaseNode: &BaseNode{
 			Type:   NodeTypeExpression,
 			Line:   line,
@@ -31,11 +31,34 @@ func NewExpressionNode(token string, operator string, operatorType OperatorType,
 	return node
 }
 
-func (n ExpressionNode) String() string {
-	return fmt.Sprintf("ExpressionNode %s %s %s", n.Left, n.Operator, n.Right)
+// SetPipeType sets the pipe type for the expression node
+// This is used to determine if the expression is running
+// as a pipe or not. This function is called by the parser
+// when it detects a pipe. It performs the recursive call
+// to set the pipe type for all child nodes.
+func (n *ExpressionNode) SetPipeType(pipeType string) {
+	n.PipeType = pipeType
+
+	if n.Left != nil {
+		n.Left.SetPipeType(pipeType)
+		// if n.Left.GetType() == NodeTypeExpression {
+		// 	leftNode := n.Left.(ExpressionNode)
+		// 	leftNode.SetPipeType(pipeType)
+		// 	n.Left = leftNode
+		// }
+	}
+
+	if n.Right != nil {
+		n.Right.SetPipeType(pipeType)
+		// if n.Right.GetType() == NodeTypeExpression {
+		// 	rightNode := n.Right.(ExpressionNode)
+		// 	rightNode.SetPipeType(pipeType)
+		// 	n.Right = rightNode
+		// }
+	}
 }
 
-func (n ExpressionNode) Eval(m Map) (any, error) {
+func (n *ExpressionNode) Eval(m Map) (any, error) {
 	l, err := n.Left.Eval(m)
 	if err != nil {
 		return nil, err

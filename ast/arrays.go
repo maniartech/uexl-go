@@ -1,17 +1,16 @@
 package ast
 
-import "fmt"
-
-type Array []Node
-
+// ArrayNode represents a node that contains an array of nodes.
+// It implements the Node interface and can be evaluated.
 type ArrayNode struct {
 	*BaseNode
 
-	Value Array `json:"value"`
+	// Value is the array of nodes.
+	Items []Node `json:"value"`
 }
 
-func NewArrayNode(token string, items []Node, offset, line, col int) (Node, error) {
-	node := ArrayNode{
+func NewArrayNode(token string, items []Node, offset, line, col int) *ArrayNode {
+	node := &ArrayNode{
 		BaseNode: &BaseNode{
 			Type:   NodeTypeArray,
 			Line:   line,
@@ -20,16 +19,22 @@ func NewArrayNode(token string, items []Node, offset, line, col int) (Node, erro
 			Token:  token,
 		},
 
-		Value: items,
+		Items: items,
 	}
 
-	return node, nil
+	return node
 }
 
-func (n ArrayNode) String() string {
-	return fmt.Sprintf("ArrayNode %v", n.Value)
+// SetPipeType sets the pipe type of the node.
+func (n *ArrayNode) SetPipeType(pipeType string) {
+	n.PipeType = pipeType
+
+	for _, item := range n.Items {
+		item.SetPipeType(pipeType)
+	}
 }
 
-func (n ArrayNode) Eval(Map) (any, error) {
-	return n.Value, nil
+// Eval evaluates the node.
+func (n *ArrayNode) Eval(Map) (any, error) {
+	panic("implement me")
 }
