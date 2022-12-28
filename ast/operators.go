@@ -16,7 +16,6 @@ const (
 
 	// BitwiseOperator evaluates the expression by applying bitwise operations
 	BitwiseOperator = "bitwise" // & | ^ << >>
-
 )
 
 func GetOperatorType(op string) OperatorType {

@@ -1,17 +1,13 @@
 package ast
 
-import (
-	"fmt"
-)
-
 type Null struct{}
 
 type NullNode struct {
 	*BaseNode
 }
 
-func NewNullNode(token string, offset, line, col int) (Node, error) {
-	node := NullNode{
+func NewNullNode(token string, offset, line, col int) *NullNode {
+	node := &NullNode{
 		BaseNode: &BaseNode{
 			Type:   NodeTypeNull,
 			Line:   line,
@@ -21,11 +17,7 @@ func NewNullNode(token string, offset, line, col int) (Node, error) {
 		},
 	}
 
-	return node, nil
-}
-
-func (n NullNode) String() string {
-	return fmt.Sprintf("NullNode null")
+	return node
 }
 
 func (n NullNode) Eval(Map) (any, error) {
