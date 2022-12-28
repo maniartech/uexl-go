@@ -6,144 +6,108 @@ import (
 
     "github.com/maniartech/uexl_go/ast"
 )
-
-var nodeBuffer []ast.Node
-var pType string
-var pTypeBuffer []string
 }
 
 /////////////////// Expressions //////////////////////
 
-Input <- expr:Expr EOF {
-  cntCodeBlocks++
-  return expr, nil
-} / expr:PipeExpr EOF {
-  cntCodeBlocks++
-  return expr, nil
+Input <- expr:Expr rest:PipedExpr* EOF {
+  // Input
+  return parseInput(string(c.text), expr, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Expr <- _ first:Term rest:( _ LogOp _ Term )* _ {
-  cntCodeBlocks++
-
   // Expr:
-  return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Term <- first:Bit rest:( _ CmpOp _ Bit )* {
-  cntCodeBlocks++
-
-  // fmt.Println("Term:", first, rest)
-  return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+  // Term:
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Bit <- first:Shift rest:( _ BitOp _ Shift )* {
-  cntCodeBlocks++
-
   // fmt.Println("Bit:", first, rest)
-  return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Shift <- first:Sum rest: ( _ ShiftOp _ Sum )* {
-  cntCodeBlocks++
-
   // fmt.Println("Shift:", first, rest)
-  return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Sum <- first:Mul rest:( _ AddOp _ Mul )* {
-  cntCodeBlocks++
-
   // fmt.Println("Sum:", first, rest)
-  return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Mul <- first:Mod rest:( _ MulOp _ Mod )* {
-  cntCodeBlocks++
-
   // fmt.Println("Mul:", first, rest)
-  return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Mod <- first:Factor rest:( _ ModOp _ Factor )* {
-  cntCodeBlocks++
-
   // fmt.Println("Mod:", first, rest)
-  return ast.ParseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Factor <- '(' expr:Expr ')' {
-  cntCodeBlocks++
   return expr, nil
 } / value:Value {
-  cntCodeBlocks++
   return value, nil
-} / pipe:Pipe {
-  cntCodeBlocks++
-  return pipe, nil
-} 
-
-PipeExpr <- expr:Expr pipe:Pipe+ {
-  cntCodeBlocks++
-  pipeNode, err := ast.NewPipeNode(string(c.text), pTypeBuffer, expr.(ast.Node), nodeBuffer, c.pos.offset, c.pos.line, c.pos.col)
-  pTypeBuffer, nodeBuffer = nil, nil
-  return pipeNode, err
 }
 
-PipeType <- [a-z]+
+PipedExpr <- '|' pipeType:PipeType? ':' expr:Expr {
+  node := expr.(ast.Node)
+  node.SetPipeType(pipeType.(string))
+  return node, nil
+}
 
-Pipe <- '|' pipeType: PipeType* ':' expr:Expr {
-  parsePipe(expr, pipeType)
-  return nil, nil
+PipeType <- [a-z]+ {
+  return string(c.text), nil
 }
 
 //////////////// Operators Definitions //////////////////////
 
 AddOp <- ( '+' / '-' ) {
-  cntCodeBlocks++
   return string(c.text), nil
 }
 
 MulOp <- ( '*' / '/' ) {
-  cntCodeBlocks++
   return string(c.text), nil
 }
 
 ModOp <- ( "//" ) {
-  cntCodeBlocks++
   return string(c.text), nil
 }
 
 CmpOp <- ( "==" / "!=" / "<=" / ">=" / '<' / '>' ) {
-  cntCodeBlocks++
   return string(c.text), nil
 }
 
 BitOp <- ( '&' / '|' / '^' ) {
-  cntCodeBlocks++
   return string(c.text), nil
 }
 
 LogOp <- ( "&&" / "||" ) {
-  cntCodeBlocks++
   return string(c.text), nil
 }
 
 ShiftOp <- ( "<<" / ">>") {
-  cntCodeBlocks++
   return string(c.text), nil
 }
 
-Value <- val:( Number / Bool / Null / String / Array / Object / Pipe) {
+///////////////////// Values /////////////////////
+
+Value <- val:( Number / Bool / Null / String / Array / Object) {
     return val, nil
 }
 
 ///////////////////// Number /////////////////////
 
 Number <- Integer ( '.' DecimalDigit+ )? Exponent? {
-  node, err := ast.NewNumberNode(
+  return ast.NewNumberNode(
     string(c.text), c.pos.offset, c.pos.line, c.pos.col,
   )
-	return node, err
 }
 
 Integer <- [+-]? DecimalDigit+ {
@@ -159,15 +123,13 @@ HexDigit <- [0-9a-f]i
 ///////////////////// Boolean /////////////////////
 
 Bool <- ( "true" / "false") {
-  cntCodeBlocks++
   return ast.NewBooleanNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
 ///////////////////// Null /////////////////////
 
 Null <- ( "null" ) {
-  cntCodeBlocks++
-  return ast.NewNullNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+  return ast.NewNullNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col), nil
 }
 
 ///////////////////// String /////////////////////
@@ -177,11 +139,11 @@ String <- DoubleQuoteString / SingleQuoteString
 DoubleQuoteString <- '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
     c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
     value, _ := strconv.Unquote(string(c.text))
-    return ast.NewStringNode(value, c.pos.offset, c.pos.line, c.pos.col)
+    return ast.NewStringNode(value, c.pos.offset, c.pos.line, c.pos.col), nil
 }
 
 SingleQuoteString <- "'" str:PlainString "'" {
-    return ast.NewStringNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+    return ast.NewStringNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col), nil
 }
 
 PlainString <- ( !EscapedChar . / '\\' EscapeSequence )* {
