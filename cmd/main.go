@@ -23,5 +23,6 @@ func main() {
 	}
 
 	fmt.Println("Evaluation pending, printing the AST")
+	fmt.Println("====================================")
 	ast.PrintNode(got.(ast.Node))
 }
