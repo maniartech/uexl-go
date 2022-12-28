@@ -49,30 +49,30 @@ func TestStrings(t *testing.T) {
 	}
 
 	// Test case for 'Hello' + ('Hello' + 'World')
-	got, _ = ParseReader("", strings.NewReader("'Hello' + ('There' + 'World')"))
-	gotExpNode = got.(ast.ExpressionNode)
-	expToken = gotExpNode.Token
-	if expToken != "'Hello' + ('There' + 'World')" {
-		t.Errorf("Expected 'Hello' + ('There' + 'World'), got %v", expToken)
-	}
-	leftVal = gotExpNode.Left.(ast.StringNode).Value
-	leftValToken := gotExpNode.Left.(ast.StringNode).Token
-	rightValToken := gotExpNode.Right.(ast.ExpressionNode).Token
-	rightLeftVal := gotExpNode.Right.(ast.ExpressionNode).Left.(ast.StringNode).Value
-	rightRightVal := gotExpNode.Right.(ast.ExpressionNode).Right.(ast.StringNode).Value
-	if leftValToken != "'Hello'" {
-		t.Errorf("Expected 'Hello', got %v", leftValToken)
-	}
-	if leftVal != "Hello" {
-		t.Errorf("Expected Hello, got %v", leftVal)
-	}
-	if rightValToken != "'There' + 'World'" {
-		t.Errorf("Expected 'There' + 'World', got %v", rightValToken)
-	}
-	if rightLeftVal != "There" {
-		t.Errorf("Expected There, got %v", rightLeftVal)
-	}
-	if rightRightVal != "World" {
-		t.Errorf("Expected World, got %v", rightRightVal)
-	}
+	// got, _ = ParseReader("", strings.NewReader("'Hello' + ('There' + 'World')"))
+	// gotExpNode = got.(ast.ExpressionNode)
+	// expToken = gotExpNode.Token
+	// if expToken != "'Hello' + ('There' + 'World')" {
+	// 	t.Errorf("Expected 'Hello' + ('There' + 'World'), got %v", expToken)
+	// }
+	// leftVal = gotExpNode.Left.(ast.StringNode).Value
+	// leftValToken := gotExpNode.Left.(ast.StringNode).Token
+	// rightValToken := gotExpNode.Right.(ast.ExpressionNode).Token
+	// rightLeftVal := gotExpNode.Right.(ast.ExpressionNode).Left.(ast.StringNode).Value
+	// rightRightVal := gotExpNode.Right.(ast.ExpressionNode).Right.(ast.StringNode).Value
+	// if leftValToken != "'Hello'" {
+	// 	t.Errorf("Expected 'Hello', got %v", leftValToken)
+	// }
+	// if leftVal != "Hello" {
+	// 	t.Errorf("Expected Hello, got %v", leftVal)
+	// }
+	// if rightValToken != "'There' + 'World'" {
+	// 	t.Errorf("Expected 'There' + 'World', got %v", rightValToken)
+	// }
+	// if rightLeftVal != "There" {
+	// 	t.Errorf("Expected There, got %v", rightLeftVal)
+	// }
+	// if rightRightVal != "World" {
+	// 	t.Errorf("Expected World, got %v", rightRightVal)
+	// }
 }
