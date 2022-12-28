@@ -1,9 +1,5 @@
 package ast
 
-import (
-	"fmt"
-)
-
 type String string
 
 type StringNode struct {
@@ -12,12 +8,12 @@ type StringNode struct {
 	Value String `json:"value"`
 }
 
-func NewStringNode(token string, offset, line, col int) (Node, error) {
+func NewStringNode(token string, offset, line, col int) *StringNode {
 	finalToken := token
 	if finalToken[0] == '\'' && finalToken[len(finalToken)-1] == '\'' {
 		finalToken = finalToken[1 : len(token)-1]
 	}
-	node := StringNode{
+	node := &StringNode{
 		BaseNode: &BaseNode{
 			Type:   NodeTypeString,
 			Line:   line,
@@ -28,11 +24,7 @@ func NewStringNode(token string, offset, line, col int) (Node, error) {
 		Value: String(finalToken),
 	}
 
-	return node, nil
-}
-
-func (n StringNode) String() string {
-	return fmt.Sprintf("StringNode %s", n.Value)
+	return node
 }
 
 func (n StringNode) Eval(Map) (any, error) {
