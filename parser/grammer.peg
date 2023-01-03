@@ -20,7 +20,7 @@ Expr <- _ first:Term rest:( _ LogOp _ Term )* _ {
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-Term <- first:Bit rest:( _ CmpOp _ Bit )* {
+Term <- first:Shift rest:( _ CmpOp _ Shift )* {
   // Term:
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
@@ -56,7 +56,9 @@ Factor <- '(' expr:Expr ')' {
   return value, nil
 }
 
-PipedExpr <- '|' pipeType:PipeType? ':' expr:Expr {
+/////////////////////// Piped Expressions ////////////////////////
+
+PipedExpr <- "|" pipeType:PipeType? ":" expr:Expr {
   return parsePipe(pipeType, expr), nil
 }
 
@@ -82,10 +84,6 @@ CmpOp <- ( "==" / "!=" / "<=" / ">=" / '<' / '>' ) {
   return string(c.text), nil
 }
 
-BitOp <- ( '&' / '|' / '^' ) {
-  return string(c.text), nil
-}
-
 LogOp <- ( "&&" / "||" ) {
   return string(c.text), nil
 }
@@ -96,7 +94,7 @@ ShiftOp <- ( "<<" / ">>") {
 
 ///////////////////// Values /////////////////////
 
-Value <- val:( Number / Bool / Null / String / Array / Object) {
+Value <- val:( Number / Bool / Null / String / Array / Object ) {
     return val, nil
 }
 
@@ -166,6 +164,9 @@ Array <- '[' _ vals:( Expr ( ',' _ Expr )* )? ']' {
 Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}' {
     return parseObject(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
+
+
+IdSet <- [a-zA-Z0-9$_@]+
 
 ////////////////////// Whitespace //////////////////////
 
