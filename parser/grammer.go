@@ -1334,11 +1334,11 @@ var g = &grammar{
 		},
 		{
 			name: "IdSet",
-			pos:  position{line: 175, col: 1, offset: 4632},
+			pos:  position{line: 174, col: 1, offset: 4586},
 			expr: &oneOrMoreExpr{
-				pos: position{line: 175, col: 10, offset: 4641},
+				pos: position{line: 174, col: 10, offset: 4595},
 				expr: &charClassMatcher{
-					pos:        position{line: 175, col: 10, offset: 4641},
+					pos:        position{line: 174, col: 10, offset: 4595},
 					val:        "[a-zA-Z0-9$_@]",
 					chars:      []rune{'$', '_', '@'},
 					ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
@@ -1350,11 +1350,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 179, col: 1, offset: 4720},
+			pos:         position{line: 178, col: 1, offset: 4674},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 179, col: 19, offset: 4738},
+				pos: position{line: 178, col: 19, offset: 4692},
 				expr: &charClassMatcher{
-					pos:        position{line: 179, col: 19, offset: 4738},
+					pos:        position{line: 178, col: 19, offset: 4692},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -1364,11 +1364,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 183, col: 1, offset: 4805},
+			pos:  position{line: 182, col: 1, offset: 4759},
 			expr: &notExpr{
-				pos: position{line: 183, col: 8, offset: 4812},
+				pos: position{line: 182, col: 8, offset: 4766},
 				expr: &anyMatcher{
-					line: 183, col: 9, offset: 4813,
+					line: 182, col: 9, offset: 4767,
 				},
 			},
 		},
@@ -1698,7 +1698,6 @@ func (p *parser) callonObject1() (interface{}, error) {
 
 func (c *current) onIdentifier1() (interface{}, error) {
 
-	fmt.Println("Identifier:", string(c.text))
 	return ast.NewIdentifierNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
