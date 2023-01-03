@@ -94,7 +94,7 @@ ShiftOp <- ( "<<" / ">>") {
 
 ///////////////////// Values /////////////////////
 
-Value <- val:( Number / Bool / Null / String / Array / Object ) {
+Value <- val:( Number / Bool / Null / String / Array / Object / Identifier ) {
     return val, nil
 }
 
@@ -165,6 +165,12 @@ Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}'
     return parseObject(vals, c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
 
+////////////////////// Identifier //////////////////////
+
+Identifier <- IdSet ('.'  IdSet)* {
+  fmt.Println("Identifier:", string(c.text))
+  return ast.NewIdentifierNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
+}
 
 IdSet <- [a-zA-Z0-9$_@]+
 
