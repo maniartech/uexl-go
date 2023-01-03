@@ -94,7 +94,7 @@ ShiftOp <- ( "<<" / ">>") {
 
 ///////////////////// Values /////////////////////
 
-Value <- val:( Number / Bool / Null / String / Array / Object / Identifier ) {
+Value <- val:( Number / Bool / Null / String / Array / Object / Function / Identifier ) {
     return val, nil
 }
 
@@ -171,7 +171,15 @@ Identifier <- IdSet ('.'  IdSet)* {
   return ast.NewIdentifierNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
-IdSet <- [a-zA-Z0-9$_@]+
+IdSet <- [a-zA-Z0-9$_@]+ {
+  return string(c.text), nil
+}
+
+////////////////////// Function //////////////////////
+
+Function <- fn:IdSet+ _ '(' _ params:( Expr ( ',' _ Expr )* )? ')' {
+  return parseFunction(string(c.text), fn, params,  c.pos.offset, c.pos.line, c.pos.col)
+}
 
 ////////////////////// Whitespace //////////////////////
 
