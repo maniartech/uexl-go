@@ -1,4 +1,4 @@
-package core
+package types
 
 // Number represents a number in the uexl language.
 type Number float64
