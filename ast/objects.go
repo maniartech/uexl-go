@@ -1,7 +1,9 @@
 package ast
 
+import "github.com/maniartech/uexl_go/types"
+
 type ObjectItem struct {
-	Key   String
+	Key   types.String
 	Value Node
 }
 

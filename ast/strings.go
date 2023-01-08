@@ -1,11 +1,11 @@
 package ast
 
-type String string
+import "github.com/maniartech/uexl_go/types"
 
 type StringNode struct {
 	*BaseNode
 
-	Value String `json:"value"`
+	Value types.String `json:"value"`
 }
 
 func NewStringNode(token string, offset, line, col int) *StringNode {
@@ -21,7 +21,7 @@ func NewStringNode(token string, offset, line, col int) *StringNode {
 			Offset: offset,
 			Token:  token,
 		},
-		Value: String(finalToken),
+		Value: types.String(finalToken),
 	}
 
 	return node

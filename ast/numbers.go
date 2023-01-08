@@ -2,22 +2,16 @@ package ast
 
 import (
 	"strconv"
+
+	"github.com/maniartech/uexl_go/types"
 )
-
-// Number represents a number literal.
-type Number float64
-
-// String returns a string representation of the number.
-func (n Number) String() string {
-	return strconv.FormatFloat(float64(n), 'f', -1, 64)
-}
 
 // NumberNode represent a number literal.
 type NumberNode struct {
 	*BaseNode
 
 	// Value is the value set to the NumberNode.
-	Value Number `json:"value"`
+	Value types.Number `json:"value"`
 }
 
 // NewNumberNode creates a new NumberNode.
@@ -37,7 +31,7 @@ func NewNumberNode(token string, offset, line, col int) (*NumberNode, error) {
 			Offset: offset,
 			Token:  token,
 		},
-		Value: Number(value),
+		Value: types.Number(value),
 	}
 	return node, nil
 }
