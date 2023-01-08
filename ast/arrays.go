@@ -35,6 +35,16 @@ func (n *ArrayNode) SetPipeType(pipeType string) {
 }
 
 // Eval evaluates the node.
-func (n *ArrayNode) Eval(Map) (any, error) {
-	panic("implement me")
+func (n *ArrayNode) Eval(m Map) (any, error) {
+	var array []any = make([]any, 0, len(n.Items))
+	for _, item := range n.Items {
+		val, err := item.Eval(m)
+		if err != nil {
+			return nil, err
+		}
+
+		array = append(array, val)
+	}
+
+	return array, nil
 }
