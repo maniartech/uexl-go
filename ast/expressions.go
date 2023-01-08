@@ -1,6 +1,8 @@
 package ast
 
-import "fmt"
+import (
+	"github.com/maniartech/uexl_go/operators"
+)
 
 type ExpressionNode struct {
 	*BaseNode
@@ -41,20 +43,10 @@ func (n *ExpressionNode) SetPipeType(pipeType string) {
 
 	if n.Left != nil {
 		n.Left.SetPipeType(pipeType)
-		// if n.Left.GetType() == NodeTypeExpression {
-		// 	leftNode := n.Left.(ExpressionNode)
-		// 	leftNode.SetPipeType(pipeType)
-		// 	n.Left = leftNode
-		// }
 	}
 
 	if n.Right != nil {
 		n.Right.SetPipeType(pipeType)
-		// if n.Right.GetType() == NodeTypeExpression {
-		// 	rightNode := n.Right.(ExpressionNode)
-		// 	rightNode.SetPipeType(pipeType)
-		// 	n.Right = rightNode
-		// }
 	}
 }
 
@@ -69,6 +61,5 @@ func (n *ExpressionNode) Eval(m Map) (any, error) {
 		return nil, err
 	}
 
-	fmt.Println("EVAL =>", l, n.Operator, r)
-	return 0, nil
+	return operators.Eval(n.Operator, l, r)
 }
