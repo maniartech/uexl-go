@@ -1,5 +1,7 @@
 package ast
 
+import "github.com/maniartech/uexl_go/functions"
+
 type FunctionNode struct {
 	*BaseNode
 
@@ -40,6 +42,15 @@ func (n *FunctionNode) SetPipeType(pipeType string) {
 	}
 }
 
-func (n *FunctionNode) Eval(m Map) (any, error) {
-	panic("implement me")
+func (n *FunctionNode) Eval(m Map) (res any, err error) {
+	args := make([]any, len(n.Params))
+	for i, param := range n.Params {
+		args[i], err = param.Eval(m)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	res, err = functions.InvokeFunction(n.Name, args)
+	return
 }
