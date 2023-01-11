@@ -27,6 +27,6 @@ func NewStringNode(token string, offset, line, col int) *StringNode {
 	return node
 }
 
-func (n StringNode) Eval(Map) (any, error) {
+func (n StringNode) Eval(types.Map) (any, error) {
 	return n.Value, nil
 }
