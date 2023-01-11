@@ -30,6 +30,6 @@ func NewObjectNode(token string, items []ObjectItem, offset, line, col int) *Obj
 }
 
 // Eval parses the array node and returns the array node.
-func (n *ObjectNode) Eval(env Map) (any, error) {
+func (n *ObjectNode) Eval(env types.Map) (any, error) {
 	panic("implement me")
 }

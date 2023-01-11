@@ -2,6 +2,7 @@ package ast
 
 import (
 	"github.com/maniartech/uexl_go/ast/constants"
+	"github.com/maniartech/uexl_go/types"
 )
 
 // PipeNode represents a Node that is a pipe.
@@ -31,6 +32,6 @@ func NewPipeNode(token string, nodes []Node, offset, line, col int) *PipeNode {
 }
 
 // Eval evaluates the node and returns the result.
-func (n *PipeNode) Eval(Map) (interface{}, error) {
+func (n *PipeNode) Eval(types.Map) (interface{}, error) {
 	panic("implement me")
 }
