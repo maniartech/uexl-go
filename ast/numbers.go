@@ -16,8 +16,10 @@ type NumberNode struct {
 
 // NewNumberNode creates a new NumberNode.
 func NewNumberNode(token string, offset, line, col int) (*NumberNode, error) {
-	// Numbers have the same syntax as Go, and are parseable using
-	// strconv.ParseFloat
+	// Convert the token to a float64 using fasted method.
+	//
+	// This is the fastest method to convert a string to a float64.
+
 	value, err := strconv.ParseFloat(token, 64)
 	if err != nil {
 		return nil, err
@@ -37,6 +39,6 @@ func NewNumberNode(token string, offset, line, col int) (*NumberNode, error) {
 }
 
 // Eval evalues the NumberNode.
-func (n NumberNode) Eval(Map) (any, error) {
+func (n NumberNode) Eval(types.Map) (any, error) {
 	return n.Value, nil
 }
