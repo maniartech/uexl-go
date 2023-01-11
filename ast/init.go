@@ -1,8 +1,8 @@
 package ast
 
-import "encoding/json"
-
-type Map map[string]any
+import (
+	"encoding/json"
+)
 
 // Print prints the node in a json format.
 func PrintNode(node Node) {
