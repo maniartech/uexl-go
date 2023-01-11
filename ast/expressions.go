@@ -2,6 +2,7 @@ package ast
 
 import (
 	"github.com/maniartech/uexl_go/operators"
+	"github.com/maniartech/uexl_go/types"
 )
 
 type ExpressionNode struct {
@@ -50,7 +51,7 @@ func (n *ExpressionNode) SetPipeType(pipeType string) {
 	}
 }
 
-func (n *ExpressionNode) Eval(m Map) (any, error) {
+func (n *ExpressionNode) Eval(m types.Map) (any, error) {
 	l, err := n.Left.Eval(m)
 	if err != nil {
 		return nil, err
