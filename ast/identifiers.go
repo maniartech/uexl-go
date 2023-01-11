@@ -1,5 +1,11 @@
 package ast
 
+import (
+	"fmt"
+
+	"github.com/maniartech/uexl_go/types"
+)
+
 type IdentifierNode struct {
 	BaseNode
 
@@ -21,6 +27,11 @@ func NewIdentifierNode(token string, offset, line, col int) (*IdentifierNode, er
 	return node, nil
 }
 
-func (n IdentifierNode) Eval(Map) (any, error) {
-	return n.Name, nil
+func (n IdentifierNode) Eval(m types.Map) (any, error) {
+	// If m is a nil, return an error
+	if m == nil {
+		return nil, fmt.Errorf("cannot access identifier '%s' from nil map", n.Name)
+	}
+
+	return m.Get(n.Name)
 }
