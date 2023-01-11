@@ -2,6 +2,8 @@ package ast
 
 import (
 	"strconv"
+
+	"github.com/maniartech/uexl_go/types"
 )
 
 // BooleanNode implements the Node interface and represents a boolean value.
@@ -34,6 +36,6 @@ func NewBooleanNode(token string, offset, line, col int) (*BooleanNode, error) {
 }
 
 // Eval evaluates the BooleanNode and returns the value.
-func (n *BooleanNode) Eval(Map) (any, error) {
+func (n *BooleanNode) Eval(types.Map) (any, error) {
 	return n.Value, nil
 }

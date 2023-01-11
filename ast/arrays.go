@@ -1,5 +1,7 @@
 package ast
 
+import "github.com/maniartech/uexl_go/types"
+
 // ArrayNode represents a node that contains an array of nodes.
 // It implements the Node interface and can be evaluated.
 type ArrayNode struct {
@@ -35,7 +37,7 @@ func (n *ArrayNode) SetPipeType(pipeType string) {
 }
 
 // Eval evaluates the node.
-func (n *ArrayNode) Eval(m Map) (any, error) {
+func (n *ArrayNode) Eval(m types.Map) (any, error) {
 	var array []any = make([]any, 0, len(n.Items))
 	for _, item := range n.Items {
 		val, err := item.Eval(m)
