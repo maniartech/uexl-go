@@ -1,5 +1,7 @@
 package ast
 
+import "github.com/maniartech/uexl_go/types"
+
 type Null struct{}
 
 type NullNode struct {
@@ -20,6 +22,6 @@ func NewNullNode(token string, offset, line, col int) *NullNode {
 	return node
 }
 
-func (n NullNode) Eval(Map) (any, error) {
+func (n NullNode) Eval(types.Map) (any, error) {
 	return nil, nil
 }
