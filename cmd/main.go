@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
-	"github.com/maniartech/uexl_go/ast"
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/types"
 )
 
 // for testing purpose
@@ -17,12 +16,27 @@ func main() {
 		log.Fatal("Usage: calculator 'EXPR'")
 	}
 
-	got, err := parser.ParseReader("", strings.NewReader(os.Args[1]))
+	expr := os.Args[1]
+
+	node, err := parser.ParseString(expr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Evaluation pending, printing the AST")
-	fmt.Println("====================================")
-	ast.PrintNode(got.(ast.Node))
+	// fmt.Println("Evaluation pending, printing the AST")
+	// fmt.Println("====================================")
+	// ast.PrintNode(node)
+
+	result, err := node.Eval(types.Map{
+		"x": types.Number(10),
+		"y": types.Map{
+			"z": types.Number(5),
+		},
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(expr, "=", result)
+
 }
