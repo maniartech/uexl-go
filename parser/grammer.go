@@ -1440,11 +1440,11 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 187, col: 1, offset: 4945},
+			pos:         position{line: 186, col: 1, offset: 4943},
 			expr: &zeroOrMoreExpr{
-				pos: position{line: 187, col: 19, offset: 4963},
+				pos: position{line: 186, col: 19, offset: 4961},
 				expr: &charClassMatcher{
-					pos:        position{line: 187, col: 19, offset: 4963},
+					pos:        position{line: 186, col: 19, offset: 4961},
 					val:        "[ \\n\\t\\r]",
 					chars:      []rune{' ', '\n', '\t', '\r'},
 					ignoreCase: false,
@@ -1454,11 +1454,11 @@ var g = &grammar{
 		},
 		{
 			name: "EOF",
-			pos:  position{line: 191, col: 1, offset: 5030},
+			pos:  position{line: 190, col: 1, offset: 5028},
 			expr: &notExpr{
-				pos: position{line: 191, col: 8, offset: 5037},
+				pos: position{line: 190, col: 8, offset: 5035},
 				expr: &anyMatcher{
-					line: 191, col: 9, offset: 5038,
+					line: 190, col: 9, offset: 5036,
 				},
 			},
 		},
