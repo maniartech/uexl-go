@@ -30,7 +30,7 @@ func NewIdentifierNode(token string, offset, line, col int) (*IdentifierNode, er
 func (n IdentifierNode) Eval(m types.Map) (any, error) {
 	// If m is a nil, return an error
 	if m == nil {
-		return nil, fmt.Errorf("cannot access identifier '%s' from nil map", n.Name)
+		return nil, fmt.Errorf("cannot access identifier '%s' from nil context", n.Name)
 	}
 
 	return m.Get(n.Name)
