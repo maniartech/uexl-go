@@ -6,7 +6,7 @@ import (
 	"github.com/maniartech/uexl_go/types"
 )
 
-func sum(args []any) (any, error) {
+func sum(args []interface{}) (interface{}, error) {
 	var sum types.Number
 	for _, arg := range args {
 		switch v := arg.(type) {
@@ -20,21 +20,16 @@ func sum(args []any) (any, error) {
 	return sum, nil
 }
 
-func subtract(args []any) (any, error) {
-	if len(args) != 2 {
-		return nil, fmt.Errorf("invalid number of arguments for subtract function: %d", len(args))
-	}
-
-	v1 := args[0]
-	v2 := args[1]
-
-	switch v1.(type) {
-	case types.Number:
-		switch v2.(type) {
+func average(args []interface{}) (interface{}, error) {
+	var sum types.Number
+	for _, arg := range args {
+		switch v := arg.(type) {
 		case types.Number:
-			return v1.(types.Number) - v2.(types.Number), nil
+			sum += types.Number(v)
+		default:
+			return nil, fmt.Errorf("invalid argument type for average function: %T", v)
 		}
 	}
 
-	return nil, fmt.Errorf("invalid argument type for subtract function: %T, %T", v1, v2)
+	return sum / types.Number(len(args)), nil
 }
