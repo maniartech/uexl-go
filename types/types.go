@@ -13,18 +13,13 @@ type Boolean bool
 type Null struct{}
 
 // Array represents an array in the uexl language.
-type Array []any
+type Array []interface{}
 
 // Object represents an object in the uexl language.
-type Object map[string]any
+type Object map[string]interface{}
 
 // Function represents a function in the uexl language.
-type Function func(...any) (any, error)
+type Function func(...interface{}) (interface{}, error)
 
 // Identifier represents an identifier in the uexl language.
 type Identifier string
-
-// Value represents a value in the uexl language.
-type Value interface {
-	Number | String | Boolean | Null | Array | Object
-}
