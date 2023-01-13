@@ -4,7 +4,7 @@ import "github.com/maniartech/uexl_go/ast"
 
 func parsePipe(pipeType, expr interface{}) ast.Node {
 	node := expr.(ast.Node)
-	pType := "map"
+	pType := "pipe"
 	if pipeType != nil {
 		pType = pipeType.(string)
 	}
