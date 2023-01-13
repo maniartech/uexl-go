@@ -28,17 +28,17 @@ func TestMapGet(t *testing.T) {
 		},
 	}
 
-	if v, _ := m.Get("a.b.c"); v != 10 {
-		t.Errorf("Map.Get() = %v", v)
+	if v, _ := m.ValueAtPath("a.b.c"); v != 10 {
+		t.Errorf("Map.ValueAtPath() = %v", v)
 	}
 
 	// test for slice
-	if v, _ := m.Get("a.b.d.1"); v != 2 {
-		t.Errorf("Map.Get() = %v", v)
+	if v, _ := m.ValueAtPath("a.b.d.1"); v != 2 {
+		t.Errorf("Map.ValueAtPath() = %v", v)
 	}
 
 	// test for nested slice
-	if v, _ := m.Get("a.b.d.2.f.1"); v != 5 {
-		t.Errorf("Map.Get() = %v", v)
+	if v, _ := m.ValueAtPath("a.b.d.2.f.1"); v != 5 {
+		t.Errorf("Map.ValueAtPath() = %v", v)
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 type Map map[string]any
 
-// GetPath is a helper function to get a value from a map using a path.
+// ValueAtPath is a helper function to get a value from a map using a path.
 // For example, if you have a map like this:
 //
 //	map[string]interface{}{
@@ -34,8 +34,15 @@ type Map map[string]any
 //	}
 //
 // You can get the value of "qux" using the path "foo.bar.0.baz".
-func (m Map) Get(path string) (interface{}, error) {
+func (m Map) ValueAtPath(path string) (interface{}, error) {
 	keys := strings.Split(path, ".")
+
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("cannot get value from %v", m)
+	} else if len(keys) == 1 {
+		return m[keys[0]], nil
+	}
+
 	return getValue(m, keys)
 }
 
