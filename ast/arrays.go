@@ -29,7 +29,7 @@ func NewArrayNode(token string, items []Node, offset, line, col int) *ArrayNode 
 
 // SetPipeType sets the pipe type of the node.
 func (n *ArrayNode) SetPipeType(pipeType string) {
-	n.PipeType = pipeType
+	n.pipeType = pipeType
 
 	for _, item := range n.Items {
 		item.SetPipeType(pipeType)

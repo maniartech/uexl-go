@@ -20,7 +20,10 @@ type BaseNode struct {
 	// Type is the type of the node.
 	Type NodeType `json:"type"`
 
-	PipeType string `json:"pipeType"`
+	// Private
+
+	// pipeType is the pipe type of the node.
+	pipeType string
 }
 
 // String returns a string representation of the node.
@@ -47,5 +50,10 @@ func (n *BaseNode) GetType() NodeType {
 // when it detects a pipe. It performs the recursive call
 // to set the pipe type for all child nodes.
 func (n *BaseNode) SetPipeType(pipeType string) {
-	n.PipeType = pipeType
+	n.pipeType = pipeType
+}
+
+// PipeType returns the pipe type of the node.
+func (n *BaseNode) PipeType() string {
+	return n.pipeType
 }

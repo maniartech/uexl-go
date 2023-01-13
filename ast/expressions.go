@@ -40,7 +40,7 @@ func NewExpressionNode(token string, operator string, operatorType OperatorType,
 // when it detects a pipe. It performs the recursive call
 // to set the pipe type for all child nodes.
 func (n *ExpressionNode) SetPipeType(pipeType string) {
-	n.PipeType = pipeType
+	n.pipeType = pipeType
 
 	if n.Left != nil {
 		n.Left.SetPipeType(pipeType)

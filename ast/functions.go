@@ -38,7 +38,7 @@ func NewFunctionNode(token string, name string, params []Node, offset, line, col
 // when it detects a pipe. It performs the recursive call
 // to set the pipe type for all child nodes.
 func (n *FunctionNode) SetPipeType(pipeType string) {
-	n.PipeType = pipeType
+	n.pipeType = pipeType
 
 	for _, param := range n.Params {
 		param.SetPipeType(pipeType)

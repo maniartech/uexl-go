@@ -9,5 +9,7 @@ type Node interface {
 
 	GetType() NodeType
 
+	PipeType() string
+
 	SetPipeType(string)
 }
