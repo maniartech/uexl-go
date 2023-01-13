@@ -33,5 +33,5 @@ func (n IdentifierNode) Eval(m types.Map) (any, error) {
 		return nil, fmt.Errorf("cannot access identifier '%s' from nil context", n.Name)
 	}
 
-	return m.Get(n.Name)
+	return m.ValueAtPath(n.Name)
 }
