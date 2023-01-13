@@ -1,7 +1,10 @@
 package ast
 
 import (
+	"fmt"
+
 	"github.com/maniartech/uexl_go/ast/constants"
+	"github.com/maniartech/uexl_go/pipes"
 	"github.com/maniartech/uexl_go/types"
 )
 
@@ -25,13 +28,39 @@ func NewPipeNode(token string, nodes []Node, offset, line, col int) *PipeNode {
 		},
 	}
 
-	node.PipeType = constants.PipeTypeRoot
+	node.pipeType = constants.PipeTypeRoot
 	node.Nodes = nodes
 
 	return node
 }
 
 // Eval evaluates the node and returns the result.
-func (n *PipeNode) Eval(types.Map) (interface{}, error) {
-	panic("implement me")
+func (n *PipeNode) Eval(context types.Map) (result interface{}, err error) {
+
+	// copy the context into ctx
+	ctx := make(types.Map)
+	for k, v := range context {
+		ctx[k] = v
+	}
+
+	for _, node := range n.Nodes {
+
+		fmt.Println(
+			"PipeNode.Eval() node.PipeType():", node.PipeType(),
+			"node.GetType():", node.GetType(),
+		)
+
+		handler, ok := pipes.Get(node.PipeType())
+		if !ok {
+			return nil, fmt.Errorf("pipe %s not found", node.PipeType())
+		}
+
+		result, err = handler(node, ctx, result)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Return the result
+	return result, nil
 }
