@@ -6,6 +6,14 @@ import (
 	"github.com/maniartech/uexl_go/types"
 )
 
+func Equal(a, b any) (any, error) {
+	return a == b, nil
+}
+
+func NotEqual(a, b any) (any, error) {
+	return a != b, nil
+}
+
 func LessThan(a, b any) (any, error) {
 	numA, numOkA := a.(types.Number)
 	numB, numOkB := b.(types.Number)
@@ -51,6 +59,9 @@ func GreaterThanEqual(a, b any) (any, error) {
 }
 
 func init() {
+	Registry.Register("==", Equal)
+	Registry.Register("!=", NotEqual)
+
 	Registry.Register("<", LessThan)
 	Registry.Register("<=", LessThanEqual)
 	Registry.Register(">", GreaterThan)
