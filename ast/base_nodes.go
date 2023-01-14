@@ -1,6 +1,8 @@
 package ast
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // BaseNode provides the base node for all nodes.
 // It contains the line number, column number, offset, token, type and pipe type.
