@@ -1,9 +1,9 @@
 package ast
 
-import "github.com/maniartech/uexl_go/types"
+import "github.com/maniartech/uexl_go/core"
 
 type Node interface {
-	Eval(types.Map) (any, error)
+	core.Evaluator
 
 	GetBaseNode() *BaseNode
 
