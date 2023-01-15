@@ -16,8 +16,8 @@ func firstEvaluator(evaluator core.Evaluator, context types.Map, prevResult any)
 	return evaluator.Eval(context)
 }
 
-// passEvaluator evalues the passes the result of the previous node to the current node.
-func passEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) (interface{}, error) {
+// pipeEvaluator evalues the passes the result of the previous node to the current node.
+func pipeEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) (interface{}, error) {
 	defer delete(context, "$1")
 
 	context["$1"] = prevResult
@@ -95,10 +95,8 @@ func findEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) 
 
 func init() {
 	_handlers.Register("first", firstEvaluator)
-	_handlers.Register("pass", passEvaluator)
-
+	_handlers.Register("pipe", pipeEvaluator)
 	_handlers.Register("map", mapEvaluator)
 	_handlers.Register("filter", filterEvaluator)
 	_handlers.Register("find", findEvaluator)
-
 }
