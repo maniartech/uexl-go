@@ -130,22 +130,32 @@ Null <- ( "null" ) {
 
 ///////////////////// String /////////////////////
 
-String <- DoubleQuoteString / SingleQuoteString
+String <- DoubleQuoteString
 
-DoubleQuoteString <- '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
-    c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
-    value, _ := strconv.Unquote(string(c.text))
-    return ast.NewStringNode(value, c.pos.offset, c.pos.line, c.pos.col), nil
+// DoubleQuoteString <- '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
+//     c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
+//     value, _ := strconv.Unquote(string(c.text))
+//     return ast.NewStringNode(value, c.pos.offset, c.pos.line, c.pos.col), nil
+// }
+
+// SingleQuoteString <- "'" str:PlainString "'" {
+//     return ast.NewStringNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col), nil
+// }
+
+DoubleQuoteString ← '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
+    // c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
+    // value, err := strconv.Unquote(string(c.text))
+    // if err != nil {
+    //     return nil, err
+    // }
+
+    return ast.NewStringNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
-SingleQuoteString <- "'" str:PlainString "'" {
-    return ast.NewStringNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col), nil
-}
-
-PlainString <- ( !EscapedChar . / '\\' EscapeSequence )* {
-    c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
-    return string(c.text), nil
-}
+// PlainString <- ( !EscapedChar . / '\\' EscapeSequence )* {
+//     c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
+//     return string(c.text), nil
+// }
 
 EscapedChar <- [\x00-\x1f"'\\]
 
