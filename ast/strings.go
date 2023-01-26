@@ -1,6 +1,10 @@
 package ast
 
-import "github.com/maniartech/uexl_go/types"
+import (
+	"strconv"
+
+	"github.com/maniartech/uexl_go/types"
+)
 
 type StringNode struct {
 	*BaseNode
@@ -8,11 +12,18 @@ type StringNode struct {
 	Value types.String `json:"value"`
 }
 
-func NewStringNode(token string, offset, line, col int) *StringNode {
-	finalToken := token
-	if finalToken[0] == '\'' && finalToken[len(finalToken)-1] == '\'' {
-		finalToken = finalToken[1 : len(token)-1]
+func NewStringNode(token string, offset, line, col int) (*StringNode, error) {
+	// finalToken := token
+
+	// if finalToken[0] == '\'' && finalToken[len(finalToken)-1] == '\'' {
+	// 	finalToken = finalToken[1 : len(token)-1]
+	// }
+
+	value, err := strconv.Unquote(token)
+	if err != nil {
+		return nil, err
 	}
+
 	node := &StringNode{
 		BaseNode: &BaseNode{
 			Type:   NodeTypeString,
@@ -21,10 +32,10 @@ func NewStringNode(token string, offset, line, col int) *StringNode {
 			Offset: offset,
 			Token:  token,
 		},
-		Value: types.String(finalToken),
+		Value: types.String(value),
 	}
 
-	return node
+	return node, nil
 }
 
 func (n StringNode) Eval(types.Map) (any, error) {
