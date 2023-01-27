@@ -53,31 +53,34 @@ func TestStrings(t *testing.T) {
 	}
 
 	for i, s := range testStrs {
-		// sdq := "\"" + s + "\""
-
 		// Test case for double quoted string
-		ssq := "'" + s + "'"
-		parsed, err := ParseReader("", strings.NewReader(ssq))
-		if err != nil {
-			t.Errorf("Error: %v", err)
-			continue
-		}
+		str := "\"" + s + "\""
+		testString(str, escappedValues[i], t)
 
-		node := parsed.(*ast.StringNode)
-		token := node.Token
-		value := node.Value
+		// Test case for single quoted string
+		str = "'" + s + "'"
+		testString(str, escappedValues[i], t)
+	}
+}
 
-		// Check if the token is same as the string (s)
-		if token != ssq {
-			t.Errorf("Token: Expected %v, got %v", ssq, token)
-		}
+func testString(str, testValue string, t *testing.T) {
+	parsed, err := ParseReader("", strings.NewReader(str))
+	if err != nil {
+		t.Errorf("Error: %v", err)
+		return
+	}
 
-		// Check if the value is escaped string
-		escaped := escappedValues[i]
+	node := parsed.(*ast.StringNode)
+	token := node.Token
+	value := node.Value
 
-		// Check if the value is same as the escaped string
-		if string(value) != escaped {
-			t.Errorf("Value: Expected %v, got %v", escaped, value)
-		}
+	// Check if the token is same as the string (s)
+	if token != str {
+		t.Errorf("Token: Expected %v, got %v", str, token)
+	}
+
+	// Check if the value is same as the escaped string
+	if string(value) != testValue {
+		t.Errorf("Value: Expected %v, got %v", testValue, value)
 	}
 }
