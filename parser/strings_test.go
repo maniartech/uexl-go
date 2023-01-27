@@ -30,6 +30,7 @@ func TestStrings(t *testing.T) {
 		`This sentence has \"escaped quotes\" and an \\escaped character and \u00A1a Unicode character!`,
 		`\u00A1This sentence has a Unicode character and \"escaped quotes\" and an \\escaped character and \u00A1a Unicode character!`,
 		`This sentence has an \\escaped character and \"escaped quotes\" and \u00A1a Unicode character! and an \\escaped character`,
+		`This sentence has an encoded emoji \ud83d\ude00, and an encoded character \u00a1,  escaped character \\, escaped quotes \" and an escaped quote character \"`,
 	}
 
 	escappedValues := []string{
@@ -48,13 +49,14 @@ func TestStrings(t *testing.T) {
 		`This sentence has "escaped quotes" and an \escaped character and ¡a Unicode character!`,
 		`¡This sentence has a Unicode character and "escaped quotes" and an \escaped character and ¡a Unicode character!`,
 		`This sentence has an \escaped character and "escaped quotes" and ¡a Unicode character! and an \escaped character`,
+		`This sentence has an encoded emoji 😀, and an encoded character ¡,  escaped character \, escaped quotes " and an escaped quote character "`,
 	}
 
 	for i, s := range testStrs {
 		// sdq := "\"" + s + "\""
 
 		// Test case for double quoted string
-		ssq := "\"" + s + "\""
+		ssq := "'" + s + "'"
 		parsed, err := ParseReader("", strings.NewReader(ssq))
 		if err != nil {
 			t.Errorf("Error: %v", err)
