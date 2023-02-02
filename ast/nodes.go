@@ -1,9 +1,9 @@
 package ast
 
-import "github.com/maniartech/uexl_go/core"
+import "github.com/maniartech/uexl_go/evaluators"
 
 type Node interface {
-	core.Evaluator
+	evaluators.Evaluator
 
 	GetBaseNode() *BaseNode
 
