@@ -1,4 +1,4 @@
-package core
+package evaluators
 
 import "github.com/maniartech/uexl_go/types"
 
