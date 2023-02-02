@@ -3,12 +3,12 @@ package pipes
 import (
 	"fmt"
 
-	"github.com/maniartech/uexl_go/core"
+	"github.com/maniartech/uexl_go/evaluators"
 	"github.com/maniartech/uexl_go/types"
 )
 
 // firstEvaluator evalues the first node in the pipe.
-func firstEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) (interface{}, error) {
+func firstEvaluator(evaluator evaluators.Evaluator, context types.Map, prevResult any) (interface{}, error) {
 	if context == nil {
 		context = make(types.Map)
 	}
@@ -17,7 +17,7 @@ func firstEvaluator(evaluator core.Evaluator, context types.Map, prevResult any)
 }
 
 // pipeEvaluator evalues the passes the result of the previous node to the current node.
-func pipeEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) (interface{}, error) {
+func pipeEvaluator(evaluator evaluators.Evaluator, context types.Map, prevResult any) (interface{}, error) {
 	defer delete(context, "$1")
 
 	context["$1"] = prevResult
@@ -25,7 +25,7 @@ func pipeEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) 
 }
 
 // mapEvaluator evalues the map node in the pipe.
-func mapEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) (interface{}, error) {
+func mapEvaluator(evaluator evaluators.Evaluator, context types.Map, prevResult any) (interface{}, error) {
 	defer delete(context, "$1")
 
 	array, ok := prevResult.([]interface{})
@@ -47,7 +47,7 @@ func mapEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) (
 }
 
 // filterEvaluator evalues the filter node in the pipe.
-func filterEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) (interface{}, error) {
+func filterEvaluator(evaluator evaluators.Evaluator, context types.Map, prevResult any) (interface{}, error) {
 	defer delete(context, "$1")
 
 	array, ok := prevResult.([]interface{})
@@ -71,7 +71,7 @@ func filterEvaluator(evaluator core.Evaluator, context types.Map, prevResult any
 }
 
 // findEvaluator evalues the find node in the pipe.
-func findEvaluator(evaluator core.Evaluator, context types.Map, prevResult any) (interface{}, error) {
+func findEvaluator(evaluator evaluators.Evaluator, context types.Map, prevResult any) (interface{}, error) {
 	defer delete(context, "$1")
 
 	array, ok := prevResult.([]interface{})
