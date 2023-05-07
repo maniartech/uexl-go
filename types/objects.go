@@ -54,3 +54,19 @@ func (o Object) Compare(other Value) (int, error) {
 func (o Object) String() string {
 	return "object"
 }
+
+// Plus merges the other object into this object. If a key exists in both objects, the value from the other object is used.
+func (o Object) Plus(other Object) Object {
+	for k, v := range other {
+		o[k] = v
+	}
+	return o
+}
+
+// Minus removes the keys from this object that are in the other object.
+func (o Object) Minus(other Object) Object {
+	for k := range other {
+		delete(o, k)
+	}
+	return o
+}
