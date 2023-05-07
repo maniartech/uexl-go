@@ -8,6 +8,16 @@ import (
 
 type Map map[string]any
 
+type Context Map
+
+func (ctx Context) ShallowCopy() Context {
+	newCtx := make(Context)
+	for k, v := range ctx {
+		newCtx[k] = v
+	}
+	return newCtx
+}
+
 // ValueAtPath is a helper function to get a value from a map using a path.
 // For example, if you have a map like this:
 //
