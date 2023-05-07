@@ -1,9 +1,9 @@
 package ast
 
-import "github.com/maniartech/uexl_go/evaluators"
+import "github.com/maniartech/uexl_go/core"
 
 type Node interface {
-	evaluators.Evaluator
+	core.Evaluator
 
 	GetBaseNode() *BaseNode
 
@@ -13,3 +13,9 @@ type Node interface {
 
 	SetPipeType(string)
 }
+
+// var number Node
+
+// func init() {
+// 	number = &NumberNode{}
+// }

@@ -22,6 +22,6 @@ func NewNullNode(token string, offset, line, col int) *NullNode {
 	return node
 }
 
-func (n NullNode) Eval(types.Map) (any, error) {
+func (n NullNode) Eval(types.Context) (types.Value, error) {
 	return nil, nil
 }

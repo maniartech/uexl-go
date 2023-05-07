@@ -45,7 +45,7 @@ func (n *FunctionNode) SetPipeType(pipeType string) {
 	}
 }
 
-func (n *FunctionNode) Eval(m types.Map) (res any, err error) {
+func (n *FunctionNode) Eval(m types.Context) (res types.Value, err error) {
 	args := make([]any, len(n.Params))
 	for i, param := range n.Params {
 		args[i], err = param.Eval(m)
