@@ -6,7 +6,7 @@ import (
 	"github.com/maniartech/uexl_go/types"
 )
 
-func sum(args []interface{}) (interface{}, error) {
+func sum(args []interface{}) (types.Value, error) {
 	var sum types.Number
 	for _, arg := range args {
 		switch v := arg.(type) {
@@ -20,7 +20,7 @@ func sum(args []interface{}) (interface{}, error) {
 	return sum, nil
 }
 
-func average(args []interface{}) (interface{}, error) {
+func average(args []interface{}) (types.Value, error) {
 	var sum types.Number
 	for _, arg := range args {
 		switch v := arg.(type) {

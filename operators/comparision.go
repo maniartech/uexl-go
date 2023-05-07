@@ -3,67 +3,68 @@ package operators
 import (
 	"fmt"
 
+	"github.com/maniartech/uexl_go/core"
 	"github.com/maniartech/uexl_go/types"
 )
 
-func Equal(a, b any) (any, error) {
-	return a == b, nil
-}
-
-func NotEqual(a, b any) (any, error) {
-	return a != b, nil
-}
-
-func LessThan(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
-
-	if numOkA && numOkB {
-		return numA < numB, nil
+func comparer(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("invalid argument type for plus operator: %T, %T", a, b)
-}
+	if aval, ok := aval.(types.Comparer); ok {
+		bval, err := b.Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
 
-func LessThanEqual(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
+		result, err := aval.Compare(bval)
+		if err != nil {
+			return nil, err
+		}
 
-	if numOkA && numOkB {
-		return numA <= numB, nil
+		switch op {
+		case "<":
+			return types.Boolean(result < 0), nil
+		case "<=":
+			return types.Boolean(result <= 0), nil
+		case ">":
+			return types.Boolean(result > 0), nil
+		case ">=":
+			return types.Boolean(result >= 0), nil
+		}
 	}
 
-	return nil, fmt.Errorf("invalid argument type for plus operator: %T, %T", a, b)
+	// The value does not support comparison
+	return nil, fmt.Errorf("invalid argument type for comparer operator: %T, %T", a, b)
 }
 
-func GreaterThan(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
-
-	if numOkA && numOkB {
-		return numA > numB, nil
+func equaler(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("invalid argument type for plus operator: %T, %T", a, b)
-}
-
-func GreaterThanEqual(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
-
-	if numOkA && numOkB {
-		return numA >= numB, nil
+	bval, err := b.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("invalid argument type for plus operator: %T, %T", a, b)
+	eq := aval.Equals(bval)
+	if op == "==" {
+		return types.Boolean(eq), nil
+	}
+
+	return types.Boolean(!eq), nil
 }
 
 func init() {
-	Registry.Register("==", Equal)
-	Registry.Register("!=", NotEqual)
+	BinaryOpRegistry.Register("==", equaler)
+	BinaryOpRegistry.Register("!=", equaler)
 
-	Registry.Register("<", LessThan)
-	Registry.Register("<=", LessThanEqual)
-	Registry.Register(">", GreaterThan)
-	Registry.Register(">=", GreaterThanEqual)
+	BinaryOpRegistry.Register("<", comparer)
+	BinaryOpRegistry.Register("<=", comparer)
+	BinaryOpRegistry.Register(">", comparer)
+	BinaryOpRegistry.Register(">=", comparer)
 }

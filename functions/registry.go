@@ -1,6 +1,8 @@
 package functions
 
-type Function func([]any) (any, error)
+import "github.com/maniartech/uexl_go/types"
+
+type Function func([]any) (types.Value, error)
 
 type registry map[string]Function
 

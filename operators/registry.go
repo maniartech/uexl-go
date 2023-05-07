@@ -1,20 +1,25 @@
 package operators
 
-type OperatorFn func(a, b any) (any, error)
+import (
+	"github.com/maniartech/uexl_go/core"
+	"github.com/maniartech/uexl_go/types"
+)
 
-type registry map[string]OperatorFn
+type BinaryOpFn func(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error)
 
-var Registry registry = registry{}
+type binaryOpRegistry map[string]BinaryOpFn
 
-func (r registry) Register(name string, f OperatorFn) {
+var BinaryOpRegistry binaryOpRegistry = binaryOpRegistry{}
+
+func (r binaryOpRegistry) Register(name string, f BinaryOpFn) {
 	r[name] = f
 }
 
-func (r registry) Unregister(name string) {
+func (r binaryOpRegistry) Unregister(name string) {
 	delete(r, name)
 }
 
-func (r registry) Get(name string) OperatorFn {
+func (r binaryOpRegistry) Get(name string) BinaryOpFn {
 	if f, ok := r[name]; ok {
 		return f
 	}

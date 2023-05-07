@@ -1,37 +1,51 @@
 package operators
 
-import "github.com/maniartech/uexl_go/evaluators"
+import (
+	"github.com/maniartech/uexl_go/core"
+	"github.com/maniartech/uexl_go/types"
+)
 
-func LogicalAnd(a, b any) (any, error) {
-	return evaluators.IsTruthy(a) && evaluators.IsTruthy(b), nil
-}
-
-func LogicalOr(a, b any) (any, error) {
-	if evaluators.IsTruthy(a) {
-		return a, nil
+func LogicalAnd(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	if evaluators.IsTruthy(b) {
-		return b, nil
+	if !aval.IsTruthy() {
+		return types.Boolean(false), nil
 	}
 
-	return false, nil
+	bval, err := b.Eval(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return types.Boolean(bval.IsTruthy()), nil
 }
 
-func LogicalXor(a, b any) (any, error) {
-	return evaluators.IsTruthy(a) != evaluators.IsTruthy(b), nil
-}
+func LogicalOr(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-func LogicalNand(a, b any) (any, error) {
-	return !(evaluators.IsTruthy(a) && evaluators.IsTruthy(b)), nil
-}
+	if aval.IsTruthy() {
+		return aval, nil
+	}
 
-// Urinary operators
-func LogicalNot(a any) (any, error) {
-	return !evaluators.IsTruthy(a), nil
+	bval, err := b.Eval(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if core.IsTruthy(bval) {
+		return bval, nil
+	}
+
+	return types.Boolean(false), nil
 }
 
 func init() {
-	Registry.Register("&&", LogicalAnd)
-	Registry.Register("||", LogicalOr)
+	BinaryOpRegistry.Register("&&", LogicalAnd)
+	BinaryOpRegistry.Register("||", LogicalOr)
 }

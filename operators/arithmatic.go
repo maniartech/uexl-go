@@ -2,80 +2,110 @@ package operators
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/maniartech/uexl_go/core"
 	"github.com/maniartech/uexl_go/types"
 )
 
-func Plus(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
-
-	if numOkA && numOkB {
-		return numA + numB, nil
+func Plus(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
+	if aval, ok := aval.(types.Adder); ok {
+		bval, err := b.Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		aval.Add(bval)
+	}
+
+	// The value does not support addition
 	return nil, fmt.Errorf("invalid argument type for plus operator: %T, %T", a, b)
 }
 
-func Minus(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
-
-	if numOkA && numOkB {
-		return numA - numB, nil
+func Minus(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
+	if aval, ok := aval.(types.Subtractor); ok {
+		bval, err := b.Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return aval.Subtract(bval)
+	}
+
+	// The value does not support subtraction
 	return nil, fmt.Errorf("invalid argument type for minus operator: %T, %T", a, b)
 }
 
-func Multiply(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
-
-	if numOkA && numOkB {
-		return numA * numB, nil
+func Multiply(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	// If one of the arguments is a string, and the other is a number, then
-	// repeat the string the number of times specified by the number.
-	strA, strOkA := a.(types.String)
-	strB, strOkB := b.(types.String)
-	if strOkA && numOkB {
-		return types.String(strings.Repeat(string(strA), int(numB))), nil
-	} else if numOkA && strOkB {
-		return types.String(strings.Repeat(string(strB), int(numA))), nil
+	if aval, ok := aval.(types.Multiplier); ok {
+		bval, err := b.Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return aval.Multiply(bval)
 	}
 
+	// The value does not support multiplication
 	return nil, fmt.Errorf("invalid argument type for multiply operator: %T, %T", a, b)
 }
 
-func Divide(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
-
-	if numOkA && numOkB {
-		return numA / numB, nil
+func Divide(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
+	if aval, ok := aval.(types.Divider); ok {
+		bval, err := b.Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return aval.Divide(bval)
+	}
+
+	// The value does not support division
 	return nil, fmt.Errorf("invalid argument type for divide operator: %T, %T", a, b)
 }
 
-func Modulo(a, b any) (any, error) {
-	numA, numOkA := a.(types.Number)
-	numB, numOkB := b.(types.Number)
-
-	if numOkA && numOkB {
-		return types.Number(int(numA) % int(numB)), nil
+func Modulo(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
+	aval, err := a.Eval(ctx)
+	if err != nil {
+		return nil, err
 	}
 
+	if aval, ok := aval.(types.Modulus); ok {
+		bval, err := b.Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return aval.Mod(bval)
+	}
+
+	// The value does not support modulo
 	return nil, fmt.Errorf("invalid argument type for modulo operator: %T, %T", a, b)
 }
 
 func init() {
-	Registry.Register("+", Plus)
-	Registry.Register("-", Minus)
-	Registry.Register("*", Multiply)
-	Registry.Register("/", Divide)
-	Registry.Register("%", Modulo)
+	BinaryOpRegistry.Register("+", Plus)
+	BinaryOpRegistry.Register("-", Minus)
+	BinaryOpRegistry.Register("*", Multiply)
+	BinaryOpRegistry.Register("/", Divide)
+	BinaryOpRegistry.Register("%", Modulo)
 }

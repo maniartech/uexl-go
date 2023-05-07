@@ -1,8 +1,12 @@
 package functions
 
-import "fmt"
+import (
+	"fmt"
 
-func InvokeFunction(name string, args []any) (any, error) {
+	"github.com/maniartech/uexl_go/types"
+)
+
+func InvokeFunction(name string, args []any) (types.Value, error) {
 	fn := Registry.Get(name)
 	if fn != nil {
 		return fn(args)
