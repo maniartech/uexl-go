@@ -36,6 +36,6 @@ func NewBooleanNode(token string, offset, line, col int) (*BooleanNode, error) {
 }
 
 // Eval evaluates the BooleanNode and returns the value.
-func (n *BooleanNode) Eval(types.Map) (any, error) {
-	return n.Value, nil
+func (n *BooleanNode) Eval(types.Context) (types.Value, error) {
+	return types.Boolean(n.Value), nil
 }

@@ -51,16 +51,6 @@ func (n *ExpressionNode) SetPipeType(pipeType string) {
 	}
 }
 
-func (n *ExpressionNode) Eval(m types.Map) (any, error) {
-	l, err := n.Left.Eval(m)
-	if err != nil {
-		return nil, err
-	}
-
-	r, err := n.Right.Eval(m)
-	if err != nil {
-		return nil, err
-	}
-
-	return operators.Eval(n.Operator, l, r)
+func (n *ExpressionNode) Eval(ctx types.Context) (types.Value, error) {
+	return operators.Eval(n.Operator, n.Left, n.Right, ctx)
 }
