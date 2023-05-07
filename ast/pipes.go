@@ -35,13 +35,10 @@ func NewPipeNode(token string, nodes []Node, offset, line, col int) *PipeNode {
 }
 
 // Eval evaluates the node and returns the result.
-func (n *PipeNode) Eval(context types.Map) (result interface{}, err error) {
+func (n *PipeNode) Eval(ctx types.Context) (result interface{}, err error) {
 
 	// copy the context into ctx
-	ctx := make(types.Map)
-	for k, v := range context {
-		ctx[k] = v
-	}
+	ctx = ctx.ShallowCopy()
 
 	for _, node := range n.Nodes {
 

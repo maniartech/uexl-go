@@ -56,6 +56,6 @@ func NewStringNode(token []byte, offset, line, col int) (*StringNode, error) {
 	return node, nil
 }
 
-func (n StringNode) Eval(types.Map) (any, error) {
+func (n StringNode) Eval(types.Context) (types.Value, error) {
 	return n.Value, nil
 }

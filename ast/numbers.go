@@ -35,10 +35,11 @@ func NewNumberNode(token string, offset, line, col int) (*NumberNode, error) {
 		},
 		Value: types.Number(value),
 	}
+
 	return node, nil
 }
 
 // Eval evalues the NumberNode.
-func (n NumberNode) Eval(types.Map) (any, error) {
+func (n NumberNode) Eval(types.Context) (types.Value, error) {
 	return n.Value, nil
 }
