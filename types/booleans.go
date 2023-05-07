@@ -21,7 +21,7 @@ func (b Boolean) IsZero() bool {
 }
 
 // Equals returns true if the boolean values are equal.
-func (b Boolean) Equals(other interface{}) bool {
+func (b Boolean) Equals(other Value) bool {
 	if other, ok := other.(Boolean); ok {
 		return b == other
 	}
@@ -29,7 +29,7 @@ func (b Boolean) Equals(other interface{}) bool {
 }
 
 // Compare returns 0 if the boolean values are equal, -1 if the boolean value is false, and 1 if the boolean value is true.
-func (b Boolean) Compare(other interface{}) (int, error) {
+func (b Boolean) Compare(other Value) (int, error) {
 	if other, ok := other.(Boolean); ok {
 		if b == other {
 			return 0, nil
