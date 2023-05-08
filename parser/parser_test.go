@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/types"
 )
 
 func BenchmarkParsing(b *testing.B) {
@@ -31,7 +32,7 @@ func BenchmarkEvaluation(b *testing.B) {
 }
 
 func TestParseString(t *testing.T) {
-	node, err := parser.ParseString(`AVERAGE(10, 20) + 30 - 40`)
+	node, err := parser.ParseString(`r'tes\nting⭐' + 123`)
 	if err != nil {
 		t.Errorf("ParseString() error = %v", err)
 	}
@@ -39,4 +40,14 @@ func TestParseString(t *testing.T) {
 	if node == nil {
 		t.Errorf("ParseString() node = %v", node)
 	}
+
+	res, err := node.Eval(nil)
+	if err != nil {
+		t.Errorf("ParseString() error = %v", err)
+	}
+
+	if res != types.String("tes\\nting123") {
+		t.Errorf("ParseString() res = %v", res)
+	}
+
 }
