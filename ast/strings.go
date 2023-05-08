@@ -23,23 +23,30 @@ func NewStringNode(token []byte, offset, line, col int) (*StringNode, error) {
 	var value string
 	var singleQuote = false
 
-	// if the first character is a single quote, then it is a single quoted string
-	// replace the first and last character with double quotes
-	if token[0] == '\'' {
-		token[0] = '"'
-		token[len(token)-1] = '"'
-		singleQuote = true
-	}
+	// if it is a raw string, the do no use the json.Unmarshal function
+	// just convert the byte array to a string
+	if token[0] == 'r' {
+		// Remove the first and last character
+		value = string(token[2 : len(token)-1])
+	} else {
+		// if the first character is a single quote, then it is a single quoted string
+		// replace the first and last character with double quotes
+		if token[0] == '\'' {
+			token[0] = '"'
+			token[len(token)-1] = '"'
+			singleQuote = true
+		}
 
-	err := json.Unmarshal(token, &value)
-	if err != nil {
-		return nil, err
-	}
+		err := json.Unmarshal(token, &value)
+		if err != nil {
+			return nil, err
+		}
 
-	// If the string is single quoted, then replace the double quotes with single quotes
-	if singleQuote {
-		token[0] = '\''
-		token[len(token)-1] = '\''
+		// If the string is single quoted, then replace the double quotes with single quotes
+		if singleQuote {
+			token[0] = '\''
+			token[len(token)-1] = '\''
+		}
 	}
 
 	node := &StringNode{

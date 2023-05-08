@@ -53,7 +53,13 @@ func (s String) Add(other Value) (Value, error) {
 		return s + other, nil
 	}
 
-	return nil, errors.New("invalid type for plus")
+	// If the other is an array, insert the string at the beginning of the array.
+	if other, ok := other.(Array); ok {
+		return append(Array{s}, other...), nil
+	}
+
+	// Convert the other to a string and add it to the string.
+	return s + String(other.String()), nil
 }
 
 // Multiply returns the string repeated the number of times specified by the other number.
