@@ -5,7 +5,7 @@ import (
 	"github.com/maniartech/uexl_go/types"
 )
 
-type PipeHandler func(evaluator core.Evaluator, context types.Context, prevResult any) (types.Value, error)
+type PipeHandler func(evaluator core.Evaluator, context types.Context, prevResult types.Value) (types.Value, error)
 type handlers map[string]PipeHandler
 
 var _handlers = handlers{}
