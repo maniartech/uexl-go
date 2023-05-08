@@ -1,14 +1,12 @@
 package pipes
 
 import (
-	"fmt"
-
 	"github.com/maniartech/uexl_go/core"
 	"github.com/maniartech/uexl_go/types"
 )
 
 // firstEvaluator evalues the first node in the pipe.
-func firstEvaluator(evaluator core.Evaluator, context types.Context, prevResult any) (types.Value, error) {
+func firstEvaluator(evaluator core.Evaluator, context types.Context, prevResult types.Value) (types.Value, error) {
 	if context == nil {
 		context = make(types.Context)
 	}
@@ -17,20 +15,24 @@ func firstEvaluator(evaluator core.Evaluator, context types.Context, prevResult 
 }
 
 // pipeEvaluator evalues the passes the result of the previous node to the current node.
-func pipeEvaluator(evaluator core.Evaluator, context types.Context, prevResult any) (types.Value, error) {
+func pipeEvaluator(evaluator core.Evaluator, context types.Context, prevResult types.Value) (types.Value, error) {
 	defer delete(context, "$1")
 
 	context["$1"] = prevResult
-	return evaluator.Eval(context)
+	result, err := evaluator.Eval(context)
+	return result, err
 }
 
 // mapEvaluator evalues the map node in the pipe.
-func mapEvaluator(evaluator core.Evaluator, context types.Context, prevResult any) (types.Value, error) {
+func mapEvaluator(evaluator core.Evaluator, context types.Context, prevResult types.Value) (types.Value, error) {
 	defer delete(context, "$1")
 
 	array, ok := prevResult.(types.Array)
+	// If the previous result is not an array, then make it an array.
 	if !ok {
-		return nil, fmt.Errorf("filter expects an array")
+		array = types.Array{
+			prevResult.(types.Value),
+		}
 	}
 
 	newArray := make(types.Array, 0, len(array))
@@ -47,12 +49,16 @@ func mapEvaluator(evaluator core.Evaluator, context types.Context, prevResult an
 }
 
 // filterEvaluator evalues the filter node in the pipe.
-func filterEvaluator(evaluator core.Evaluator, context types.Context, prevResult any) (types.Value, error) {
+func filterEvaluator(evaluator core.Evaluator, context types.Context, prevResult types.Value) (types.Value, error) {
 	defer delete(context, "$1")
 
 	array, ok := prevResult.(types.Array)
+
+	// If the previous result is not an array, then make it an array.
 	if !ok {
-		return nil, fmt.Errorf("filter expects an array")
+		array = types.Array{
+			prevResult.(types.Value),
+		}
 	}
 
 	newArray := make(types.Array, 0, len(array))
@@ -71,12 +77,15 @@ func filterEvaluator(evaluator core.Evaluator, context types.Context, prevResult
 }
 
 // findEvaluator evalues the find node in the pipe.
-func findEvaluator(evaluator core.Evaluator, context types.Context, prevResult any) (types.Value, error) {
+func findEvaluator(evaluator core.Evaluator, context types.Context, prevResult types.Value) (types.Value, error) {
 	defer delete(context, "$1")
 
 	array, ok := prevResult.(types.Array)
+	// If the previous result is not an array, then make it an array.
 	if !ok {
-		return nil, fmt.Errorf("filter expects an array")
+		array = types.Array{
+			prevResult.(types.Value),
+		}
 	}
 
 	for i := 0; i < len(array); i++ {
