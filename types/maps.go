@@ -8,7 +8,7 @@ import (
 
 type Map map[string]any
 
-type Context Map
+type Context map[string]Value
 
 func (ctx Context) ShallowCopy() Context {
 	newCtx := make(Context)
@@ -18,7 +18,7 @@ func (ctx Context) ShallowCopy() Context {
 	return newCtx
 }
 
-// ValueAtPath is a helper function to get a value from a map using a path.
+// ValueAtPath is a helper function to get a value from a context using a path.
 // For example, if you have a map like this:
 //
 //	map[string]interface{}{
@@ -44,7 +44,7 @@ func (ctx Context) ShallowCopy() Context {
 //	}
 //
 // You can get the value of "qux" using the path "foo.bar.0.baz".
-func (m Map) ValueAtPath(path string) (interface{}, error) {
+func (m Context) ValueAtPath(path string) (Value, error) {
 	keys := strings.Split(path, ".")
 
 	if len(keys) == 0 {
@@ -53,18 +53,42 @@ func (m Map) ValueAtPath(path string) (interface{}, error) {
 		return m[keys[0]], nil
 	}
 
-	return getValue(m, keys)
+	ret, err := getValue(m, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	val, ok := ret.(Value)
+	if !ok {
+		return nil, fmt.Errorf("cannot get value from %v", m)
+	}
+
+	return val, nil
 }
 
-func getValue(m any, keys []string) (interface{}, error) {
+func getValue(m interface{}, keys []string) (interface{}, error) {
 	if len(keys) == 0 {
 		return m, nil
 	}
 
 	switch v := m.(type) {
+	// `Context` is a type alias for a map of strings to `Value` types. It is used to represent a
+	// context in which a template is executed, where the keys are variable names and the values are
+	// their corresponding values. The `ValueAtPath` method is a helper function to get a value from
+	// the context using a path.
+	case Context:
+		return getValue(v[keys[0]], keys[1:])
+	case Object:
+		return getValue(v[keys[0]], keys[1:])
 	case Map:
 		return getValue(v[keys[0]], keys[1:])
+	case map[string]interface{}:
+		return getValue(v[keys[0]], keys[1:])
+
 	case []interface{}:
+		index, _ := strconv.Atoi(keys[0])
+		return getValue(v[index], keys[1:])
+	case Array:
 		index, _ := strconv.Atoi(keys[0])
 		return getValue(v[index], keys[1:])
 	default:

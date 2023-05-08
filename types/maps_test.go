@@ -9,18 +9,18 @@ import (
 func TestMapGet(t *testing.T) {
 
 	// Perform Map.Get() tests here
-	m := types.Map{
-		"a": types.Map{
-			"b": types.Map{
-				"c": 10,
-				"d": []interface{}{
-					1,
-					2,
-					types.Map{
-						"e": 3,
-						"f": []interface{}{
-							4,
-							5,
+	m := types.Context{
+		"a": types.Object{
+			"b": types.Object{
+				"c": types.Number(10),
+				"d": types.Array{
+					types.Number(1),
+					types.Number(2),
+					types.Object{
+						"e": types.Number(3),
+						"f": types.Array{
+							types.Number(4),
+							types.Number(5),
 						},
 					},
 				},
@@ -28,17 +28,17 @@ func TestMapGet(t *testing.T) {
 		},
 	}
 
-	if v, _ := m.ValueAtPath("a.b.c"); v != 10 {
+	if v, _ := m.ValueAtPath("a.b.c"); v != types.Number(10) {
 		t.Errorf("Map.ValueAtPath() = %v", v)
 	}
 
 	// test for slice
-	if v, _ := m.ValueAtPath("a.b.d.1"); v != 2 {
+	if v, _ := m.ValueAtPath("a.b.d.1"); v != types.Number(2) {
 		t.Errorf("Map.ValueAtPath() = %v", v)
 	}
 
 	// test for nested slice
-	if v, _ := m.ValueAtPath("a.b.d.2.f.1"); v != 5 {
+	if v, _ := m.ValueAtPath("a.b.d.2.f.1"); v != types.Number(5) {
 		t.Errorf("Map.ValueAtPath() = %v", v)
 	}
 }

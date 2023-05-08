@@ -47,8 +47,8 @@ func (s String) String() string {
 	return string(s)
 }
 
-// Plus returns the concatenation of the string and the other string.
-func (s String) Plus(other Value) (Value, error) {
+// Add returns the concatenation of the string and the other string.
+func (s String) Add(other Value) (Value, error) {
 	if other, ok := other.(String); ok {
 		return s + other, nil
 	}

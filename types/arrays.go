@@ -75,3 +75,13 @@ func (a Array) String() string {
 	sb.WriteString("]")
 	return sb.String()
 }
+
+// Add returns the concatenation of the array and the other array.
+func (a Array) Add(other Value) (Value, error) {
+	if otherArray, ok := other.(Array); ok {
+		return append(a, otherArray...), nil
+	}
+
+	a = append(a, other)
+	return a, nil
+}
