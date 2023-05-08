@@ -27,9 +27,9 @@ func main() {
 	// fmt.Println("====================================")
 	// ast.PrintNode(node)
 
-	result, err := node.Eval(types.Map{
+	result, err := node.Eval(types.Context{
 		"x": types.Number(10),
-		"y": types.Map{
+		"y": types.Object{
 			"z": types.Number(5),
 		},
 	})

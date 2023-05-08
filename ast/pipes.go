@@ -35,17 +35,17 @@ func NewPipeNode(token string, nodes []Node, offset, line, col int) *PipeNode {
 }
 
 // Eval evaluates the node and returns the result.
-func (n *PipeNode) Eval(ctx types.Context) (result interface{}, err error) {
+func (n *PipeNode) Eval(ctx types.Context) (result types.Value, err error) {
 
 	// copy the context into ctx
 	ctx = ctx.ShallowCopy()
 
 	for _, node := range n.Nodes {
 
-		fmt.Println(
-			"PipeNode.Eval() node.PipeType():", node.PipeType(),
-			"node.GetType():", node.GetType(),
-		)
+		// fmt.Println(
+		// 	"PipeNode.Eval() node.PipeType():", node.PipeType(),
+		// 	"node.GetType():", node.GetType(),
+		// )
 
 		handler, ok := pipes.Get(node.PipeType())
 		if !ok {
