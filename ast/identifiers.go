@@ -27,11 +27,21 @@ func NewIdentifierNode(token string, offset, line, col int) (*IdentifierNode, er
 	return node, nil
 }
 
-func (n IdentifierNode) Eval(m types.Map) (any, error) {
+func (n IdentifierNode) Eval(m types.Context) (types.Value, error) {
 	// If m is a nil, return an error
 	if m == nil {
 		return nil, fmt.Errorf("cannot access identifier '%s' from nil context", n.Name)
 	}
 
-	return m.ValueAtPath(n.Name)
+	val, err := m.ValueAtPath(n.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	// It is possible that the value is nil, in which case we return nil, nil
+	if val == nil {
+		return nil, nil
+	}
+
+	return val.(types.Value), nil
 }
