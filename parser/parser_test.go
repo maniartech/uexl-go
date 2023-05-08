@@ -46,7 +46,7 @@ func TestParseString(t *testing.T) {
 		t.Errorf("ParseString() error = %v", err)
 	}
 
-	if res != types.String("tes\\nting123") {
+	if res != types.String("tes\\nting⭐123") {
 		t.Errorf("ParseString() res = %v", res)
 	}
 
