@@ -130,7 +130,7 @@ Null <- ( "null" ) {
 
 ///////////////////// String /////////////////////
 
-String <- (DoubleQuoteString / SingleQuoteString)
+String <- (DoubleQuoteString / SingleQuoteString / RawStringSingleQuote / RawStringDoubleQuote)
 
 DoubleQuoteString ← '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
   return ast.NewStringNode(c.text, c.pos.offset, c.pos.line, c.pos.col)
@@ -140,10 +140,17 @@ SingleQuoteString <- '\'' ( !EscapedChar . / '\\' EscapeSequence )* '\'' {
   return ast.NewStringNode(c.text, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-// PlainString <- ( !EscapedChar . / '\\' EscapeSequence )* {
-//     c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
-//     return string(c.text), nil
-// }
+// Raw string literals starts with r and quotes (double or single) and
+// ends with the same quote. Raw string literals do not process escape
+// sequences and ignore line breaks. However, a quote can be escaped by
+// using two consecutive quotes.
+RawStringSingleQuote <- 'r' '\'' ( !'\'' . / '\'' '\'' )* '\'' {
+  return ast.NewStringNode(c.text, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+RawStringDoubleQuote <- 'r' '"' ( !'"' . / '"' '"' )* '"' {
+  return ast.NewStringNode(c.text, c.pos.offset, c.pos.line, c.pos.col)
+}
 
 EscapedChar <- [\x00-\x1f"'\\]
 
