@@ -16,6 +16,9 @@ const (
 
 	// BitwiseOperator evaluates the expression by applying bitwise operations
 	BitwiseOperator = "bitwise" // & | ^ << >>
+
+	// DotOperator evaluates the expression by applying dot operations
+	DotOperator = "dot" // .
 )
 
 func GetOperatorType(op string) OperatorType {
@@ -31,6 +34,9 @@ func GetOperatorType(op string) OperatorType {
 
 	case "&", "|", "^", "<<", ">>":
 		return BitwiseOperator
+
+	case ".":
+		return DotOperator
 
 	default:
 		return "unknown"
