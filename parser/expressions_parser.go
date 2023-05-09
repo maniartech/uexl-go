@@ -1,6 +1,8 @@
 package parser
 
-import "github.com/maniartech/uexl_go/ast"
+import (
+	"github.com/maniartech/uexl_go/ast"
+)
 
 func parseExpression(token string, first, rest interface{}, offset, line, col int) (ast.Node, error) {
 
@@ -36,3 +38,8 @@ func parseExpression(token string, first, rest interface{}, offset, line, col in
 
 	return l, nil
 }
+
+// func parseDotExpression(token string, first interface{}, rest interface{}, offset, line, col int) (ast.Node, error) {
+// 	fmt.Println("parseDotExpression", token, first, rest)
+// 	return nil, nil
+// }
