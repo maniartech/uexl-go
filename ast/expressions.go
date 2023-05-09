@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"encoding/json"
+
 	"github.com/maniartech/uexl_go/operators"
 	"github.com/maniartech/uexl_go/types"
 )
@@ -53,4 +55,9 @@ func (n *ExpressionNode) SetPipeType(pipeType string) {
 
 func (n *ExpressionNode) Eval(ctx types.Context) (types.Value, error) {
 	return operators.Eval(n.Operator, n.Left, n.Right, ctx)
+}
+
+func (n *ExpressionNode) String() string {
+	b, _ := json.MarshalIndent(n, "", "  ")
+	return string(b)
 }
