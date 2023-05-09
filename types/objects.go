@@ -1,6 +1,9 @@
 package types
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+)
 
 // Object represents an object in the uexl language.
 type Object map[string]Value
@@ -52,7 +55,8 @@ func (o Object) Compare(other Value) (int, error) {
 
 // String returns the string representation of the object.
 func (o Object) String() string {
-	return "object"
+	b, _ := json.MarshalIndent(o, "", "  ")
+	return string(b)
 }
 
 // Plus merges the other object into this object. If a key exists in both objects, the value from the other object is used.
@@ -69,4 +73,13 @@ func (o Object) Minus(other Object) Object {
 		delete(o, k)
 	}
 	return o
+}
+
+// Dot returns the value of the key in the object. If the key does not exist, nil is returned.
+func (o Object) Dot(other Value) (Value, error) {
+	key := other.String()
+	if v, ok := o[key]; ok {
+		return v, nil
+	}
+	return nil, errors.New("key not found: " + key)
 }
