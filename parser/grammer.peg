@@ -10,9 +10,14 @@ import (
 
 /////////////////// Expressions //////////////////////
 
-Input <- expr:Expr rest:PipedExpr* EOF {
+Input <- expr:DotExpr rest:PipedExpr* EOF {
   // Input
   return parseInput(string(c.text), expr, rest, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+DotExpr <- _ first:Term rest:( _ DotOp _ Identifier )* _ {
+  // Expr:
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 Expr <- _ first:Term rest:( _ LogOp _ Term )* _ {
@@ -89,6 +94,10 @@ LogOp <- ( "&&" / "||" ) {
 }
 
 ShiftOp <- ( "<<" / ">>") {
+  return string(c.text), nil
+}
+
+DotOp <- '.' {
   return string(c.text), nil
 }
 
@@ -172,7 +181,8 @@ Object <- '{' _ vals:( String _ ':' _ Expr ( ',' _ String _ ':' _ Expr )* )? '}'
 
 ////////////////////// Identifier //////////////////////
 
-Identifier <- IdSet ('.'  IdSet)* {
+// Identifier <- IdSet ('.'  IdSet)* {
+Identifier <- IdSet* {
   return ast.NewIdentifierNode(string(c.text), c.pos.offset, c.pos.line, c.pos.col)
 }
 
