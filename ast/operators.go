@@ -26,7 +26,7 @@ func GetOperatorType(op string) OperatorType {
 	case "+", "-", "*", "/", "//":
 		return ArithmeticOperator
 
-	case "=", "<>", "<", ">", "<=", ">=":
+	case "==", "!=", "<", ">", "<=", ">=":
 		return ComparisonOperator
 
 	case "AND", "OR":

@@ -30,6 +30,14 @@ func NewObjectNode(token string, items []ObjectItem, offset, line, col int) *Obj
 }
 
 // Eval parses the array node and returns the array node.
-func (n *ObjectNode) Eval(env types.Context) (types.Value, error) {
-	panic("implement me")
+func (n *ObjectNode) Eval(ctx types.Context) (types.Value, error) {
+	obj := make(types.Object)
+	for _, item := range n.Items {
+		val, err := item.Value.Eval(ctx)
+		if err != nil {
+			return nil, err
+		}
+		obj[string(item.Key)] = val
+	}
+	return obj, nil
 }
