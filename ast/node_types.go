@@ -15,6 +15,7 @@ const (
 
 	// expression types
 	NodeTypeExpression      = "expression"       // Expression node
+	NodeTypeDotExpression   = "dot expression"   // Dot expression node
 	NodeTypeUnaryExpression = "unary expression" // Unary expression node
 
 	// Other types
