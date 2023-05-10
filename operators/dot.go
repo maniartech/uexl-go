@@ -7,27 +7,20 @@ import (
 	"github.com/maniartech/uexl_go/types"
 )
 
-func dot(op string, a, b core.Evaluator, ctx types.Context) (types.Value, error) {
-	aval, err := a.Eval(ctx)
+func DotEval(expr core.Evaluator, key string, ctx types.Context) (types.Value, error) {
+	val, err := expr.Eval(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := aval.(types.Dot); ok {
-		actx := types.Context(aval.(types.Object))
-		res, err := b.Eval(actx)
-		if err != nil {
-			return nil, err
-		}
+	if val == nil {
+		return nil, fmt.Errorf("the dot operator is not supported for nil")
+	}
 
-		return res, nil
-		// return aval.Dot(bval)
+	if vald, ok := val.(types.Dot); ok {
+		return vald.Dot(key)
 	}
 
 	// The value does not support addition
-	return nil, fmt.Errorf("the dot operator is not supported for %s", aval.Type())
-}
-
-func init() {
-	BinaryOpRegistry.Register(".", dot)
+	return nil, fmt.Errorf("the dot operator is not supported for %s", val.Type())
 }
