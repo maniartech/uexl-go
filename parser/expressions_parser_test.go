@@ -10,9 +10,9 @@ import (
 
 func TestExpressionParsing(t *testing.T) {
 
-	// node, err := parser.ParseString("4 == { 'x': ['a', 'b', 'c', {'d': 2}]}.x.3.d + 2 == true")
+	node, err := parser.ParseString("4 == { 'x': ['a', 'b', 'c', {'d': 2}]}.x.3.d + 2 == true")
 
-	node, err := parser.ParseString("'hello world'.0 == 'h'")
+	// node, err := parser.ParseString("'hello world'.1 + 'l'")
 	if err != nil {
 		t.Errorf("Error: %v", err)
 		return
