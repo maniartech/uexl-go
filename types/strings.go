@@ -1,6 +1,9 @@
 package types
 
-import "errors"
+import (
+	"errors"
+	"strconv"
+)
 
 // String returns a string representation of the number.
 type String string
@@ -73,4 +76,21 @@ func (s String) Multiply(other Value) (Value, error) {
 	}
 
 	return nil, errors.New("invalid type for multiply")
+}
+
+// Dot performs a lookup on the string. It returns the character at the index specified by the other number.
+func (s String) Dot(key string) (Value, error) {
+	// Convert key to index using strconv.Atoi
+	// If error, return nil, error
+	index, err := strconv.Atoi(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if index < 0 || index >= len(s) {
+		return nil, errors.New("index out of range, expected 0-" + strconv.Itoa(len(s)-1) + ", got " + strconv.Itoa(index))
+	}
+
+	// Return the character at the index
+	return String(s[index]), nil
 }

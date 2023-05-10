@@ -33,15 +33,9 @@ func (n IdentifierNode) Eval(m types.Context) (types.Value, error) {
 		return nil, fmt.Errorf("cannot access identifier '%s' from nil context", n.Name)
 	}
 
-	val, err := m.ValueAtPath(n.Name)
-	if err != nil {
-		return nil, err
+	if val, ok := m[n.Name]; ok {
+		return val, nil
 	}
 
-	// It is possible that the value is nil, in which case we return nil, nil
-	if val == nil {
-		return nil, nil
-	}
-
-	return val.(types.Value), nil
+	return nil, fmt.Errorf("key '%s' not found", n.Name)
 }
