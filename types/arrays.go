@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 )
 
@@ -87,17 +88,18 @@ func (a Array) Add(other Value) (Value, error) {
 }
 
 // Dot returns the value of the key in the object. If the key does not exist, nil is returned.
-func (a Array) Dot(other Value) (Value, error) {
-	var index int
-	if i, ok := other.(Number); ok {
-		index = int(i)
-	} else {
-		return nil, errors.New("invalid index type")
+func (a Array) Dot(key string) (Value, error) {
+
+	// Convert key to index using strconv.Atoi
+	// If error, return nil, error
+	index, err := strconv.Atoi(key)
+	if err != nil {
+		return nil, err
 	}
 
 	if index < 0 || index >= len(a) {
-		return nil, errors.New("index out of range")
+		return nil, errors.New("index out of range, expected 0-" + strconv.Itoa(len(a)-1) + ", got " + strconv.Itoa(index))
 	}
 
-	return nil, nil
+	return a[index], nil
 }

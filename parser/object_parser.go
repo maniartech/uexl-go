@@ -9,7 +9,7 @@ func parseObject(vals interface{}, text []byte, offset, line, col int) (ast.Node
 		return ast.NewObjectNode(string(text), res, offset, line, col), nil
 	}
 
-	res = append(res, ast.ObjectItem{Key: valsSl[0].(ast.StringNode).Value, Value: valsSl[4].(ast.Node)})
+	res = append(res, ast.ObjectItem{Key: valsSl[0].(*ast.StringNode).Value, Value: valsSl[4].(ast.Node)})
 	restSl := toIfaceSlice(valsSl[5])
 
 	for _, v := range restSl {
