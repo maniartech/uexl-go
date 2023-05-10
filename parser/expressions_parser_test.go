@@ -10,7 +10,14 @@ import (
 
 func TestExpressionParsing(t *testing.T) {
 
-	node, _ := parser.ParseString("x . y1 . 2 ")
+	// node, err := parser.ParseString("4 == { 'x': ['a', 'b', 'c', {'d': 2}]}.x.3.d + 2 == true")
+
+	node, err := parser.ParseString("'hello world'.0 == 'h'")
+	if err != nil {
+		t.Errorf("Error: %v", err)
+		return
+	}
+	// fmt.Println(node)
 
 	result, err := node.Eval(types.Context{
 		"x": types.Object{

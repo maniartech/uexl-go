@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"errors"
+
 	"github.com/maniartech/uexl_go/ast"
 )
 
@@ -39,7 +41,27 @@ func parseExpression(token string, first, rest interface{}, offset, line, col in
 	return l, nil
 }
 
-// func parseDotExpression(token string, first interface{}, rest interface{}, offset, line, col int) (ast.Node, error) {
-// 	fmt.Println("parseDotExpression", token, first, rest)
-// 	return nil, nil
-// }
+func parseDotExpression(token string, first interface{}, rest interface{}, offset, line, col int) (ast.Node, error) {
+
+	l, ok := first.(ast.Node)
+
+	// TODO: handle error
+	if l != nil && !ok { // when l is nil, ignore it!
+		panic("invalid-expression - assertion-failed")
+	}
+
+	restSl := toIfaceSlice(rest)
+
+	for _, v := range restSl {
+		restExpr := toIfaceSlice(v)
+		r, ok := restExpr[3].(*ast.IdentifierNode)
+		// TODO: handle error
+		if !ok {
+			return nil, errors.New("identifier-expected")
+		}
+
+		l = ast.NewDotExpressionNode(token, l, r.Name, offset, line, col)
+	}
+
+	return l, nil
+}
