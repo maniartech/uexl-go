@@ -76,8 +76,7 @@ func (o Object) Minus(other Object) Object {
 }
 
 // Dot returns the value of the key in the object. If the key does not exist, nil is returned.
-func (o Object) Dot(other Value) (Value, error) {
-	key := other.String()
+func (o Object) Dot(key string) (Value, error) {
 	if v, ok := o[key]; ok {
 		return v, nil
 	}

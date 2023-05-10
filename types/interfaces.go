@@ -61,5 +61,5 @@ type Not interface {
 // Dot interface represents types that can perform dot operation.
 type Dot interface {
 	// Dot performs dot operation with another Value and returns the result and an error.
-	Dot(other Value) (Value, error)
+	Dot(key string) (Value, error)
 }
