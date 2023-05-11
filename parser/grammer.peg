@@ -6,6 +6,10 @@ import (
 
     "github.com/maniartech/uexl_go/ast"
 )
+
+// Ref: Operator Precedence in JS
+//      https://www.w3schools.com/js/js_precedence.asp
+//      https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence
 }
 
 /////////////////// Main Input //////////////////////
@@ -17,19 +21,32 @@ Input <- expr:Expr rest:PipedExpr* EOF {
 
 ///////////////////// Expressions /////////////////////
 
-Expr <- _ first:Comp rest:( _ LogOp _ Comp )* _ {
+Expr <- _ first:Bit rest:( _ LogOp _ Bit )* _ {
   // Expr:
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
+
+LogOp <- ( "&&" / "||" ) {
+  return string(c.text), nil
+}
+
+Bit <- first:Comp rest:( _ BitOp _ Comp )* {
+  // fmt.Println("Bit:", first, rest)
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+BitOp <- ( '&' / '|' / '^' ) {
+  return string(c.text), nil
+}
+
 
 Comp <- first:Shift rest:( _ CmpOp _ Shift )* {
   // Comp:
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-Bit <- first:Shift rest:( _ BitOp _ Shift )* {
-  // fmt.Println("Bit:", first, rest)
-  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+CmpOp <- ( "==" / "!=" / "<=" / ">=" / '<' / '>' ) {
+  return string(c.text), nil
 }
 
 Shift <- first:Sum rest: ( _ ShiftOp _ Sum )* {
@@ -37,9 +54,18 @@ Shift <- first:Sum rest: ( _ ShiftOp _ Sum )* {
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
+ShiftOp <- ( "<<" / ">>") {
+  return string(c.text), nil
+}
+
+
 Sum <- first:Mul rest:( _ AddOp _ Mul )* {
   // fmt.Println("Sum:", first, rest)
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+AddOp <- ( '+' / '-' ) {
+  return string(c.text), nil
 }
 
 Mul <- first:Mod rest:( _ MulOp _ Mod )* {
@@ -47,10 +73,19 @@ Mul <- first:Mod rest:( _ MulOp _ Mod )* {
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
+MulOp <- ( '*' / '/' ) {
+  return string(c.text), nil
+}
+
 Mod <- first:DotExpr rest:( _ ModOp _ DotExpr )* {
   // fmt.Println("Mod:", first, rest)
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
+
+ModOp <- ( "//" ) {
+  return string(c.text), nil
+}
+
 
 ///////////////////// Dot Expression /////////////////////
 
@@ -83,29 +118,6 @@ PipeType <- [a-z]+ {
 
 //////////////// Operators Definitions //////////////////////
 
-AddOp <- ( '+' / '-' ) {
-  return string(c.text), nil
-}
-
-MulOp <- ( '*' / '/' ) {
-  return string(c.text), nil
-}
-
-ModOp <- ( "//" ) {
-  return string(c.text), nil
-}
-
-CmpOp <- ( "==" / "!=" / "<=" / ">=" / '<' / '>' ) {
-  return string(c.text), nil
-}
-
-LogOp <- ( "&&" / "||" ) {
-  return string(c.text), nil
-}
-
-ShiftOp <- ( "<<" / ">>") {
-  return string(c.text), nil
-}
 
 ///////////////////// Values /////////////////////
 
