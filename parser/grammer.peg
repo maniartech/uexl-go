@@ -8,20 +8,22 @@ import (
 )
 }
 
-/////////////////// Expressions //////////////////////
+/////////////////// Main Input //////////////////////
 
 Input <- expr:Expr rest:PipedExpr* EOF {
   // Input
   return parseInput(string(c.text), expr, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-Expr <- _ first:Term rest:( _ LogOp _ Term )* _ {
+///////////////////// Expressions /////////////////////
+
+Expr <- _ first:Comp rest:( _ LogOp _ Comp )* _ {
   // Expr:
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-Term <- first:Shift rest:( _ CmpOp _ Shift )* {
-  // Term:
+Comp <- first:Shift rest:( _ CmpOp _ Shift )* {
+  // Comp:
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
@@ -44,11 +46,6 @@ Mul <- first:Mod rest:( _ MulOp _ Mod )* {
   // fmt.Println("Mul:", first, rest)
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
-
-// Mod <- first:Factor rest:( _ ModOp _ Factor )* {
-//   // fmt.Println("Mod:", first, rest)
-//   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
-// }
 
 Mod <- first:DotExpr rest:( _ ModOp _ DotExpr )* {
   // fmt.Println("Mod:", first, rest)
