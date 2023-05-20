@@ -59,12 +59,20 @@ func (o Object) String() string {
 	return string(b)
 }
 
-// Plus merges the other object into this object. If a key exists in both objects, the value from the other object is used.
-func (o Object) Plus(other Object) Object {
-	for k, v := range other {
-		o[k] = v
+// Add merges the other object into this object. If a key exists in both objects, the value from the other object is used.
+func (o Object) Add(other Value) (Value, error) {
+	if otherV, ok := other.(Object); ok {
+		for k, v := range otherV {
+			o[k] = v
+		}
+		return o, nil
+	} else if otherV, ok := other.(Array); ok {
+		// prepend the current object to the array
+		otherV = append(Array{o}, otherV...)
+		return otherV, nil
 	}
-	return o
+
+	return nil, errors.New("invalid type for addition")
 }
 
 // Minus removes the keys from this object that are in the other object.
