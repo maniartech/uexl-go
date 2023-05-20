@@ -23,7 +23,7 @@ const (
 
 func GetOperatorType(op string) OperatorType {
 	switch op {
-	case "+", "-", "*", "/", "//":
+	case "+", "-", "*", "/", "%":
 		return ArithmeticOperator
 
 	case "==", "!=", "<", ">", "<=", ">=":

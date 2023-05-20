@@ -110,5 +110,5 @@ func init() {
 	BinaryOpRegistry.Register("-", Minus)
 	BinaryOpRegistry.Register("*", Times)
 	BinaryOpRegistry.Register("/", Divide)
-	BinaryOpRegistry.Register("//", Modulo)
+	BinaryOpRegistry.Register("%", Modulo)
 }
