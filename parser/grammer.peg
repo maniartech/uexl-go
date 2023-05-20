@@ -30,12 +30,21 @@ LogOp <- ( "&&" / "||" ) {
   return string(c.text), nil
 }
 
-Bit <- first:Comp rest:( _ BitOp _ Comp )* {
+Bit <- first:Equility rest:( _ BitOp _ Equility )* {
   // fmt.Println("Bit:", first, rest)
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
 BitOp <- ( '&' / '|' / '^' ) {
+  return string(c.text), nil
+}
+
+Equility <- first:Comp rest:( _ EqOp _ Comp )* {
+  // Comp:
+  return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
+}
+
+EqOp <- ( "==" / "!=" ) {
   return string(c.text), nil
 }
 
@@ -45,7 +54,7 @@ Comp <- first:Shift rest:( _ CmpOp _ Shift )* {
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-CmpOp <- ( "==" / "!=" / "<=" / ">=" / '<' / '>' ) {
+CmpOp <- ( "<=" / ">=" / '<' / '>' ) {
   return string(c.text), nil
 }
 
@@ -57,7 +66,6 @@ Shift <- first:Sum rest: ( _ ShiftOp _ Sum )* {
 ShiftOp <- ( "<<" / ">>") {
   return string(c.text), nil
 }
-
 
 Sum <- first:Mul rest:( _ AddOp _ Mul )* {
   // fmt.Println("Sum:", first, rest)
@@ -82,7 +90,7 @@ Mod <- first:DotExpr rest:( _ ModOp _ DotExpr )* {
   return parseExpression(string(c.text), first, rest, c.pos.offset, c.pos.line, c.pos.col)
 }
 
-ModOp <- ( "//" ) {
+ModOp <- ( "%" ) {
   return string(c.text), nil
 }
 
