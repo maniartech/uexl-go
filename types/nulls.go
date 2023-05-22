@@ -45,5 +45,9 @@ func (n Null) Add(other Value) (Value, error) {
 		return append(Array{n}, otherV...), nil
 	}
 
+	if otherV, ok := other.(String); ok {
+		return String(n.String()) + otherV, nil
+	}
+
 	return nil, errors.New("invalid type for addition")
 }
