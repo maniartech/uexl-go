@@ -52,13 +52,17 @@ func (s String) String() string {
 
 // Add returns the concatenation of the string and the other string.
 func (s String) Add(other Value) (Value, error) {
-	if other, ok := other.(String); ok {
-		return s + other, nil
+	if otherV, ok := other.(String); ok {
+		return s + otherV, nil
+	}
+
+	if _, ok := other.(Object); ok {
+		return nil, errors.New("invalid type for addition")
 	}
 
 	// If the other is an array, insert the string at the beginning of the array.
-	if other, ok := other.(Array); ok {
-		return append(Array{s}, other...), nil
+	if otherV, ok := other.(Array); ok {
+		return append(Array{s}, otherV...), nil
 	}
 
 	// Convert the other to a string and add it to the string.
