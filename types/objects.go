@@ -66,7 +66,9 @@ func (o Object) Add(other Value) (Value, error) {
 			o[k] = v
 		}
 		return o, nil
-	} else if otherV, ok := other.(Array); ok {
+	}
+
+	if otherV, ok := other.(Array); ok {
 		// prepend the current object to the array
 		otherV = append(Array{o}, otherV...)
 		return otherV, nil
