@@ -39,8 +39,12 @@ func (n Number) String() string {
 
 // Add returns the sum of the number and the other number.
 func (n Number) Add(other Value) (Value, error) {
-	if other, ok := other.(Number); ok {
-		return n + other, nil
+	if otherV, ok := other.(Number); ok {
+		return n + otherV, nil
+	}
+
+	if otherV, ok := other.(Array); ok {
+		return append(Array{n}, otherV...), nil
 	}
 
 	return nil, errors.New("invalid type for plus")
