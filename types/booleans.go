@@ -33,6 +33,10 @@ func (b Boolean) Add(other Value) (Value, error) {
 		return append(Array{b}, otherV...), nil
 	}
 
+	if otherV, ok := other.(String); ok {
+		return String(b.String()) + otherV, nil
+	}
+
 	return nil, errors.New("invalid type for addition")
 }
 
