@@ -28,6 +28,14 @@ func (b Boolean) Equals(other Value) bool {
 	return false
 }
 
+func (b Boolean) Add(other Value) (Value, error) {
+	if otherV, ok := other.(Array); ok {
+		return append(Array{b}, otherV...), nil
+	}
+
+	return nil, errors.New("invalid type for addition")
+}
+
 // Compare returns 0 if the boolean values are equal, -1 if the boolean value is false, and 1 if the boolean value is true.
 func (b Boolean) Compare(other Value) (int, error) {
 	if other, ok := other.(Boolean); ok {
