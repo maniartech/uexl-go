@@ -92,7 +92,6 @@ PipeType <- [a-z]+ {
 
 //////////////// Operators Definitions //////////////////////
 
-
 LogOp <- ( "&&" / "||" ) {
   return string(c.text), nil
 }
