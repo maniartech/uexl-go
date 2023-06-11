@@ -2,19 +2,6 @@
 
 Universal Expression Language parser for go projects!
 
-Operators supported:
-
-- Logical Operators             && ||
-- Bitwise Operators             & | ^
-- Equality Operators            == !=
-- Comparison Operators          <= >= < >
-- Bitwise Shift Operators       << >>
-- Additive Operators            + -
-- Multiplicative Operators      * /
-- Modulus Operator              %
-- Dot Operator                  .
-- Grouping Operator             ()
-
 Operator Precedence:
 
 Operators | Type | Associativity
