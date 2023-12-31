@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,6 +11,12 @@ type Map map[string]any
 
 type Context map[string]Value
 
+func JSONToContext(input string) (Context, error) {
+	var ctx Context
+	err := json.Unmarshal([]byte(input), &ctx)
+	return ctx, err
+}
+
 func (ctx Context) ShallowCopy() Context {
 	newCtx := make(Context)
 	for k, v := range ctx {
@@ -18,31 +25,6 @@ func (ctx Context) ShallowCopy() Context {
 	return newCtx
 }
 
-// ValueAtPath is a helper function to get a value from a context using a path.
-// For example, if you have a map like this:
-//
-//	map[string]interface{}{
-//		"foo": map[string]interface{}{
-//			"bar": "baz",
-//		},
-//	}
-//
-// You can get the value of "baz" using the path "foo.bar".
-// If the path is not found, nil is returned.
-// If the member is a slice, you can get the value of a specific index using the path "foo.bar.0".
-// If the member is a slice of maps, you can get the value of a specific index using the path "foo.bar.0.baz".
-// For example, if you have a map like this:
-//
-//	map[string]interface{}{
-//		"foo": map[string]interface{}{
-//			"bar": []interface{}{
-//				map[string]interface{}{
-//					"baz": "qux",
-//				},
-//			},
-//		},
-//	}
-//
 // You can get the value of "qux" using the path "foo.bar.0.baz".
 func (m Context) ValueAtPath(path string) (Value, error) {
 	keys := strings.Split(path, ".")
