@@ -2,7 +2,14 @@
 
 ## Introduction
 
-UExL, short for Universal Expression Language, is a robust and versatile expression evaluator written in Go. Designed for efficiency and simplicity, UExL offers an intuitive approach to handling and evaluating expressions in various formats.
+UExL (Universal Expression Language) is an embeddable platform independent
+expression evaluation engine. It is a simple language that can be used to
+evaluate expressions in various formats. UExL is designed to be used in
+applications where the expression to be evaluated is not known at compile time.
+Or to make the application more flexible by allowing the user to define
+expressions through the configuration file or database.
+
+, is a . Designed for efficiency and simplicity, UExL offers an intuitive approach to handling and evaluating expressions in various formats.
 
 ## Table of Contents
 
