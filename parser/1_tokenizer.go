@@ -26,6 +26,7 @@ const (
 	TokenString
 	TokenBoolean
 	TokenNull
+	TokenDollar
 )
 
 type Token struct {
@@ -83,6 +84,10 @@ func (t *Tokenizer) NextToken() Token {
 		return t.singleCharToken(TokenDot)
 	case ch == ':':
 		return t.singleCharToken(TokenColon)
+	case ch == '$':
+		return t.readDollarIdentifier()
+	case ch == '|':
+		return t.readPipeOrBitwiseOr()
 	default:
 		return t.readOperator()
 	}
@@ -107,18 +112,17 @@ func (t *Tokenizer) readNumber() Token {
 
 func (t *Tokenizer) readIdentifierOrKeyword() Token {
 	start := t.pos
-	column := t.column
 	for t.pos < len(t.input) && (isLetter(t.current()) || isDigit(t.current()) || t.current() == '_') {
 		t.advance()
 	}
 	value := t.input[start:t.pos]
 	switch value {
 	case "true", "false":
-		return Token{Type: TokenBoolean, Value: value, Line: t.line, Column: column}
+		return Token{Type: TokenBoolean, Value: value, Line: t.line, Column: t.column - (t.pos - start)}
 	case "null":
-		return Token{Type: TokenNull, Value: value, Line: t.line, Column: column}
+		return Token{Type: TokenNull, Value: value, Line: t.line, Column: t.column - (t.pos - start)}
 	default:
-		return Token{Type: TokenIdentifier, Value: value, Line: t.line, Column: column}
+		return Token{Type: TokenIdentifier, Value: value, Line: t.line, Column: t.column - (t.pos - start)}
 	}
 }
 
@@ -138,9 +142,21 @@ func (t *Tokenizer) readString() Token {
 	return Token{Type: TokenString, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
 }
 
+func (t *Tokenizer) readDollarIdentifier() Token {
+	start := t.pos
+	t.advance() // consume '$'
+	for t.pos < len(t.input) && isDigit(t.current()) {
+		t.advance()
+	}
+	return Token{Type: TokenIdentifier, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
+}
+
 func (t *Tokenizer) readPipeOrBitwiseOr() Token {
-	// start := t.pos
-	t.advance()
+	t.advance() // consume first '|'
+	if t.current() == '|' {
+		t.advance() // consume second '|'
+		return Token{Type: TokenOperator, Value: "||", Line: t.line, Column: t.column - 2}
+	}
 	if t.current() == ':' {
 		t.advance()
 		return Token{Type: TokenPipe, Value: "|:", Line: t.line, Column: t.column - 2}
@@ -150,25 +166,27 @@ func (t *Tokenizer) readPipeOrBitwiseOr() Token {
 
 func (t *Tokenizer) readOperator() Token {
 	start := t.pos
-	column := t.column
-
-	// Check for two-character operators
-	if t.pos+1 < len(t.input) {
-		twoCharOp := t.input[t.pos : t.pos+2]
-		if twoCharOp == "&&" || twoCharOp == "||" || twoCharOp == "==" || twoCharOp == "!=" || twoCharOp == "<=" || twoCharOp == ">=" || twoCharOp == "<<" || twoCharOp == ">>" || twoCharOp == "|:" {
+	switch t.current() {
+	case '&':
+		if t.peek() == '&' {
 			t.advance()
 			t.advance()
-			if twoCharOp == "|:" {
-				return Token{Type: TokenPipe, Value: twoCharOp, Line: t.line, Column: column}
-			}
-			return Token{Type: TokenOperator, Value: twoCharOp, Line: t.line, Column: column}
+			return Token{Type: TokenOperator, Value: "&&", Line: t.line, Column: t.column - 2}
+		}
+	case '|':
+		if t.peek() == '|' {
+			t.advance()
+			t.advance()
+			return Token{Type: TokenOperator, Value: "||", Line: t.line, Column: t.column - 2}
 		}
 	}
-
-	// Single-character operators
-	t.advance()
-	return Token{Type: TokenOperator, Value: t.input[start:t.pos], Line: t.line, Column: column}
+	// Handle single-character operators
+	for t.pos < len(t.input) && isOperatorChar(t.current()) {
+		t.advance()
+	}
+	return Token{Type: TokenOperator, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
 }
+
 func (t *Tokenizer) singleCharToken(tokenType TokenType) Token {
 	token := Token{Type: tokenType, Value: string(t.current()), Line: t.line, Column: t.column}
 	t.advance()
@@ -212,4 +230,12 @@ func isLetter(r rune) bool {
 
 func isOperatorChar(r rune) bool {
 	return strings.ContainsRune("+-*/%<>=!&|^", r)
+}
+
+func (t *Tokenizer) peek() rune {
+	if t.pos+1 >= len(t.input) {
+		return 0
+	}
+	r, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
+	return r
 }
