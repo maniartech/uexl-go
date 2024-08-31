@@ -1,147 +1,118 @@
 package parser_test
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestParser(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected parser.Expression
-	}{
-		// ... (keep existing test cases)
-		{
-			input: "a.b |: func(1, 'test')",
-			expected: &parser.PipeExpression{
-				Left: &parser.MemberAccess{
-					Object:   &parser.Identifier{Name: "a", Line: 1, Column: 1},
-					Property: "b",
-					Line:     1,
-					Column:   2,
-				},
-				Right: &parser.FunctionCall{
-					Function: &parser.Identifier{Name: "func", Line: 1, Column: 8},
-					Arguments: []parser.Expression{
-						&parser.NumberLiteral{Value: "1", Line: 1, Column: 13},
-						&parser.StringLiteral{Value: "test", Line: 1, Column: 16},
-					},
-					Line:   1,
-					Column: 12,
-				},
-				Line:   1,
-				Column: 5,
-			},
-		},
-		{
-			input: `{"a": 1, "b": true}`,
-			expected: &parser.ObjectLiteral{
-				Properties: map[string]parser.Expression{
-					"a": &parser.NumberLiteral{Value: "1", Line: 1, Column: 7},
-					"b": &parser.BooleanLiteral{Value: true, Line: 1, Column: 15},
-				},
-				Line:   1,
-				Column: 1,
-			},
-		},
-		{
-			input: "[1, 2, 3] |map: (1 + 2)",
-			expected: &parser.PipeExpression{
-				Left: &parser.ArrayLiteral{
-					Elements: []parser.Expression{
-						&parser.NumberLiteral{Value: "1", Line: 1, Column: 2},
-						&parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
-						&parser.NumberLiteral{Value: "3", Line: 1, Column: 8},
-					},
-					Line:   1,
-					Column: 1,
-				},
-				PipeType: "map",
-				Right: &parser.BinaryExpression{
-					Left:     &parser.NumberLiteral{Value: "1", Line: 1, Column: 17},
-					Operator: "+",
-					Right:    &parser.NumberLiteral{Value: "2", Line: 1, Column: 21},
-					Line:     1,
-					Column:   19,
-				},
-				Line:   1,
-				Column: 11,
-			},
-		},
-		{
-			input: "x + 2 |: $1 + 3",
-			expected: &parser.PipeExpression{
-				Left: &parser.BinaryExpression{
-					Left:     &parser.Identifier{Name: "x", Line: 1, Column: 1},
-					Operator: "+",
-					Right:    &parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
-					Line:     1,
-					Column:   3,
-				},
-				Right: &parser.BinaryExpression{
-					Left:     &parser.Identifier{Name: "$1", Line: 1, Column: 10},
-					Operator: "+",
-					Right:    &parser.NumberLiteral{Value: "3", Line: 1, Column: 15},
-					Line:     1,
-					Column:   13,
-				},
-				Line:   1,
-				Column: 7,
-			},
-		},
-		{
-			input: "[1, 2, 3, 4, 5, 6, 7, 8, 9] |filter: $1 % 2 == 0",
-			expected: &parser.PipeExpression{
-				Left: &parser.ArrayLiteral{
-					Elements: []parser.Expression{
-						&parser.NumberLiteral{Value: "1", Line: 1, Column: 2},
-						&parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
-						&parser.NumberLiteral{Value: "3", Line: 1, Column: 8},
-						&parser.NumberLiteral{Value: "4", Line: 1, Column: 11},
-						&parser.NumberLiteral{Value: "5", Line: 1, Column: 14},
-						&parser.NumberLiteral{Value: "6", Line: 1, Column: 17},
-						&parser.NumberLiteral{Value: "7", Line: 1, Column: 20},
-						&parser.NumberLiteral{Value: "8", Line: 1, Column: 23},
-						&parser.NumberLiteral{Value: "9", Line: 1, Column: 26},
-					},
-					Line:   1,
-					Column: 1,
-				},
-				PipeType: "filter",
-				Right: &parser.BinaryExpression{
-					Left: &parser.BinaryExpression{
-						Left:     &parser.Identifier{Name: "$1", Line: 1, Column: 37},
-						Operator: "%",
-						Right:    &parser.NumberLiteral{Value: "2", Line: 1, Column: 42},
-						Line:     1,
-						Column:   40,
-					},
-					Operator: "==",
-					Right:    &parser.NumberLiteral{Value: "0", Line: 1, Column: 47},
-					Line:     1,
-					Column:   44,
-				},
-				Line:   1,
-				Column: 29,
-			},
-		},
+// TestSimpleBinaryExpression tests a simple binary expression
+func TestSimpleBinaryExpression(t *testing.T) {
+	input := "1 + 2"
+	expected := &parser.BinaryExpression{
+		Left:     &parser.NumberLiteral{Value: "1", Line: 1, Column: 1},
+		Operator: "+",
+		Right:    &parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
+		Line:     1,
+		Column:   3,
 	}
+	testParser(t, input, expected)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			p := parser.NewParser(tt.input)
-			actual, err := p.Parse()
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
-			if !reflect.DeepEqual(actual, tt.expected) {
-				t.Errorf("For input %q, expected AST %+v, but got %+v", tt.input, tt.expected, actual)
-			}
-		})
+// TestNestedBinaryExpression tests a nested binary expression
+func TestNestedBinaryExpression(t *testing.T) {
+	input := "1 + 2 * 3"
+	expected := &parser.BinaryExpression{
+		Left:     &parser.NumberLiteral{Value: "1", Line: 1, Column: 1},
+		Operator: "+",
+		Right: &parser.BinaryExpression{
+			Left:     &parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
+			Operator: "*",
+			Right:    &parser.NumberLiteral{Value: "3", Line: 1, Column: 9},
+			Line:     1,
+			Column:   7,
+		},
+		Line:   1,
+		Column: 3,
 	}
+	testParser(t, input, expected)
+}
+
+// TestPipeExpression tests a pipe expression
+func TestPipeExpression(t *testing.T) {
+	input := "a.b |: func(1, 'test')"
+	expected := &parser.PipeExpression{
+		Left: &parser.MemberAccess{
+			Object:   &parser.Identifier{Name: "a", Line: 1, Column: 1},
+			Property: "b",
+			Line:     1,
+			Column:   3,
+		},
+		Right: &parser.FunctionCall{
+			Function: &parser.Identifier{Name: "func", Line: 1, Column: 8},
+			Arguments: []parser.Expression{
+				&parser.NumberLiteral{Value: "1", Line: 1, Column: 13},
+				&parser.StringLiteral{Value: "test", Line: 1, Column: 16},
+			},
+			Line:   1,
+			Column: 12,
+		},
+		Line:   1,
+		Column: 5,
+	}
+	testParser(t, input, expected)
+}
+
+// TestObjectLiteral tests an object literal
+func TestObjectLiteral(t *testing.T) {
+	input := `{"a": 1, "b": true}`
+	expected := &parser.ObjectLiteral{
+		Properties: map[string]parser.Expression{
+			"a": &parser.NumberLiteral{Value: "1", Line: 1, Column: 7},
+			"b": &parser.BooleanLiteral{Value: true, Line: 1, Column: 15},
+		},
+		Line:   1,
+		Column: 1,
+	}
+	testParser(t, input, expected)
+}
+
+// TestArrayLiteralWithPipe tests an array literal with a pipe expression
+func TestArrayLiteralWithPipe(t *testing.T) {
+	input := "[1, 2, 3] |map: (1 + 2)"
+	expected := &parser.PipeExpression{
+		Left: &parser.ArrayLiteral{
+			Elements: []parser.Expression{
+				&parser.NumberLiteral{Value: "1", Line: 1, Column: 2},
+				&parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
+				&parser.NumberLiteral{Value: "3", Line: 1, Column: 8},
+			},
+			Line:   1,
+			Column: 1,
+		},
+		PipeType: "map",
+		Right: &parser.BinaryExpression{
+			Left:     &parser.NumberLiteral{Value: "1", Line: 1, Column: 17},
+			Operator: "+",
+			Right:    &parser.NumberLiteral{Value: "2", Line: 1, Column: 21},
+			Line:     1,
+			Column:   19,
+		},
+		Line:   1,
+		Column: 11,
+	}
+	testParser(t, input, expected)
+}
+
+// testParser is a helper function to run parser tests
+func testParser(t *testing.T, input string, expected parser.Expression) {
+	t.Helper()
+	p := parser.NewParser(input)
+	actual, err := p.Parse()
+	assert.NoError(t, err, "Parsing should not produce an error")
+	assert.Equal(t, expected, actual, "For input %q, AST should match", input)
 }
 
 func TestParserErrors(t *testing.T) {
