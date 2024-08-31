@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestParser(t *testing.T) {
+func TestParser_Old(t *testing.T) {
 	// Test for the Modulus (//) Operator.
 	got, err := ParseReader("", strings.NewReader("10 // 4"))
 	expected := 2
