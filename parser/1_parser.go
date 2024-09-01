@@ -49,6 +49,7 @@ func (p *Parser) parsePipeExpression() Expression {
 
 		right := p.parseExpression()
 		left = &PipeExpression{Left: left, Right: right, PipeType: pipeType, Line: op.Line, Column: op.Column}
+
 	}
 
 	return left
