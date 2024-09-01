@@ -153,7 +153,7 @@ func TestParserErrors(t *testing.T) {
 			expectedErr: "expected ']'",
 		},
 		{
-			input:       `{"a": 1,,}`,
+			input:       `{"a": 1,}`,
 			expectedErr: "expected '}'",
 		},
 		{

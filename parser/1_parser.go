@@ -224,14 +224,23 @@ func (p *Parser) parseArray() Expression {
 	token := p.current
 	p.advance() // consume '['
 	elements := []Expression{}
-	for p.current.Type != TokenRightBracket {
-		elements = append(elements, p.parseExpression())
-		if p.current.Type == TokenComma {
-			p.advance()
-		} else {
-			break
+
+	if p.current.Type != TokenRightBracket {
+		for {
+			elements = append(elements, p.parseExpression())
+			if p.current.Type != TokenComma {
+				break
+			}
+			p.advance() // consume ','
+
+			// Check for trailing comma
+			if p.current.Type == TokenRightBracket {
+				p.addError("expected ']'")
+				break
+			}
 		}
 	}
+
 	if p.current.Type != TokenRightBracket {
 		p.addError("expected ']'")
 	} else {
