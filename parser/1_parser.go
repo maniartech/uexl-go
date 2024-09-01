@@ -9,6 +9,7 @@ type Parser struct {
 	tokenizer *Tokenizer
 	current   Token
 	errors    []string
+	pos       int
 }
 
 func NewParser(input string) *Parser {
@@ -21,6 +22,12 @@ func NewParser(input string) *Parser {
 
 func (p *Parser) Parse() (Expression, error) {
 	expr := p.parseExpression()
+	if expr == nil {
+		if len(p.errors) != 0 {
+			return nil, fmt.Errorf("parsing errors: %v", p.errors)
+		}
+	}
+
 	if p.current.Type != TokenEOF {
 		return nil, fmt.Errorf("unexpected token at end: %v", p.current)
 	}
@@ -35,8 +42,14 @@ func (p *Parser) parseExpression() Expression {
 }
 
 func (p *Parser) parsePipeExpression() Expression {
-	expressions := []Expression{p.parseLogicalOr()}
-	pipeTypes := []string{}
+	firstExpression := p.parseLogicalOr()
+
+	if firstExpression == nil {
+		return nil
+	}
+
+	expressions := []Expression{firstExpression}
+	pipeTypes := []string{"pipe"}
 
 	startLine, startColumn := expressions[0].Position()
 
@@ -320,6 +333,12 @@ func (p *Parser) parseBinaryOp(parseFunc func() Expression, operators ...string)
 
 func (p *Parser) advance() {
 	p.current = p.tokenizer.NextToken()
+	if p.pos == 0 {
+		if p.current.Type == TokenPipe {
+			p.addError("unexpected token: " + p.current.Value)
+		}
+	}
+	p.pos++
 }
 
 func (p *Parser) addError(msg string) {

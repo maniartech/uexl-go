@@ -54,7 +54,7 @@ func TestPipeExpressionMapOperation(t *testing.T) {
 }
 
 func TestPipeExpressionMultipleFunctions(t *testing.T) {
-	input := "x + y |: func($1) |: otherFunc($1, 2)"
+	input := "x + y |map: func($1) |filter: otherFunc($1, 2)"
 	p := parser.NewParser(input)
 	ast, err := p.Parse()
 	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
