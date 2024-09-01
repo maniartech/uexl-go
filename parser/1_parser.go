@@ -35,24 +35,42 @@ func (p *Parser) parseExpression() Expression {
 }
 
 func (p *Parser) parsePipeExpression() Expression {
-	left := p.parseLogicalOr()
+	expressions := []Expression{p.parseLogicalOr()}
+	pipeTypes := []string{}
+
+	startLine, startColumn := expressions[0].Position()
+
+	// startLine := expressions[0].GetLine()
+	// startColumn := expressions[0].GetColumn()
 
 	for p.current.Type == TokenPipe {
 		op := p.current
 		p.advance()
 
 		pipeType := "pipe" // default pipe type
-
 		if op.Value != "" {
 			pipeType = op.Value
 		}
+		pipeTypes = append(pipeTypes, pipeType)
 
-		right := p.parseExpression()
-		left = &PipeExpression{Left: left, Right: right, PipeType: pipeType, Line: op.Line, Column: op.Column}
-
+		expressions = append(expressions, p.parseLogicalOr())
 	}
 
-	return left
+	if len(expressions) == 1 {
+		return expressions[0]
+	}
+
+	if len(expressions) > len(pipeTypes) {
+		// insert default pipe type at the beginning of the pipeTypes slice
+		pipeTypes = append([]string{"pipe"}, pipeTypes...)
+	}
+
+	return &PipeExpression{
+		Expressions: expressions,
+		PipeTypes:   pipeTypes,
+		Line:        startLine,
+		Column:      startColumn,
+	}
 }
 
 func (p *Parser) parseLogicalOr() Expression {
