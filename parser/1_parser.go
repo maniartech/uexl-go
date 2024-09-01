@@ -41,17 +41,11 @@ func (p *Parser) parsePipeExpression() Expression {
 		op := p.current
 		p.advance()
 
-		var pipeType string
-		if p.current.Type == TokenIdentifier {
-			pipeType = p.current.Value
-			p.advance()
-		}
+		pipeType := "pipe" // default pipe type
 
-		if p.current.Type != TokenColon {
-			p.addError("expected ':' after pipe operator")
-			return left
+		if op.Value != "" {
+			pipeType = op.Value
 		}
-		p.advance()
 
 		right := p.parseExpression()
 		left = &PipeExpression{Left: left, Right: right, PipeType: pipeType, Line: op.Line, Column: op.Column}

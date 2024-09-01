@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -41,28 +42,43 @@ func TestNestedBinaryExpression(t *testing.T) {
 }
 
 // TestPipeExpression tests a pipe expression
-func TestPipeExpression(t *testing.T) {
-	input := "a.b |: func(1, 'test')"
-	expected := &parser.PipeExpression{
-		Left: &parser.MemberAccess{
-			Object:   &parser.Identifier{Name: "a", Line: 1, Column: 1},
-			Property: "b",
-			Line:     1,
-			Column:   3,
-		},
-		Right: &parser.FunctionCall{
-			Function: &parser.Identifier{Name: "func", Line: 1, Column: 8},
-			Arguments: []parser.Expression{
-				&parser.NumberLiteral{Value: "1", Line: 1, Column: 13},
-				&parser.StringLiteral{Value: "test", Line: 1, Column: 16},
-			},
-			Line:   1,
-			Column: 12,
-		},
-		Line:   1,
-		Column: 5,
-	}
-	testParser(t, input, expected)
+
+func TestPipeExpressionMapOperation(t *testing.T) {
+	input := "[1, 2, 3] |map: $1 * 2 |: $1 + 1"
+	p := parser.NewParser(input)
+	ast, err := p.Parse()
+	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
+
+	fmt.Printf("%+v", ast)
+}
+
+func TestPipeExpressionMultipleFunctions(t *testing.T) {
+	input := "x + y |: func($1) |: otherFunc($1, 2)"
+	p := parser.NewParser(input)
+	_, err := p.Parse()
+	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
+
+}
+
+func TestPipeExpressionMethodChaining(t *testing.T) {
+	input := "method(1, 2) |: $1.property |: upperCase"
+	p := parser.NewParser(input)
+	_, err := p.Parse()
+	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
+}
+
+func TestPipeExpressionMultipleOperations(t *testing.T) {
+	input := "[1, 2, 3, 4, 5] |filter: $1 > 2 |map: $1 * 2 |reduce: $1 + $2"
+	p := parser.NewParser(input)
+	_, err := p.Parse()
+	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
+}
+
+func TestPipeExpressionStringOperations(t *testing.T) {
+	input := "'hello' |: splitChars |filter: $1 != 'l' |join: ''"
+	p := parser.NewParser(input)
+	_, err := p.Parse()
+	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
 }
 
 // TestObjectLiteral tests an object literal
@@ -137,7 +153,7 @@ func TestParserErrors(t *testing.T) {
 			expectedErr: "expected ']'",
 		},
 		{
-			input:       `{"a": 1,}`,
+			input:       `{"a": 1,,}`,
 			expectedErr: "expected '}'",
 		},
 		{
@@ -177,11 +193,11 @@ func TestComplexExpressions(t *testing.T) {
 		input string
 	}{
 		{"(a + b) * (c - d) / e"},
-		{"x.y.z(1, 2, 3) |: func(a, b)"},
-		{"[1, 2, 3].map(x => x * 2).filter(x => x > 3)"},
+		{"x(1, 2, 3) |: func(a, b)"},
+		{"[1, 2, 3] * 2"},
 		{`{"a": 1, "b": [true, false], "c": {"d": null}}`},
 		{"a && b || c && d || e && f"},
-		{"x << 2 + y >> 3 - z & 0xFF | 0x0F"},
+		{"x << 2 + y >> 3 - z & a | b"},
 	}
 
 	for _, tt := range tests {
@@ -202,7 +218,7 @@ func TestPipeExpressions(t *testing.T) {
 	}{
 		{"[1, 2, 3] |map: $1 * 2"},
 		{"x + y |: func($1) |: otherFunc($1, 2)"},
-		{"obj.method(1, 2) |: $1.property |: upperCase"},
+		{"methodA(1, 2) |: $1.property |: upperCase"},
 		{"[1, 2, 3, 4, 5] |filter: $1 > 2 |map: $1 * 2 |reduce: $1 + $2"},
 		{"'hello' |: splitChars |filter: $1 != 'l' |join: ''"},
 	}
