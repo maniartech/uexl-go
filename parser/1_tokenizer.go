@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"math"
+	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -28,6 +30,49 @@ const (
 	TokenNull
 	TokenDollar
 )
+
+func (t TokenType) String() string {
+	switch t {
+	case TokenEOF:
+		return "EOF"
+	case TokenNumber:
+		return "Number"
+	case TokenIdentifier:
+		return "Identifier"
+	case TokenOperator:
+		return "Operator"
+	case TokenLeftParen:
+		return "LeftParen"
+	case TokenRightParen:
+		return "RightParen"
+	case TokenLeftBracket:
+		return "LeftBracket"
+	case TokenRightBracket:
+		return "RightBracket"
+	case TokenLeftBrace:
+		return "LeftBrace"
+	case TokenRightBrace:
+		return "RightBrace"
+	case TokenComma:
+		return "Comma"
+	case TokenDot:
+		return "Dot"
+	case TokenColon:
+		return "Colon"
+	case TokenPipe:
+		return "Pipe"
+	case TokenString:
+		return "String"
+	case TokenBoolean:
+		return "Boolean"
+	case TokenNull:
+		return "Null"
+	case TokenDollar:
+		return "Dollar"
+	default:
+		return "Unknown"
+	}
+}
 
 type Token struct {
 	Type   TokenType
@@ -151,16 +196,28 @@ func (t *Tokenizer) readDollarIdentifier() Token {
 	return Token{Type: TokenIdentifier, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
 }
 
+var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-z]+)?:`)
+
 func (t *Tokenizer) readPipeOrBitwiseOr() Token {
 	t.advance() // consume first '|'
 	if t.current() == '|' {
 		t.advance() // consume second '|'
 		return Token{Type: TokenOperator, Value: "||", Line: t.line, Column: t.column - 2}
 	}
-	if t.current() == ':' {
-		t.advance()
-		return Token{Type: TokenPipe, Value: "|:", Line: t.line, Column: t.column - 2}
+
+	// Fetch the next 10 characters or the rest of the input if less than 10 characters are available
+	nextChars := t.input[t.pos:int(math.Min(float64(t.pos+10), float64(len(t.input))))]
+
+	pipeMatch := pipePattern.FindStringSubmatch(nextChars)
+	if len(pipeMatch) > 0 {
+		pipeName := pipeMatch[1]
+		for range pipeName {
+			t.advance()
+		}
+		t.advance() // consume ':'
+		return Token{Type: TokenPipe, Value: pipeName, Line: t.line, Column: t.column - len(pipeMatch[0]) - 1}
 	}
+
 	return Token{Type: TokenOperator, Value: "|", Line: t.line, Column: t.column - 1}
 }
 
@@ -238,4 +295,21 @@ func (t *Tokenizer) peek() rune {
 	}
 	r, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
 	return r
+}
+
+// PreloadTokens preloads all tokens in the input string.
+// This is a helper function for debugging and testing. It preloads all tokens in the input string
+// and returns them as a slice. After this function is called, the tokenizer will be at the end of the input.
+func (t *Tokenizer) PreloadTokens() []Token {
+	tokens := []Token{}
+
+	// Loop until the end of the input
+	for {
+		token := t.NextToken()
+		tokens = append(tokens, token)
+		if token.Type == TokenEOF {
+			break
+		}
+	}
+	return tokens
 }

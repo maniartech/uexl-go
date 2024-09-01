@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
@@ -43,7 +44,7 @@ func TestTokenizer(t *testing.T) {
 				{Type: parser.TokenIdentifier, Value: "a", Line: 1, Column: 1},
 				{Type: parser.TokenDot, Value: ".", Line: 1, Column: 2},
 				{Type: parser.TokenIdentifier, Value: "b", Line: 1, Column: 3},
-				{Type: parser.TokenPipe, Value: "|:", Line: 1, Column: 5},
+				{Type: parser.TokenPipe, Value: "", Line: 1, Column: 5},
 				{Type: parser.TokenIdentifier, Value: "func", Line: 1, Column: 8},
 				{Type: parser.TokenLeftParen, Value: "(", Line: 1, Column: 12},
 				{Type: parser.TokenNumber, Value: "1", Line: 1, Column: 13},
@@ -67,4 +68,11 @@ func TestTokenizer(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPipe(t *testing.T) {
+	expression := "a |map: b |: c"
+	tokenizer := parser.NewTokenizer(expression)
+
+	fmt.Printf("%+v", tokenizer.PreloadTokens())
 }
