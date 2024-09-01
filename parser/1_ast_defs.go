@@ -110,11 +110,10 @@ type MemberAccess struct {
 }
 
 type PipeExpression struct {
-	Left     Expression
-	PipeType string
-	Right    Expression
-	Line     int
-	Column   int
+	Expressions []Expression
+	PipeTypes   []string
+	Line        int
+	Column      int
 }
 
 func (ma *MemberAccess) expressionNode()      {}
