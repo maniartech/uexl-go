@@ -71,7 +71,7 @@ func TestTokenizer(t *testing.T) {
 }
 
 func TestPipe(t *testing.T) {
-	expression := "a |map: b |: c"
+	expression := "[1, 2, 3] |map: $1 * 2"
 	tokenizer := parser.NewTokenizer(expression)
 
 	fmt.Printf("%+v", tokenizer.PreloadTokens())
