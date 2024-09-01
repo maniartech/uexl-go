@@ -255,7 +255,7 @@ func (p *Parser) parseObject() Expression {
 			p.addError("expected string key")
 			break
 		}
-		key := p.current.Value
+		key := strings.Trim(p.current.Value, "\"'")
 		p.advance()
 		if p.current.Type != TokenColon {
 			p.addError("expected ':'")
