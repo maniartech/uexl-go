@@ -267,9 +267,14 @@ func (p *Parser) parseObject() Expression {
 		p.advance()
 		value := p.parseExpression()
 		properties[key] = value
-		if p.current.Type == TokenComma {
-			p.advance()
-		} else {
+		if p.current.Type != TokenComma {
+			break
+		}
+		p.advance() // consume ','
+
+		// Check for trailing comma
+		if p.current.Type == TokenRightBrace {
+			p.addError("expected '}'")
 			break
 		}
 	}
