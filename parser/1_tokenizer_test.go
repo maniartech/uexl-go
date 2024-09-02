@@ -1,7 +1,6 @@
 package parser_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
@@ -91,8 +90,24 @@ func TestTokenizer(t *testing.T) {
 }
 
 func TestPipe(t *testing.T) {
-	expression := "[1, 2, 3] |map: $1 * 2"
-	tokenizer := parser.NewTokenizer(expression)
+	input := "a.b * 2 |map: $1.x.y * 2"
+	expected := []parser.Token{
+		{Type: parser.TokenIdentifier, Value: "a.b", Line: 1, Column: 1},
+		{Type: parser.TokenOperator, Value: "*", Line: 1, Column: 5},
+		{Type: parser.TokenNumber, Value: "2", Line: 1, Column: 7},
+		{Type: parser.TokenPipe, Value: "map", Line: 1, Column: 9},
+		{Type: parser.TokenIdentifier, Value: "$1.x.y", Line: 1, Column: 15},
+		{Type: parser.TokenOperator, Value: "*", Line: 1, Column: 22},
+		{Type: parser.TokenNumber, Value: "2", Line: 1, Column: 24},
+		{Type: parser.TokenEOF, Line: 1, Column: 25},
+	}
+	tokenizer := parser.NewTokenizer(input)
 
-	fmt.Printf("%+v", tokenizer.PreloadTokens())
+	for _, expected := range expected {
+		actual := tokenizer.NextToken()
+		if actual.Type != expected.Type || actual.Value != expected.Value ||
+			actual.Line != expected.Line || actual.Column != expected.Column {
+			t.Errorf("For input %q, expected token %+v, but got %+v", input, expected, actual)
+		}
+	}
 }

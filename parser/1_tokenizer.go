@@ -109,6 +109,8 @@ func (t *Tokenizer) NextToken() Token {
 		return t.readNumber()
 	case isLetter(ch):
 		return t.readIdentifierOrKeyword()
+	case ch == '$':
+		return t.readIdentifierOrKeyword()
 	case ch == '"' || ch == '\'':
 		return t.readString()
 	case ch == '(':
@@ -129,13 +131,10 @@ func (t *Tokenizer) NextToken() Token {
 		return t.singleCharToken(TokenDot)
 	case ch == ':':
 		return t.singleCharToken(TokenColon)
-	case ch == '$':
-		return t.readDollarIdentifier()
 	case ch == '|':
 		return t.readPipeOrBitwiseOr()
-	default:
-		return t.readOperator()
 	}
+	return t.readOperator()
 }
 
 func (t *Tokenizer) readNumber() Token {
@@ -157,9 +156,26 @@ func (t *Tokenizer) readNumber() Token {
 
 func (t *Tokenizer) readIdentifierOrKeyword() Token {
 	start := t.pos
-	for t.pos < len(t.input) && (isLetter(t.current()) || isDigit(t.current()) || t.current() == '_') {
+	hasDot := false
+
+	// Allow the first character to be a letter, underscore, or dollar sign
+	if isLetter(t.current()) || t.current() == '_' || t.current() == '$' {
 		t.advance()
 	}
+
+	for t.pos < len(t.input) && (isLetter(t.current()) || isDigit(t.current()) || t.current() == '_' || t.current() == '.') {
+		if t.current() == '.' {
+			if hasDot {
+				// Error: consecutive dots
+				return Token{Type: TokenEOF, Value: "Error: consecutive dots", Line: t.line, Column: t.column}
+			}
+			hasDot = true
+		} else {
+			hasDot = false
+		}
+		t.advance()
+	}
+
 	value := t.input[start:t.pos]
 	switch value {
 	case "true", "false":
@@ -187,14 +203,14 @@ func (t *Tokenizer) readString() Token {
 	return Token{Type: TokenString, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
 }
 
-func (t *Tokenizer) readDollarIdentifier() Token {
-	start := t.pos
-	t.advance() // consume '$'
-	for t.pos < len(t.input) && isDigit(t.current()) {
-		t.advance()
-	}
-	return Token{Type: TokenIdentifier, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
-}
+// func (t *Tokenizer) readDollarIdentifier() Token {
+// 	start := t.pos
+// 	t.advance() // consume '$'
+// 	for t.pos < len(t.input) && isDigit(t.current()) {
+// 		t.advance()
+// 	}
+// 	return Token{Type: TokenIdentifier, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
+// }
 
 // Ref: https://regex101.com/r/w6qtHq/1
 var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-z]+)?:`)
