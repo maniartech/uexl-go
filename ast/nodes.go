@@ -13,9 +13,3 @@ type Node interface {
 
 	SetPipeType(string)
 }
-
-// var number Node
-
-// func init() {
-// 	number = &NumberNode{}
-// }
