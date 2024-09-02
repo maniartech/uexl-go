@@ -203,15 +203,6 @@ func (t *Tokenizer) readString() Token {
 	return Token{Type: TokenString, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
 }
 
-// func (t *Tokenizer) readDollarIdentifier() Token {
-// 	start := t.pos
-// 	t.advance() // consume '$'
-// 	for t.pos < len(t.input) && isDigit(t.current()) {
-// 		t.advance()
-// 	}
-// 	return Token{Type: TokenIdentifier, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
-// }
-
 // Ref: https://regex101.com/r/w6qtHq/1
 var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-z]+)?:`)
 
