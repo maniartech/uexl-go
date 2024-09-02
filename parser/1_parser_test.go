@@ -236,3 +236,14 @@ func TestPipeExpressions(t *testing.T) {
 		})
 	}
 }
+
+func TestMemberAccess(t *testing.T) {
+	input := "$1.x.y * 2"
+	p := parser.NewParser(input)
+	ast, err := p.Parse()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	json.PrintJSON(ast)
+}

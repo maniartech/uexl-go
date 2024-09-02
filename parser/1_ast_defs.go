@@ -109,15 +109,15 @@ type MemberAccess struct {
 	Column   int
 }
 
+func (ma *MemberAccess) expressionNode()      {}
+func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
+
 type PipeExpression struct {
 	Expressions []Expression
 	PipeTypes   []string
 	Line        int
 	Column      int
 }
-
-func (ma *MemberAccess) expressionNode()      {}
-func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
 
 func (pe *PipeExpression) expressionNode()      {}
 func (pe *PipeExpression) Position() (int, int) { return pe.Line, pe.Column }
