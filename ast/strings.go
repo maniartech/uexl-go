@@ -54,7 +54,6 @@ func NewStringNode(token []byte, offset, line, col int) (*StringNode, error) {
 			Type:   NodeTypeString,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  string(token),
 		},
 		Value: types.String(value),

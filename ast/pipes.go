@@ -23,7 +23,6 @@ func NewPipeNode(token string, nodes []Node, offset, line, col int) *PipeNode {
 			Type:   NodeTypePipe,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  token,
 		},
 	}

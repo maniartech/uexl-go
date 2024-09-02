@@ -21,7 +21,6 @@ func NewFunctionNode(token string, name string, params []Node, offset, line, col
 			Type:   NodeTypeFunc,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  token,
 		},
 	}

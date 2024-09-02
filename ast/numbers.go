@@ -30,7 +30,6 @@ func NewNumberNode(token string, offset, line, col int) (*NumberNode, error) {
 			Type:   NodeTypeNumber,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  token,
 		},
 		Value: types.Number(value),

@@ -17,7 +17,6 @@ func NewIdentifierNode(token string, offset, line, col int) (*IdentifierNode, er
 		BaseNode: BaseNode{
 			Type:   NodeTypeIdentifier,
 			Line:   line,
-			Offset: offset,
 			Column: col,
 			Token:  token,
 		},

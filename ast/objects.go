@@ -19,7 +19,6 @@ func NewObjectNode(token string, items []ObjectItem, offset, line, col int) *Obj
 			Type:   NodeTypeObject,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  token,
 		},
 

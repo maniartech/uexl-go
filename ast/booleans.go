@@ -26,7 +26,6 @@ func NewBooleanNode(token string, offset, line, col int) (*BooleanNode, error) {
 			Type:   NodeTypeBoolean,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  token,
 		},
 		Value: value,

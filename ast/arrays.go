@@ -17,7 +17,6 @@ func NewArrayNode(token string, items []Node, offset, line, col int) *ArrayNode 
 			Type:   NodeTypeArray,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  token,
 		},
 

@@ -21,7 +21,6 @@ func NewDotExpressionNode(token string, expr Node, key string, offset, line, col
 			Type:   NodeTypeDotExpression,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  token,
 		},
 		Expr: expr,

@@ -14,9 +14,6 @@ type BaseNode struct {
 	// Column is the column number of the node in the source code.
 	Column int `json:"column"`
 
-	// Offset is the position of the node in the source code.
-	Offset int `json:"offset"`
-
 	Token string `json:"token"`
 
 	// Type is the type of the node.

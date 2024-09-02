@@ -14,7 +14,6 @@ func NewNullNode(token string, offset, line, col int) *NullNode {
 			Type:   NodeTypeNull,
 			Line:   line,
 			Column: col,
-			Offset: offset,
 			Token:  token,
 		},
 	}
