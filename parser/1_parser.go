@@ -6,10 +6,11 @@ import (
 )
 
 type Parser struct {
-	tokenizer *Tokenizer
-	current   Token
-	errors    []string
-	pos       int
+	tokenizer           *Tokenizer
+	current             Token
+	errors              []string
+	pos                 int
+	subExpressionActive bool
 }
 
 func NewParser(input string) *Parser {
@@ -22,10 +23,13 @@ func NewParser(input string) *Parser {
 
 func (p *Parser) Parse() (Expression, error) {
 	expr := p.parseExpression()
+
+	if len(p.errors) != 0 {
+		return nil, fmt.Errorf("parsing errors: %v", p.errors)
+	}
+
 	if expr == nil {
-		if len(p.errors) != 0 {
-			return nil, fmt.Errorf("parsing errors: %v", p.errors)
-		}
+		return nil, fmt.Errorf("expression is nil")
 	}
 
 	if p.current.Type != TokenEOF {
@@ -42,6 +46,11 @@ func (p *Parser) parseExpression() Expression {
 }
 
 func (p *Parser) parsePipeExpression() Expression {
+	if p.subExpressionActive {
+		p.addError("pipe expressions cannot be sub-expressions")
+		return nil
+	}
+
 	firstExpression := p.parseLogicalOr()
 
 	if firstExpression == nil {
@@ -193,6 +202,8 @@ func (p *Parser) parseIdentifierOrFunctionCall() Expression {
 func (p *Parser) parseFunctionCall(function Expression) Expression {
 	openParen := p.current
 	p.advance() // consume '('
+	p.subExpressionActive = true
+
 	args := []Expression{}
 
 	if p.current.Type != TokenRightParen {
@@ -211,6 +222,7 @@ func (p *Parser) parseFunctionCall(function Expression) Expression {
 	}
 	p.advance() // consume ')'
 
+	p.subExpressionActive = false
 	return &FunctionCall{Function: function, Arguments: args, Line: openParen.Line, Column: openParen.Column}
 }
 
@@ -243,18 +255,24 @@ func (p *Parser) parseNull() Expression {
 
 func (p *Parser) parseGroupedExpression() Expression {
 	p.advance() // consume '('
+	p.subExpressionActive = true
+
 	expr := p.parseExpression()
 	if p.current.Type != TokenRightParen {
 		p.addError("expected ')'")
 	} else {
 		p.advance() // consume ')'
 	}
+
+	p.subExpressionActive = false
 	return expr
 }
 
 func (p *Parser) parseArray() Expression {
 	token := p.current
 	p.advance() // consume '['
+	p.subExpressionActive = true
+
 	elements := []Expression{}
 
 	if p.current.Type != TokenRightBracket {
@@ -278,12 +296,16 @@ func (p *Parser) parseArray() Expression {
 	} else {
 		p.advance() // consume ']'
 	}
+
+	p.subExpressionActive = false
 	return &ArrayLiteral{Elements: elements, Line: token.Line, Column: token.Column}
 }
 
 func (p *Parser) parseObject() Expression {
 	token := p.current
 	p.advance() // consume '{'
+	p.subExpressionActive = true
+
 	properties := make(map[string]Expression)
 	for p.current.Type != TokenRightBrace {
 		if p.current.Type != TokenString {
@@ -315,6 +337,8 @@ func (p *Parser) parseObject() Expression {
 	} else {
 		p.advance() // consume '}'
 	}
+
+	p.subExpressionActive = false
 	return &ObjectLiteral{Properties: properties, Line: token.Line, Column: token.Column}
 }
 
