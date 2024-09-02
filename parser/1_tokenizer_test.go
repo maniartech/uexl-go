@@ -54,6 +54,26 @@ func TestTokenizer(t *testing.T) {
 				{Type: parser.TokenEOF, Line: 1, Column: 23},
 			},
 		},
+		{
+			// All cases of | operators, pipe, logical or and bitwise or
+			input: "a | b |map: c || d |filter: x | y || z",
+			expected: []parser.Token{
+				{Type: parser.TokenIdentifier, Value: "a", Line: 1, Column: 1},
+				{Type: parser.TokenOperator, Value: "|", Line: 1, Column: 3},
+				{Type: parser.TokenIdentifier, Value: "b", Line: 1, Column: 5},
+				{Type: parser.TokenPipe, Value: "map", Line: 1, Column: 7},
+				{Type: parser.TokenIdentifier, Value: "c", Line: 1, Column: 13},
+				{Type: parser.TokenOperator, Value: "||", Line: 1, Column: 15},
+				{Type: parser.TokenIdentifier, Value: "d", Line: 1, Column: 18},
+				{Type: parser.TokenPipe, Value: "filter", Line: 1, Column: 20},
+				{Type: parser.TokenIdentifier, Value: "x", Line: 1, Column: 29},
+				{Type: parser.TokenOperator, Value: "|", Line: 1, Column: 31},
+				{Type: parser.TokenIdentifier, Value: "y", Line: 1, Column: 33},
+				{Type: parser.TokenOperator, Value: "||", Line: 1, Column: 35},
+				{Type: parser.TokenIdentifier, Value: "z", Line: 1, Column: 38},
+				{Type: parser.TokenEOF, Line: 1, Column: 39},
+			},
+		},
 	}
 
 	for _, tt := range tests {

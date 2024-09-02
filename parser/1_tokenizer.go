@@ -196,6 +196,7 @@ func (t *Tokenizer) readDollarIdentifier() Token {
 	return Token{Type: TokenIdentifier, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
 }
 
+// Ref: https://regex101.com/r/w6qtHq/1
 var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-z]+)?:`)
 
 func (t *Tokenizer) readPipeOrBitwiseOr() Token {
@@ -206,7 +207,9 @@ func (t *Tokenizer) readPipeOrBitwiseOr() Token {
 	}
 
 	// Fetch the next 10 characters or the rest of the input if less than 10 characters are available
-	nextChars := t.input[t.pos:int(math.Min(float64(t.pos+10), float64(len(t.input))))]
+	nextChars := t.input[t.pos:int(
+		math.Min(float64(t.pos+10), float64(len(t.input))),
+	)]
 
 	pipeMatch := pipePattern.FindStringSubmatch(nextChars)
 	if len(pipeMatch) > 0 {
@@ -222,21 +225,18 @@ func (t *Tokenizer) readPipeOrBitwiseOr() Token {
 }
 
 func (t *Tokenizer) readOperator() Token {
+	// This function does not handle operators starting with '|' because that is
+	// handled by the readPipeOrBitwiseOr function.
+
 	start := t.pos
-	switch t.current() {
-	case '&':
-		if t.peek() == '&' {
-			t.advance()
-			t.advance()
-			return Token{Type: TokenOperator, Value: "&&", Line: t.line, Column: t.column - 2}
-		}
-	case '|':
-		if t.peek() == '|' {
-			t.advance()
-			t.advance()
-			return Token{Type: TokenOperator, Value: "||", Line: t.line, Column: t.column - 2}
-		}
+
+	// Handle && operator
+	if t.current() == '&' && t.peek() == '&' {
+		t.advance()
+		t.advance()
+		return Token{Type: TokenOperator, Value: "&&", Line: t.line, Column: t.column - 2}
 	}
+
 	// Handle single-character operators
 	for t.pos < len(t.input) && isOperatorChar(t.current()) {
 		t.advance()
