@@ -15,9 +15,9 @@ func TestTokenizer(t *testing.T) {
 			input: "\"hello\" + 'world'",
 			expected: []parser.Token{
 				{Type: parser.TokenString, Value: "\"hello\"", Line: 1, Column: 1},
-				{Type: parser.TokenOperator, Value: "+", Line: 1, Column: 8},
-				{Type: parser.TokenString, Value: "'world'", Line: 1, Column: 10},
-				{Type: parser.TokenEOF, Line: 1, Column: 17},
+				{Type: parser.TokenOperator, Value: "+", Line: 1, Column: 9},
+				{Type: parser.TokenString, Value: "'world'", Line: 1, Column: 11},
+				{Type: parser.TokenEOF, Line: 1, Column: 18},
 			},
 		},
 		{
@@ -120,8 +120,7 @@ func TestPipe(t *testing.T) {
 }
 
 func TestTrial(t *testing.T) {
-	input := `
-  'Test'`
+	input := "\"hello\" + 'world'"
 	tokenizer := parser.NewTokenizer(input)
 
 	tokenizer.PrintTokens()
