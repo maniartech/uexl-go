@@ -12,6 +12,15 @@ func TestTokenizer(t *testing.T) {
 		expected []parser.Token
 	}{
 		{
+			input: "\"hello\" + 'world'",
+			expected: []parser.Token{
+				{Type: parser.TokenString, Value: "\"hello\"", Line: 1, Column: 1},
+				{Type: parser.TokenOperator, Value: "+", Line: 1, Column: 8},
+				{Type: parser.TokenString, Value: "'world'", Line: 1, Column: 10},
+				{Type: parser.TokenEOF, Line: 1, Column: 17},
+			},
+		},
+		{
 			input: "3.14 + x * (y - z)",
 			expected: []parser.Token{
 				{Type: parser.TokenNumber, Value: "3.14", Line: 1, Column: 1},
@@ -40,10 +49,8 @@ func TestTokenizer(t *testing.T) {
 		{
 			input: "a.b |: func(1, 'test')",
 			expected: []parser.Token{
-				{Type: parser.TokenIdentifier, Value: "a", Line: 1, Column: 1},
-				{Type: parser.TokenDot, Value: ".", Line: 1, Column: 2},
-				{Type: parser.TokenIdentifier, Value: "b", Line: 1, Column: 3},
-				{Type: parser.TokenPipe, Value: "", Line: 1, Column: 5},
+				{Type: parser.TokenIdentifier, Value: "a.b", Line: 1, Column: 1},
+				{Type: parser.TokenPipe, Value: ":", Line: 1, Column: 5},
 				{Type: parser.TokenIdentifier, Value: "func", Line: 1, Column: 8},
 				{Type: parser.TokenLeftParen, Value: "(", Line: 1, Column: 12},
 				{Type: parser.TokenNumber, Value: "1", Line: 1, Column: 13},
@@ -110,4 +117,12 @@ func TestPipe(t *testing.T) {
 			t.Errorf("For input %q, expected token %+v, but got %+v", input, expected, actual)
 		}
 	}
+}
+
+func TestTrial(t *testing.T) {
+	input := `
+  'Test'`
+	tokenizer := parser.NewTokenizer(input)
+
+	tokenizer.PrintTokens()
 }

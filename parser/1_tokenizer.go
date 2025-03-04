@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"math"
 	"regexp"
 	"strings"
@@ -86,6 +87,10 @@ type Tokenizer struct {
 	pos    int
 	line   int
 	column int
+}
+
+func (t Token) String() string {
+	return fmt.Sprintf("%s(%s) at %d:%d", t.Type, t.Value, t.Line, t.Column)
 }
 
 func NewTokenizer(input string) *Tokenizer {
@@ -190,6 +195,7 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 func (t *Tokenizer) readString() Token {
 	quote := t.current()
 	start := t.pos
+	startColumn := t.column
 	t.advance() // consume opening quote
 	for t.pos < len(t.input) && t.current() != quote {
 		if t.current() == '\\' {
@@ -200,17 +206,23 @@ func (t *Tokenizer) readString() Token {
 	if t.pos < len(t.input) {
 		t.advance() // consume closing quote
 	}
-	return Token{Type: TokenString, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
+	return Token{Type: TokenString, Value: t.input[start:t.pos], Line: t.line, Column: startColumn}
 }
 
 // Ref: https://regex101.com/r/w6qtHq/1
 var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-z]+)?:`)
 
 func (t *Tokenizer) readPipeOrBitwiseOr() Token {
+	start := t.pos
 	t.advance() // consume first '|'
 	if t.current() == '|' {
 		t.advance() // consume second '|'
-		return Token{Type: TokenOperator, Value: "||", Line: t.line, Column: t.column - 2}
+		return Token{Type: TokenOperator, Value: "||", Line: t.line, Column: t.column - (t.pos - start)}
+	}
+
+	if t.current() == ':' {
+		t.advance() // consume ':'
+		return Token{Type: TokenPipe, Value: ":", Line: t.line, Column: t.column - (t.pos - start)}
 	}
 
 	// Fetch the next 10 characters or the rest of the input if less than 10 characters are available
@@ -225,10 +237,10 @@ func (t *Tokenizer) readPipeOrBitwiseOr() Token {
 			t.advance()
 		}
 		t.advance() // consume ':'
-		return Token{Type: TokenPipe, Value: pipeName, Line: t.line, Column: t.column - len(pipeMatch[0]) - 1}
+		return Token{Type: TokenPipe, Value: pipeName, Line: t.line, Column: t.column - (t.pos - start)}
 	}
 
-	return Token{Type: TokenOperator, Value: "|", Line: t.line, Column: t.column - 1}
+	return Token{Type: TokenOperator, Value: "|", Line: t.line, Column: t.column - (t.pos - start)}
 }
 
 func (t *Tokenizer) readOperator() Token {
@@ -236,19 +248,20 @@ func (t *Tokenizer) readOperator() Token {
 	// handled by the readPipeOrBitwiseOr function.
 
 	start := t.pos
+	startColumn := t.column
 
 	// Handle && operator
 	if t.current() == '&' && t.peek() == '&' {
 		t.advance()
 		t.advance()
-		return Token{Type: TokenOperator, Value: "&&", Line: t.line, Column: t.column - 2}
+		return Token{Type: TokenOperator, Value: "&&", Line: t.line, Column: startColumn}
 	}
 
 	// Handle single-character operators
 	for t.pos < len(t.input) && isOperatorChar(t.current()) {
 		t.advance()
 	}
-	return Token{Type: TokenOperator, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
+	return Token{Type: TokenOperator, Value: t.input[start:t.pos], Line: t.line, Column: startColumn}
 }
 
 func (t *Tokenizer) singleCharToken(tokenType TokenType) Token {
@@ -319,4 +332,10 @@ func (t *Tokenizer) PreloadTokens() []Token {
 		}
 	}
 	return tokens
+}
+
+func (t *Tokenizer) PrintTokens() {
+	for i, t := range t.PreloadTokens() {
+		fmt.Printf("%d: %s\n", i, t)
+	}
 }
