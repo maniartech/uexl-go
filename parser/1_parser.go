@@ -70,8 +70,11 @@ func (p *Parser) parsePipeExpression() Expression {
 		p.advance()
 
 		pipeType := "pipe" // default pipe type
-		if op.Value != "" {
-			pipeType = op.Value
+		if op.Value != nil {
+			// Convert op.Value to string if possible
+			if strValue, ok := op.Value.(string); ok && strValue != "" {
+				pipeType = strValue
+			}
 		}
 		pipeTypes = append(pipeTypes, pipeType)
 
@@ -136,11 +139,15 @@ func (p *Parser) parseMultiplicative() Expression {
 }
 
 func (p *Parser) parseUnary() Expression {
-	if p.current.Type == TokenOperator && (p.current.Value == "-" || p.current.Value == "!") {
-		op := p.current
-		p.advance()
-		expr := p.parseUnary()
-		return &UnaryExpression{Operator: op.Value, Operand: expr, Line: op.Line, Column: op.Column}
+	if p.current.Type == TokenOperator {
+		// Check if the operator is "-" or "!"
+		if opValue, ok := p.current.Value.(string); ok && (opValue == "-" || opValue == "!") {
+			op := p.current
+			p.advance()
+			expr := p.parseUnary()
+			// Use the string value from the type assertion
+			return &UnaryExpression{Operator: opValue, Operand: expr, Line: op.Line, Column: op.Column}
+		}
 	}
 	return p.parseMemberAccess()
 }
@@ -155,7 +162,12 @@ func (p *Parser) parseMemberAccess() Expression {
 			p.addError("expected identifier after '.'")
 			return expr
 		}
-		property := p.current.Value
+		// Type assertion for property which should be a string
+		property, ok := p.current.Value.(string)
+		if !ok {
+			// Fallback to using the token string if type assertion fails
+			property = p.current.Token
+		}
 		p.advance()
 		expr = &MemberAccess{Object: expr, Property: property, Line: dot.Line, Column: dot.Column}
 	}
@@ -189,7 +201,7 @@ func (p *Parser) parsePrimary() Expression {
 }
 
 func (p *Parser) parseIdentifierOrFunctionCall() Expression {
-	identifier := &Identifier{Name: p.current.Value, Line: p.current.Line, Column: p.current.Column}
+	identifier := &Identifier{Name: p.current.Token, Line: p.current.Line, Column: p.current.Column}
 	p.advance()
 
 	if p.current.Type == TokenLeftParen {
@@ -229,21 +241,28 @@ func (p *Parser) parseFunctionCall(function Expression) Expression {
 func (p *Parser) parseNumber() Expression {
 	token := p.current
 	p.advance()
-	return &NumberLiteral{Value: token.Value, Line: token.Line, Column: token.Column}
+	return &NumberLiteral{Value: token.Token, Line: token.Line, Column: token.Column}
 }
 
 func (p *Parser) parseString() Expression {
 	token := p.current
 	p.advance()
-	// Remove surrounding quotes
-	value := strings.Trim(token.Value, "'\"")
+	// Value already has quotes removed
+	value, ok := token.Value.(string)
+	if !ok {
+		// Fallback to removing quotes manually if type assertion fails
+		value = strings.Trim(token.Token, "'\"")
+	}
 	return &StringLiteral{Value: value, Line: token.Line, Column: token.Column}
 }
 
 func (p *Parser) parseBoolean() Expression {
 	token := p.current
 	p.advance()
-	value := token.Value == "true"
+	value, ok := token.Value.(bool)
+	if !ok {
+		value = token.Token == "true"
+	}
 	return &BooleanLiteral{Value: value, Line: token.Line, Column: token.Column}
 }
 
@@ -312,7 +331,12 @@ func (p *Parser) parseObject() Expression {
 			p.addError("expected string key")
 			break
 		}
-		key := strings.Trim(p.current.Value, "\"'")
+		// Type assertion for key which should be a string
+		key, ok := p.current.Value.(string)
+		if !ok {
+			// Fallback to removing quotes manually if type assertion fails
+			key = strings.Trim(p.current.Token, "'\"")
+		}
 		p.advance()
 		if p.current.Type != TokenColon {
 			p.addError("expected ':'")
@@ -345,11 +369,16 @@ func (p *Parser) parseObject() Expression {
 func (p *Parser) parseBinaryOp(parseFunc func() Expression, operators ...string) Expression {
 	left := parseFunc()
 
-	for p.current.Type == TokenOperator && contains(operators, p.current.Value) {
+	for p.current.Type == TokenOperator {
+		// Type assertion for operator value
+		opValue, ok := p.current.Value.(string)
+		if !ok || !contains(operators, opValue) {
+			break
+		}
 		op := p.current
 		p.advance()
 		right := parseFunc()
-		left = &BinaryExpression{Left: left, Operator: op.Value, Right: right, Line: op.Line, Column: op.Column}
+		left = &BinaryExpression{Left: left, Operator: opValue, Right: right, Line: op.Line, Column: op.Column}
 	}
 
 	return left
@@ -359,7 +388,7 @@ func (p *Parser) advance() {
 	p.current = p.tokenizer.NextToken()
 	if p.pos == 0 {
 		if p.current.Type == TokenPipe {
-			p.addError("unexpected token: " + p.current.Value)
+			p.addError("unexpected token: " + p.current.Token)
 		}
 	}
 	p.pos++

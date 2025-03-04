@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -77,7 +78,8 @@ func (t TokenType) String() string {
 
 type Token struct {
 	Type   TokenType
-	Value  string
+	Value  any    // Stores native parsed values (float64, string without quotes, etc.)
+	Token  string // Stores the original token string
 	Line   int
 	Column int
 }
@@ -90,7 +92,7 @@ type Tokenizer struct {
 }
 
 func (t Token) String() string {
-	return fmt.Sprintf("%s(%s) at %d:%d", t.Type, t.Value, t.Line, t.Column)
+	return fmt.Sprintf("%s(%s) at %d:%d", t.Type, t.Token, t.Line, t.Column)
 }
 
 func NewTokenizer(input string) *Tokenizer {
@@ -156,7 +158,12 @@ func (t *Tokenizer) readNumber() Token {
 			t.advance()
 		}
 	}
-	return Token{Type: TokenNumber, Value: t.input[start:t.pos], Line: t.line, Column: t.column - (t.pos - start)}
+	originalToken := t.input[start:t.pos]
+	value, err := strconv.ParseFloat(originalToken, 64)
+	if err != nil {
+		value = 0.0
+	}
+	return Token{Type: TokenNumber, Value: value, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 }
 
 func (t *Tokenizer) readIdentifierOrKeyword() Token {
@@ -172,7 +179,7 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 		if t.current() == '.' {
 			if hasDot {
 				// Error: consecutive dots
-				return Token{Type: TokenEOF, Value: "Error: consecutive dots", Line: t.line, Column: t.column}
+				return Token{Type: TokenEOF, Value: "Error: consecutive dots", Token: "Error: consecutive dots", Line: t.line, Column: t.column}
 			}
 			hasDot = true
 		} else {
@@ -181,14 +188,14 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 		t.advance()
 	}
 
-	value := t.input[start:t.pos]
-	switch value {
+	originalToken := t.input[start:t.pos]
+	switch originalToken {
 	case "true", "false":
-		return Token{Type: TokenBoolean, Value: value, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: TokenBoolean, Value: originalToken == "true", Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 	case "null":
-		return Token{Type: TokenNull, Value: value, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: TokenNull, Value: nil, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 	default:
-		return Token{Type: TokenIdentifier, Value: value, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: TokenIdentifier, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 	}
 }
 
@@ -206,7 +213,10 @@ func (t *Tokenizer) readString() Token {
 	if t.pos < len(t.input) {
 		t.advance() // consume closing quote
 	}
-	return Token{Type: TokenString, Value: t.input[start:t.pos], Line: t.line, Column: startColumn}
+	originalToken := t.input[start:t.pos]
+	// Remove surrounding quotes
+	value := strings.Trim(originalToken, "'\"")
+	return Token{Type: TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn}
 }
 
 // Ref: https://regex101.com/r/w6qtHq/1
@@ -217,12 +227,14 @@ func (t *Tokenizer) readPipeOrBitwiseOr() Token {
 	t.advance() // consume first '|'
 	if t.current() == '|' {
 		t.advance() // consume second '|'
-		return Token{Type: TokenOperator, Value: "||", Line: t.line, Column: t.column - (t.pos - start)}
+		operator := "||"
+		return Token{Type: TokenOperator, Value: operator, Token: operator, Line: t.line, Column: t.column - (t.pos - start)}
 	}
 
 	if t.current() == ':' {
 		t.advance() // consume ':'
-		return Token{Type: TokenPipe, Value: ":", Line: t.line, Column: t.column - (t.pos - start)}
+		pipeValue := ":"
+		return Token{Type: TokenPipe, Value: pipeValue, Token: pipeValue, Line: t.line, Column: t.column - (t.pos - start)}
 	}
 
 	// Fetch the next 10 characters or the rest of the input if less than 10 characters are available
@@ -237,10 +249,11 @@ func (t *Tokenizer) readPipeOrBitwiseOr() Token {
 			t.advance()
 		}
 		t.advance() // consume ':'
-		return Token{Type: TokenPipe, Value: pipeName, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: TokenPipe, Value: pipeName, Token: pipeName, Line: t.line, Column: t.column - (t.pos - start)}
 	}
 
-	return Token{Type: TokenOperator, Value: "|", Line: t.line, Column: t.column - (t.pos - start)}
+	operator := "|"
+	return Token{Type: TokenOperator, Value: operator, Token: operator, Line: t.line, Column: t.column - (t.pos - start)}
 }
 
 func (t *Tokenizer) readOperator() Token {
@@ -254,18 +267,21 @@ func (t *Tokenizer) readOperator() Token {
 	if t.current() == '&' && t.peek() == '&' {
 		t.advance()
 		t.advance()
-		return Token{Type: TokenOperator, Value: "&&", Line: t.line, Column: startColumn}
+		operator := "&&"
+		return Token{Type: TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}
 	}
 
 	// Handle single-character operators
 	for t.pos < len(t.input) && isOperatorChar(t.current()) {
 		t.advance()
 	}
-	return Token{Type: TokenOperator, Value: t.input[start:t.pos], Line: t.line, Column: startColumn}
+	operator := t.input[start:t.pos]
+	return Token{Type: TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}
 }
 
 func (t *Tokenizer) singleCharToken(tokenType TokenType) Token {
-	token := Token{Type: tokenType, Value: string(t.current()), Line: t.line, Column: t.column}
+	charValue := string(t.current())
+	token := Token{Type: tokenType, Value: charValue, Token: charValue, Line: t.line, Column: t.column}
 	t.advance()
 	return token
 }
