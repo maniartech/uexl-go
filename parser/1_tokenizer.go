@@ -92,7 +92,7 @@ type Tokenizer struct {
 }
 
 func (t Token) String() string {
-	return fmt.Sprintf("%s(%s) at %d:%d", t.Type, t.Token, t.Line, t.Column)
+	return fmt.Sprintf("%s(%s) with value(%v) at %d:%d", t.Type, t.Token, t.Value, t.Line, t.Column)
 }
 
 func NewTokenizer(input string) *Tokenizer {
@@ -114,12 +114,19 @@ func (t *Tokenizer) NextToken() Token {
 	switch ch := t.current(); {
 	case isDigit(ch):
 		return t.readNumber()
-	case isLetter(ch):
-		return t.readIdentifierOrKeyword()
 	case ch == '$':
 		return t.readIdentifierOrKeyword()
 	case ch == '"' || ch == '\'':
 		return t.readString()
+	case ch == 'r':
+		next := t.next()
+		// if next string is a quote, then it is a raw string, otherwise it is an identifier
+		if next == '"' || next == '\'' {
+			return t.readString()
+		}
+		fallthrough
+	case isLetter(ch):
+		return t.readIdentifierOrKeyword()
 	case ch == '(':
 		return t.singleCharToken(TokenLeftParen)
 	case ch == ')':
@@ -202,11 +209,8 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 func (t *Tokenizer) readString() Token {
 	// Check for raw string prefix
 	rawString := false
-	if t.pos > 0 && t.input[t.pos-1] == 'r' {
+	if t.input[t.pos] == 'r' {
 		rawString = true
-		// Move back one position to include 'r' in the token
-		t.pos--
-		t.column--
 	}
 
 	quote := t.current()
@@ -231,11 +235,12 @@ func (t *Tokenizer) readString() Token {
 		t.advance() // consume closing quote
 	}
 	originalToken := t.input[start:t.pos]
-	// Remove surrounding quotes and 'r' prefix if present
-	value := strings.Trim(originalToken, "'\"")
+	var value string
 	if rawString {
-		value = value[1:] // Remove 'r' prefix
+		value = originalToken[1:] // Remove 'r' prefix
 	}
+	// Remove surrounding quotes and 'r' prefix if present
+	value = strings.Trim(value, "'\"")
 	return Token{Type: TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn}
 }
 
@@ -311,6 +316,15 @@ func (t *Tokenizer) current() rune {
 		return 0
 	}
 	r, _ := utf8.DecodeRuneInString(t.input[t.pos:])
+	return r
+}
+
+// next returns the next rune in the input string without advancing the position.
+func (t *Tokenizer) next() rune {
+	if t.pos+1 >= len(t.input) {
+		return 0
+	}
+	r, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
 	return r
 }
 

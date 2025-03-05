@@ -159,8 +159,61 @@ func TestPipe(t *testing.T) {
 }
 
 func TestTrial(t *testing.T) {
-	input := "\"hello\" + 'world'"
+	input := `r"hello\nworld"`
 	tokenizer := parser.NewTokenizer(input)
 
 	tokenizer.PrintTokens()
+}
+
+func TestRawString(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []parser.Token
+	}{
+		{
+			input: `r"hello\nworld"`,
+			expected: []parser.Token{
+				{Type: parser.TokenString, Value: `hello\nworld`, Token: `r"hello\nworld"`, Line: 1, Column: 1},
+				{Type: parser.TokenEOF, Line: 1, Column: 16},
+			},
+		},
+		{
+			input: `r'path\to\file'`,
+			expected: []parser.Token{
+				{Type: parser.TokenString, Value: `path\to\file`, Token: `r'path\to\file'`, Line: 1, Column: 1},
+				{Type: parser.TokenEOF, Line: 1, Column: 16},
+			},
+		},
+		{
+			input: `r"multi\nline\nstring"`,
+			expected: []parser.Token{
+				{Type: parser.TokenString, Value: `multi\nline\nstring`, Token: `r"multi\nline\nstring"`, Line: 1, Column: 1},
+				{Type: parser.TokenEOF, Line: 1, Column: 23},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			tokenizer := parser.NewTokenizer(tt.input)
+			for _, expected := range tt.expected {
+				actual := tokenizer.NextToken()
+				if actual.Type != expected.Type ||
+					actual.Line != expected.Line || actual.Column != expected.Column {
+					t.Errorf("For input %q, expected token %+v, but got %+v", tt.input, expected, actual)
+				}
+
+				// For raw strings, we expect the Value to contain the literal string content
+				// and the Token to contain the full raw string including 'r' prefix and quotes
+				if actual.Type == parser.TokenString {
+					if actual.Value != expected.Value {
+						t.Errorf("For input %q, expected string value %q, but got %q", tt.input, expected.Value, actual.Value)
+					}
+					if actual.Token != expected.Token {
+						t.Errorf("For input %q, expected token string %q, but got %q", tt.input, expected.Token, actual.Token)
+					}
+				}
+			}
+		})
+	}
 }
