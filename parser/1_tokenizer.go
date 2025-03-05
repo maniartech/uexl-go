@@ -200,13 +200,30 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 }
 
 func (t *Tokenizer) readString() Token {
+	// Check for raw string prefix
+	rawString := false
+	if t.pos > 0 && t.input[t.pos-1] == 'r' {
+		rawString = true
+		// Move back one position to include 'r' in the token
+		t.pos--
+		t.column--
+	}
+
 	quote := t.current()
+	if rawString {
+		// Skip the quote character for raw strings
+		quote = t.peek()
+	}
 	start := t.pos
 	startColumn := t.column
-	t.advance() // consume opening quote
+	t.advance() // consume 'r' or opening quote
+	if rawString {
+		t.advance() // consume opening quote for raw strings
+	}
+
 	for t.pos < len(t.input) && t.current() != quote {
-		if t.current() == '\\' {
-			t.advance() // skip escape character
+		if !rawString && t.current() == '\\' {
+			t.advance() // skip escape character only for non-raw strings
 		}
 		t.advance()
 	}
@@ -214,8 +231,11 @@ func (t *Tokenizer) readString() Token {
 		t.advance() // consume closing quote
 	}
 	originalToken := t.input[start:t.pos]
-	// Remove surrounding quotes
+	// Remove surrounding quotes and 'r' prefix if present
 	value := strings.Trim(originalToken, "'\"")
+	if rawString {
+		value = value[1:] // Remove 'r' prefix
+	}
 	return Token{Type: TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn}
 }
 
