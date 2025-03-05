@@ -13,6 +13,7 @@ UExl (Universal Expression Language) is an embeddable, platform-independent expr
 - [Functions](#functions)
 - [Pipes](#pipes)
 - [Objects and Arrays](#objects-and-arrays)
+- [Error Handling and Debugging](#error-handling-and-debugging)
 - [Examples](#examples)
 
 ## Data Types
@@ -250,6 +251,32 @@ Elements of arrays can be accessed using bracket notation with a zero-based inde
 numbers[0]    // First element
 names[2]      // Third element
 ```
+
+## Error Handling and Debugging
+
+UExl is designed to provide clear and actionable error information when expression evaluation fails. When an error occurs, UExl will throw a custom error that includes the following components:
+
+- **ErrorCode:** A standardized code that identifies the type of error (e.g., `"SYNTAX_ERROR"`, `"TYPE_MISMATCH"`, `"RUNTIME_ERROR"`). This code helps developers quickly reference documentation and understand the nature of the error.
+- **Message:** A descriptive message explaining what went wrong, including contextual information to aid in debugging. For example, an error message might indicate, "Unexpected token '+' encountered."
+- **Line and Column:** The specific location in the expression where the error occurred, provided as line and column numbers. This pinpointing allows developers to quickly locate and address the issue.
+
+### Error Format
+
+Here is an example of a host-agnostic error object:
+
+```
+{
+  "errorCode": "SYNTAX_ERROR",
+  "message": "Unexpected token '+' encountered. Check operator usage.",
+  "line": 3,
+  "column": 15
+}
+```
+
+### Debugging Support
+
+- **Debug Mode:** UExl can be configured with a debug mode that logs detailed evaluation steps, including intermediate values and function call traces. This is especially useful during development or when troubleshooting complex expressions.
+- **Stack Traces:** For runtime errors within nested expressions or function calls, UExl may provide a stack trace or a sequence of evaluation contexts to assist in identifying the exact source of the error.
 
 ## Examples
 
