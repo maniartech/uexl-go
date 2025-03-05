@@ -9,9 +9,15 @@ import (
 
 func TestNull(t *testing.T) {
 	got, _ := ParseReader("", strings.NewReader("null"))
-	gotNode := got.(ast.NullNode)
+
+	// Change the type assertion to handle a pointer to NullNode
+	gotNode, ok := got.(*ast.NullNode)
+	if !ok {
+		t.Fatalf("Expected *ast.NullNode, got %T", got)
+	}
+
 	token := gotNode.Token
 	if token != "null" {
-		t.Errorf("Expcted null, got %v", token)
+		t.Errorf("Expected null, got %v", token)
 	}
 }
