@@ -13,6 +13,7 @@ UExl (Universal Expression Language) is an embeddable, platform-independent expr
 - [Functions](#functions)
 - [Pipes](#pipes)
 - [Objects and Arrays](#objects-and-arrays)
+- [Type Conversion and Coercion](#type-conversion-and-coercion)
 - [Error Handling and Debugging](#error-handling-and-debugging)
 - [Examples](#examples)
 
@@ -251,6 +252,48 @@ Elements of arrays can be accessed using bracket notation with a zero-based inde
 numbers[0]    // First element
 names[2]      // Third element
 ```
+
+## Type Conversion and Coercion
+
+UExl provides a flexible type system that includes both implicit and explicit type conversion mechanisms. Understanding these rules is crucial for writing predictable expressions and avoiding unintended behaviors.
+
+### Implicit Type Conversion
+
+When evaluating expressions, UExl may automatically convert values between types according to a defined set of rules:
+
+- **Arithmetic Operations:**
+  If an arithmetic operator is used with operands of different types (for example, a number and a string), UExl attempts to convert the string to a number. If the conversion is successful, the operation continues; otherwise, an error is thrown.
+
+- **Logical Contexts:**
+  In logical expressions, UExl determines truthiness or falsiness as follows:
+  - Non-zero numbers and non-empty strings are treated as truthy.
+  - The values `false` and `null` are considered falsy.
+
+- **Comparison Operations:**
+  For equality checks, implicit conversion may occur:
+  - The equality operator (`==`) performs type coercion, comparing values after converting them to a common type.
+  - A stricter equality operator (if supported) could compare both type and value without coercion.
+
+### Explicit Type Conversion
+
+To ensure clarity and avoid unintended implicit coercion, UExl includes built-in functions for explicit type conversion:
+
+- **`toNumber(value)`**
+  Converts the given `value` to a numeric type, if possible. If the conversion fails, a type error is raised.
+
+- **`toString(value)`**
+  Converts the given `value` to its string representation.
+
+- **`toBoolean(value)`**
+  Converts the given `value` to a boolean, following UExl's truthiness rules.
+
+### Considerations for Developers
+
+- **Predictability:**
+  While implicit conversions can simplify expressions, they may lead to unexpected results if not carefully managed. Using explicit conversion functions is recommended when the data type is critical for the operation.
+
+- **Error Handling:**
+  Any failure during implicit or explicit conversion will result in an error, providing details such as the error code and location in the expression to aid in debugging.
 
 ## Error Handling and Debugging
 
