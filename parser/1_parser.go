@@ -11,6 +11,7 @@ type Parser struct {
 	errors              []string
 	pos                 int
 	subExpressionActive bool
+	inParenthesis       bool // Add flag to track if we're inside parentheses
 }
 
 func NewParser(input string) *Parser {
@@ -46,7 +47,8 @@ func (p *Parser) parseExpression() Expression {
 }
 
 func (p *Parser) parsePipeExpression() Expression {
-	if p.subExpressionActive {
+	// Only disallow pipe expressions in sub-expressions that aren't in parentheses
+	if p.subExpressionActive && !p.inParenthesis {
 		p.addError("pipe expressions cannot be sub-expressions")
 		return nil
 	}
@@ -57,13 +59,15 @@ func (p *Parser) parsePipeExpression() Expression {
 		return nil
 	}
 
+	// Don't process pipes if inside a subexpression that's not a parenthesized expr
+	if p.subExpressionActive && !p.inParenthesis {
+		return firstExpression
+	}
+
 	expressions := []Expression{firstExpression}
 	pipeTypes := []string{"pipe"}
 
 	startLine, startColumn := expressions[0].Position()
-
-	// startLine := expressions[0].GetLine()
-	// startColumn := expressions[0].GetColumn()
 
 	for p.current.Type == TokenPipe {
 		op := p.current
@@ -155,21 +159,71 @@ func (p *Parser) parseUnary() Expression {
 func (p *Parser) parseMemberAccess() Expression {
 	expr := p.parsePrimary()
 
-	for p.current.Type == TokenDot {
-		dot := p.current
-		p.advance()
-		if p.current.Type != TokenIdentifier {
-			p.addError("expected identifier after '.'")
-			return expr
+	for {
+		// Handle array index access
+		if p.current.Type == TokenLeftBracket {
+			bracket := p.current
+			p.advance() // consume '['
+
+			// Save previous state
+			wasInParenthesis := p.inParenthesis
+			wasSubExpressionActive := p.subExpressionActive
+
+			// Allow expressions within array index
+			p.inParenthesis = true
+			p.subExpressionActive = true
+
+			// Parse the index expression
+			indexExpr := p.parseExpression()
+
+			if p.current.Type != TokenRightBracket {
+				p.addError("expected ']' after array index")
+			} else {
+				p.advance() // consume ']'
+			}
+
+			// Restore previous state
+			p.inParenthesis = wasInParenthesis
+			p.subExpressionActive = wasSubExpressionActive
+
+			// Create an index access expression
+			expr = &IndexAccess{
+				Array:  expr,
+				Index:  indexExpr,
+				Line:   bracket.Line,
+				Column: bracket.Column,
+			}
+			continue // check for more member access operations
 		}
-		// Type assertion for property which should be a string
-		property, ok := p.current.Value.(string)
-		if !ok {
-			// Fallback to using the token string if type assertion fails
-			property = p.current.Token
+
+		// Handle dot access
+		if p.current.Type == TokenDot {
+			dot := p.current
+			p.advance()
+
+			// Check for end of input or unexpected token after dot
+			if p.current.Type != TokenIdentifier {
+				p.addError("expected identifier after '.'")
+				return expr // Return what we have so far since this is an error
+			}
+
+			property, ok := p.current.Value.(string)
+			if !ok {
+				property = p.current.Token
+			}
+			p.advance()
+
+			expr = &MemberAccess{
+				Object:   expr,
+				Property: property,
+				Line:     dot.Line,
+				Column:   dot.Column,
+			}
+			continue // check for more member access operations
 		}
-		p.advance()
-		expr = &MemberAccess{Object: expr, Property: property, Line: dot.Line, Column: dot.Column}
+
+		// No more member access operations
+		break
 	}
 
 	return expr
@@ -201,7 +255,11 @@ func (p *Parser) parsePrimary() Expression {
 }
 
 func (p *Parser) parseIdentifierOrFunctionCall() Expression {
-	identifier := &Identifier{Name: p.current.Token, Line: p.current.Line, Column: p.current.Column}
+	identifier := &Identifier{
+		Name:   p.current.Token,
+		Line:   p.current.Line,
+		Column: p.current.Column,
+	}
 	p.advance()
 
 	if p.current.Type == TokenLeftParen {
@@ -214,6 +272,13 @@ func (p *Parser) parseIdentifierOrFunctionCall() Expression {
 func (p *Parser) parseFunctionCall(function Expression) Expression {
 	openParen := p.current
 	p.advance() // consume '('
+
+	// Save previous state
+	wasInParenthesis := p.inParenthesis
+	wasSubExpressionActive := p.subExpressionActive
+
+	// Set flags for function arguments
+	p.inParenthesis = true // Allow parenthesized expressions in function args
 	p.subExpressionActive = true
 
 	args := []Expression{}
@@ -234,8 +299,16 @@ func (p *Parser) parseFunctionCall(function Expression) Expression {
 	}
 	p.advance() // consume ')'
 
-	p.subExpressionActive = false
-	return &FunctionCall{Function: function, Arguments: args, Line: openParen.Line, Column: openParen.Column}
+	// Restore previous state
+	p.inParenthesis = wasInParenthesis
+	p.subExpressionActive = wasSubExpressionActive
+
+	return &FunctionCall{
+		Function:  function,
+		Arguments: args,
+		Line:      openParen.Line,
+		Column:    openParen.Column,
+	}
 }
 
 func (p *Parser) parseNumber() Expression {
@@ -274,6 +347,11 @@ func (p *Parser) parseNull() Expression {
 
 func (p *Parser) parseGroupedExpression() Expression {
 	p.advance() // consume '('
+
+	// Set both flags to track that we're in a parenthesized expression
+	wasInParenthesis := p.inParenthesis
+	p.inParenthesis = true
+	wasSubExpressionActive := p.subExpressionActive
 	p.subExpressionActive = true
 
 	expr := p.parseExpression()
@@ -283,13 +361,23 @@ func (p *Parser) parseGroupedExpression() Expression {
 		p.advance() // consume ')'
 	}
 
-	p.subExpressionActive = false
+	// Restore previous state
+	p.inParenthesis = wasInParenthesis
+	p.subExpressionActive = wasSubExpressionActive
+
 	return expr
 }
 
 func (p *Parser) parseArray() Expression {
 	token := p.current
 	p.advance() // consume '['
+
+	// Save previous state
+	wasInParenthesis := p.inParenthesis
+	wasSubExpressionActive := p.subExpressionActive
+
+	// Set flags for array elements
+	p.inParenthesis = true
 	p.subExpressionActive = true
 
 	elements := []Expression{}
@@ -316,13 +404,23 @@ func (p *Parser) parseArray() Expression {
 		p.advance() // consume ']'
 	}
 
-	p.subExpressionActive = false
+	// Restore previous state
+	p.inParenthesis = wasInParenthesis
+	p.subExpressionActive = wasSubExpressionActive
+
 	return &ArrayLiteral{Elements: elements, Line: token.Line, Column: token.Column}
 }
 
 func (p *Parser) parseObject() Expression {
 	token := p.current
 	p.advance() // consume '{'
+
+	// Save previous state
+	wasInParenthesis := p.inParenthesis
+	wasSubExpressionActive := p.subExpressionActive
+
+	// Set flags for object properties
+	p.inParenthesis = true
 	p.subExpressionActive = true
 
 	properties := make(map[string]Expression)
@@ -331,20 +429,33 @@ func (p *Parser) parseObject() Expression {
 			p.addError("expected string key")
 			break
 		}
-		// Type assertion for key which should be a string
-		key, ok := p.current.Value.(string)
-		if !ok {
-			// Fallback to removing quotes manually if type assertion fails
+
+		// Use the Value field which should contain the unquoted string
+		var key string
+		if strValue, ok := p.current.Value.(string); ok && strValue != "" {
+			key = strValue
+		} else {
+			// Fallback: remove quotes manually if needed
 			key = strings.Trim(p.current.Token, "'\"")
 		}
+
+		// Advance past the string token
 		p.advance()
+
 		if p.current.Type != TokenColon {
 			p.addError("expected ':'")
 			break
 		}
 		p.advance()
+
 		value := p.parseExpression()
+		if value == nil {
+			p.addError(fmt.Sprintf("invalid value for key '%s'", key))
+			break
+		}
+
 		properties[key] = value
+
 		if p.current.Type != TokenComma {
 			break
 		}
@@ -352,17 +463,20 @@ func (p *Parser) parseObject() Expression {
 
 		// Check for trailing comma
 		if p.current.Type == TokenRightBrace {
-			p.addError("expected '}'")
 			break
 		}
 	}
+
 	if p.current.Type != TokenRightBrace {
 		p.addError("expected '}'")
 	} else {
 		p.advance() // consume '}'
 	}
 
-	p.subExpressionActive = false
+	// Restore previous state
+	p.inParenthesis = wasInParenthesis
+	p.subExpressionActive = wasSubExpressionActive
+
 	return &ObjectLiteral{Properties: properties, Line: token.Line, Column: token.Column}
 }
 
@@ -406,3 +520,14 @@ func contains(slice []string, item string) bool {
 	}
 	return false
 }
+
+// Add a new expression type for array index access
+type IndexAccess struct {
+	Array  Expression
+	Index  Expression
+	Line   int
+	Column int
+}
+
+func (ia *IndexAccess) expressionNode()      {}
+func (ia *IndexAccess) Position() (int, int) { return ia.Line, ia.Column }
