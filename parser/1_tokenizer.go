@@ -31,6 +31,7 @@ const (
 	TokenBoolean
 	TokenNull
 	TokenDollar
+	TokenAs
 )
 
 func (t TokenType) String() string {
@@ -71,6 +72,8 @@ func (t TokenType) String() string {
 		return "Null"
 	case TokenDollar:
 		return "Dollar"
+	case TokenAs:
+		return "As"
 	default:
 		return "Unknown"
 	}
@@ -92,7 +95,7 @@ type Tokenizer struct {
 }
 
 func (t Token) String() string {
-	return fmt.Sprintf("%s(%s) with value(%v) at %d:%d", t.Type, t.Token, t.Value, t.Line, t.Column)
+	return fmt.Sprintf("%s(%s) at %d:%d", t.Type, t.Token, t.Line, t.Column)
 }
 
 func NewTokenizer(input string) *Tokenizer {
@@ -119,9 +122,7 @@ func (t *Tokenizer) NextToken() Token {
 	case ch == '"' || ch == '\'':
 		return t.readString()
 	case ch == 'r':
-		next := t.next()
-		// if next string is a quote, then it is a raw string, otherwise it is an identifier
-		if next == '"' || next == '\'' {
+		if t.peekNext() == '"' || t.peekNext() == '\'' {
 			return t.readString()
 		}
 		fallthrough
@@ -205,42 +206,50 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 		return Token{Type: TokenIdentifier, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 	}
 }
-
 func (t *Tokenizer) readString() Token {
+	start := t.pos
+	startColumn := t.column
+
 	// Check for raw string prefix
 	rawString := false
 	if t.input[t.pos] == 'r' {
 		rawString = true
+		// Advance past 'r'
+		t.advance()
 	}
 
+	// Get the quote character and advance past it
 	quote := t.current()
-	if rawString {
-		// Skip the quote character for raw strings
-		quote = t.peek()
-	}
-	start := t.pos
-	startColumn := t.column
-	t.advance() // consume 'r' or opening quote
-	if rawString {
-		t.advance() // consume opening quote for raw strings
-	}
+	t.advance() // consume opening quote
 
+	// Read until closing quote
 	for t.pos < len(t.input) && t.current() != quote {
 		if !rawString && t.current() == '\\' {
-			t.advance() // skip escape character only for non-raw strings
+			t.advance() // skip escape character
 		}
 		t.advance()
 	}
+
 	if t.pos < len(t.input) {
 		t.advance() // consume closing quote
 	}
-	originalToken := t.input[start:t.pos]
+
 	var value string
+	originalToken := t.input[start:t.pos]
 	if rawString {
-		value = originalToken[1:] // Remove 'r' prefix
+		// Remove 'r' prefix with quotes from the original token
+		value = originalToken[2 : len(originalToken)-1]
+	} else {
+		value = originalToken[1 : len(originalToken)-1]
+
+		// Unescape the string
+		value = strings.ReplaceAll(value, "\\\\", "\\")
+		value = strings.ReplaceAll(value, "\\n", "\n")
+		value = strings.ReplaceAll(value, "\\t", "\t")
+		value = strings.ReplaceAll(value, "\\\"", "\"")
+		value = strings.ReplaceAll(value, "\\'", "'")
 	}
-	// Remove surrounding quotes and 'r' prefix if present
-	value = strings.Trim(value, "'\"")
+
 	return Token{Type: TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn}
 }
 
@@ -319,8 +328,8 @@ func (t *Tokenizer) current() rune {
 	return r
 }
 
-// next returns the next rune in the input string without advancing the position.
-func (t *Tokenizer) next() rune {
+// peek the next character without advancing the position
+func (t *Tokenizer) peekNext() rune {
 	if t.pos+1 >= len(t.input) {
 		return 0
 	}
