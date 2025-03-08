@@ -1,11 +1,9 @@
 package parser_test
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/maniartech/uexl_go/internal/json"
 	"github.com/maniartech/uexl_go/parser"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,44 +41,29 @@ func TestNestedBinaryExpression(t *testing.T) {
 }
 
 // TestPipeExpression tests a pipe expression
+func TestPipeExpressions(t *testing.T) {
+	tests := []struct {
+		input string
+	}{
+		{"[1, 2, 3] |map: $1 * 2"},
+		{"x + y |: func($1) |: otherFunc($1, 2)"},
+		{"methodA(1, 2) |: $1.property |: upperCase"},
+		{"[1, 2, 3, 4, 5] |filter: $1 > 2 |map: $1 * 2 |reduce: $1 + $2"},
+		{"'hello' |: splitChars |filter: $1 != 'l' |join: ''"},
+		{"[$1.x.y, 2] |map: $1 * 2"},  // From previous TestGroupWithPipe
+	}
 
-func TestPipeExpressionMapOperation(t *testing.T) {
-	input := "[1, 2, 3] |map: $1 * 2 |filter: $1 + 1"
-	p := parser.NewParser(input)
-	ast, err := p.Parse()
-	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			ast, err := p.Parse()
+			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
 
-	fmt.Printf("%+v", ast)
-}
-
-func TestPipeExpressionMultipleFunctions(t *testing.T) {
-	input := "x + y |map: func($1) |filter: otherFunc($1, 2)"
-	p := parser.NewParser(input)
-	ast, err := p.Parse()
-	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
-
-	json.PrintJSON(ast)
-}
-
-func TestPipeExpressionMethodChaining(t *testing.T) {
-	input := "method(1, 2) |: $1.property |: upperCase"
-	p := parser.NewParser(input)
-	_, err := p.Parse()
-	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
-}
-
-func TestPipeExpressionMultipleOperations(t *testing.T) {
-	input := "[1, 2, 3, 4, 5] |filter: $1 > 2 |map: $1 * 2 |reduce: $1 + $2"
-	p := parser.NewParser(input)
-	_, err := p.Parse()
-	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
-}
-
-func TestPipeExpressionStringOperations(t *testing.T) {
-	input := "'hello' |: splitChars |filter: $1 != 'l' |join: ''"
-	p := parser.NewParser(input)
-	_, err := p.Parse()
-	assert.NoError(t, err, "Parsing should not produce an error for input: %s", input)
+			// Verify it's a pipe expression
+			_, ok := ast.(*parser.PipeExpression)
+			assert.True(t, ok, "Expected a PipeExpression for input: %s", tt.input)
+		})
+	}
 }
 
 // TestObjectLiteral tests an object literal
@@ -96,33 +79,6 @@ func TestObjectLiteral(t *testing.T) {
 	}
 	testParser(t, input, expected)
 }
-
-// TestArrayLiteralWithPipe tests an array literal with a pipe expression
-// func TestArrayLiteralWithPipe(t *testing.T) {
-// 	input := "[1, 2, 3] |map: (1 + 2)"
-// 	expected := &parser.PipeExpression{
-// 		Left: &parser.ArrayLiteral{
-// 			Elements: []parser.Expression{
-// 				&parser.NumberLiteral{Value: "1", Line: 1, Column: 2},
-// 				&parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
-// 				&parser.NumberLiteral{Value: "3", Line: 1, Column: 8},
-// 			},
-// 			Line:   1,
-// 			Column: 1,
-// 		},
-// 		PipeType: "map",
-// 		Right: &parser.BinaryExpression{
-// 			Left:     &parser.NumberLiteral{Value: "1", Line: 1, Column: 18},
-// 			Operator: "+",
-// 			Right:    &parser.NumberLiteral{Value: "2", Line: 1, Column: 22},
-// 			Line:     1,
-// 			Column:   20,
-// 		},
-// 		Line:   1,
-// 		Column: 11,
-// 	}
-// 	testParser(t, input, expected)
-// }
 
 // testParser is a helper function to run parser tests
 func testParser(t *testing.T, input string, expected parser.Expression) {
@@ -144,7 +100,7 @@ func TestParserErrors(t *testing.T) {
 		},
 		{
 			input:       "a.b |: (1, 2)",
-			expectedErr: "expected ')'", // Updated to match actual error
+			expectedErr: "expected ')'",
 		},
 		{
 			input:       "(1 + 2",
@@ -154,23 +110,10 @@ func TestParserErrors(t *testing.T) {
 			input:       "[1, 2,]",
 			expectedErr: "expected ']'",
 		},
-		// Object literal with trailing comma is now accepted
-		// by the parser, so we'll skip this test case
-		// {
-		//     input:       `{"a": 1,}`,
-		//     expectedErr: "expected '}'",
-		// },
 		{
 			input:       "1 + + 2",
 			expectedErr: "unexpected token",
 		},
-		// Remove this test case as the parser now handles
-		// identifiers followed by a dot without an identifier
-		// by returning a specific error
-		// {
-		//     input:       "a.",
-		//     expectedErr: "expected identifier after '.'",
-		// },
 		{
 			input:       `{"a": }`,
 			expectedErr: "unexpected token",
@@ -219,50 +162,96 @@ func TestComplexExpressions(t *testing.T) {
 	}
 }
 
-func TestPipeExpressions(t *testing.T) {
+func TestMemberAccess(t *testing.T) {
+    input := "$1.x.y * 2"
+    p := parser.NewParser(input)
+    ast, err := p.Parse()
+    assert.NoError(t, err, "Unexpected error: %v", err)
+
+    _, ok := ast.(*parser.BinaryExpression)
+    assert.True(t, ok, "Expected a BinaryExpression")
+}
+
+func TestPipeExpressionWithAlias(t *testing.T) {
 	tests := []struct {
 		input string
 	}{
-		{"[1, 2, 3] |map: $1 * 2"},
-		{"x + y |: func($1) |: otherFunc($1, 2)"},
-		{"methodA(1, 2) |: $1.property |: upperCase"},
-		{"[1, 2, 3, 4, 5] |filter: $1 > 2 |map: $1 * 2 |reduce: $1 + $2"},
-		{"'hello' |: splitChars |filter: $1 != 'l' |join: ''"},
+		{"x + 10 as $a |: y + 20 as $b |: $a + $b"},
+		{"[1, 2, 3] |map: $1 * 2 as $doubled |filter: $doubled > 4"},
+		{"obj.value as $v |: transform($v) as $t |: format($t)"},
+		{"single_expression as $x"}, // Test single expression with alias
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			ast, err := p.Parse()
+			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+
+			// Verify it's a pipe expression if it contains a pipe or alias
+			if strings.Contains(tt.input, "|") || strings.Contains(tt.input, " as ") {
+				pipeExpr, ok := ast.(*parser.PipeExpression)
+				assert.True(t, ok, "Expected a PipeExpression for input: %s", tt.input)
+				assert.NotNil(t, pipeExpr.Aliases, "Aliases slice should not be nil")
+			}
+		})
+	}
+}
+
+// Add negative test cases for 'as' keyword misuse
+func TestPipeExpressionWithInvalidAlias(t *testing.T) {
+	tests := []struct {
+		input       string
+		expectedErr string
+	}{
+		{"x + 10 as y", "expected identifier starting with $"},
+		{"x as $a as $b", "unexpected token"},
+		{"[1, x as $a, 2]", "pipe expressions cannot be sub-expressions"},
+		{"x as $a y as $b", "unexpected token"},
+		{"(x + 1 as $a)", "pipe expressions cannot be sub-expressions"},
+		{"func(1) as $a", "pipe expressions cannot be sub-expressions"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			p := parser.NewParser(tt.input)
 			_, err := p.Parse()
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
-			// If we reach here, the parser successfully parsed the pipe expression
+
+			assert.Error(t, err, "Expected error for input: %s", tt.input)
+			assert.Contains(t, err.Error(), tt.expectedErr,
+				"Expected error containing %q, but got %q", tt.expectedErr, err.Error())
 		})
 	}
 }
 
-func TestMemberAccess(t *testing.T) {
-	input := "$1.x.y * 2 "
-	p := parser.NewParser(input)
-	ast, err := p.Parse()
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+func TestPipeAliasInFunctionArgs(t *testing.T) {
+	tests := []struct {
+		input string
+	}{
+		{"x as $a |: func($a) |: transform($a)"},
+		{"obj.value as $v |: transform($v, 42) |: format($v)"},
+		{"[1, 2, 3] |map: $1 * 2 as $doubled |filter: check($doubled)"},
+		{"x as $a |: func($a + y as $b)"}, // This should fail since aliases can't contain other aliases
 	}
 
-	json.PrintJSON(ast)
-}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			ast, err := p.Parse()
 
-func TestGroupWithPipe(t *testing.T) {
-	// Original test was invalid: "[$1.x.y, 2, |map: $1 * 2]"
-	// Pipes can't be used directly inside arrays
-	// Instead, we'll test a valid use case with a pipe after an array
-	input := "[$1.x.y, 2] |map: $1 * 2"
-	p := parser.NewParser(input)
-	ast, err := p.Parse()
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+			if strings.Contains(tt.input, "func($a + y as $b)") {
+				assert.Error(t, err, "Should error on nested alias in %s", tt.input)
+				assert.Contains(t, err.Error(), "pipe expressions cannot be sub-expressions",
+					"Should give correct error message for nested alias")
+				return
+			}
+
+			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+
+			// Verify it's a pipe expression
+			pipeExpr, ok := ast.(*parser.PipeExpression)
+			assert.True(t, ok, "Expected a PipeExpression for input: %s", tt.input)
+			assert.NotEmpty(t, pipeExpr.Aliases, "Should have at least one alias")
+		})
 	}
-
-	json.PrintJSON(ast)
 }

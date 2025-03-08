@@ -115,6 +115,7 @@ func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
 type PipeExpression struct {
 	Expressions []Expression
 	PipeTypes   []string
+	Aliases     []string // New field to store aliases
 	Line        int
 	Column      int
 }
