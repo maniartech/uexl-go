@@ -202,6 +202,8 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 		return Token{Type: TokenBoolean, Value: originalToken == "true", Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 	case "null":
 		return Token{Type: TokenNull, Value: nil, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
+	case "as":
+		return Token{Type: TokenAs, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 	default:
 		return Token{Type: TokenIdentifier, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 	}
