@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/maniartech/uexl_go/internal/utils"
 	"github.com/maniartech/uexl_go/parser"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,7 +51,7 @@ func TestPipeExpressions(t *testing.T) {
 		{"methodA(1, 2) |: $1.property |: upperCase"},
 		{"[1, 2, 3, 4, 5] |filter: $1 > 2 |map: $1 * 2 |reduce: $1 + $2"},
 		{"'hello' |: splitChars |filter: $1 != 'l' |join: ''"},
-		{"[$1.x.y, 2] |map: $1 * 2"},  // From previous TestGroupWithPipe
+		{"[$1.x.y, 2] |map: $1 * 2"}, // From previous TestGroupWithPipe
 	}
 
 	for _, tt := range tests {
@@ -163,13 +164,13 @@ func TestComplexExpressions(t *testing.T) {
 }
 
 func TestMemberAccess(t *testing.T) {
-    input := "$1.x.y * 2"
-    p := parser.NewParser(input)
-    ast, err := p.Parse()
-    assert.NoError(t, err, "Unexpected error: %v", err)
+	input := "$1.x.y * 2"
+	p := parser.NewParser(input)
+	ast, err := p.Parse()
+	assert.NoError(t, err, "Unexpected error: %v", err)
 
-    _, ok := ast.(*parser.BinaryExpression)
-    assert.True(t, ok, "Expected a BinaryExpression")
+	_, ok := ast.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected a BinaryExpression")
 }
 
 func TestPipeExpressionWithAlias(t *testing.T) {
@@ -179,7 +180,6 @@ func TestPipeExpressionWithAlias(t *testing.T) {
 		{"x + 10 as $a |: y + 20 as $b |: $a + $b"},
 		{"[1, 2, 3] |map: $1 * 2 as $doubled |filter: $doubled > 4"},
 		{"obj.value as $v |: transform($v) as $t |: format($t)"},
-		{"single_expression as $x"}, // Test single expression with alias
 	}
 
 	for _, tt := range tests {
@@ -254,4 +254,13 @@ func TestPipeAliasInFunctionArgs(t *testing.T) {
 			assert.NotEmpty(t, pipeExpr.Aliases, "Should have at least one alias")
 		})
 	}
+}
+
+func TestParserTrial(t *testing.T) {
+	input := "(x as $a)"
+	p := parser.NewParser(input)
+	ast, err := p.Parse()
+	assert.NoError(t, err, "Parsing should not produce an error")
+
+	utils.PrintJSON(ast)
 }

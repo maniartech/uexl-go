@@ -59,15 +59,25 @@ func (p *Parser) parsePipeExpression() Expression {
 		return nil
 	}
 
-	// Don't process pipes if inside a subexpression that's not a parenthesized expr
-	if p.subExpressionActive && !p.inParenthesis {
-		return firstExpression
+	if p.subExpressionActive {
+
+		if !p.inParenthesis {
+			return firstExpression
+		}
 	}
 
+	aliases := []string{}
 	expressions := []Expression{firstExpression}
 	pipeTypes := []string{"pipe"}
 
 	startLine, startColumn := expressions[0].Position()
+
+	alias, e := p.parsePipeAlias()
+	if e != nil {
+		p.addError(e.Error())
+		return nil
+	}
+	aliases = append(aliases, alias)
 
 	for p.current.Type == TokenPipe {
 		op := p.current
@@ -83,6 +93,12 @@ func (p *Parser) parsePipeExpression() Expression {
 		pipeTypes = append(pipeTypes, pipeType)
 
 		expressions = append(expressions, p.parseLogicalOr())
+		alias, e := p.parsePipeAlias()
+		if e != nil {
+			p.addError(e.Error())
+			return nil
+		}
+		aliases = append(aliases, alias)
 	}
 
 	if len(expressions) == 1 {
@@ -97,9 +113,28 @@ func (p *Parser) parsePipeExpression() Expression {
 	return &PipeExpression{
 		Expressions: expressions,
 		PipeTypes:   pipeTypes,
+		Aliases:     aliases,
 		Line:        startLine,
 		Column:      startColumn,
 	}
+}
+
+func (p *Parser) parsePipeAlias() (string, error) {
+	if p.current.Type == TokenAs {
+		// Parse alias
+		p.advance() // consume 'as'
+
+		if p.current.Type != TokenIdentifier || !strings.HasPrefix(p.current.Token, "$") {
+			return "", fmt.Errorf("expected identifier starting with $")
+		}
+
+		alias := p.current.Token
+		p.advance()
+
+		// Add alias to the first expression
+		return alias, nil
+	}
+	return "", nil
 }
 
 func (p *Parser) parseLogicalOr() Expression {
