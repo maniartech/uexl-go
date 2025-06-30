@@ -1,28 +1,73 @@
 # Objects and Arrays
 
+Objects and arrays are fundamental data structures in UExL, enabling you to represent and manipulate structured data.
+
 ## Objects
-Objects are collections of key-value pairs enclosed in curly braces:
+- Objects are collections of key-value pairs.
+- Keys are strings (quoted or unquoted if valid identifiers).
+- Values can be any UExL expression (number, string, array, object, etc.).
+- Objects can be nested.
+
+### Syntax
 ```
-{"name": "UExL", "version": 1.0}
-{"values": [1, 2, 3], "enabled": true}
-{"nested": {"a": 1, "b": 2}}
+{
+  key1: value1,
+  key2: value2,
+  "key 3": value3
+}
 ```
-Properties can be accessed using dot or bracket notation:
+
+### Accessing Object Properties
+- Use dot notation: `obj.key1`
+- Use bracket notation: `obj["key 3"]`
+- Bracket notation is required for keys with spaces or special characters.
+
+### Example
 ```
-user.name
-user["name"]
+user = {
+  name: "Alice",
+  age: 30,
+  "favorite color": "blue"
+}
+user.name              // "Alice"
+user["favorite color"] // "blue"
 ```
 
 ## Arrays
-Arrays are ordered collections of values enclosed in square brackets:
+- Arrays are ordered collections of values.
+- Elements can be any UExL expression.
+- Arrays can be nested.
+
+### Syntax
 ```
 [1, 2, 3]
-["apple", "banana", "cherry"]
-[true, false, null]
-[1, "mixed", true, [1, 2]]
+["a", {x: 1}, [2, 3]]
 ```
-Elements are accessed by zero-based index:
+
+### Accessing Array Elements
+- Use zero-based indexing: `arr[0]`
+- Negative indices are not supported.
+- Out-of-bounds access returns `null`.
+
+### Example
 ```
-numbers[0]    // First element
-names[2]      // Third element
+arr = [10, 20, 30]
+arr[1]    // 20
+arr[10]   // null
 ```
+
+## Advanced Usage
+- Objects and arrays can be deeply nested:
+  `{user: {profile: {name: "Bob"}}}`
+- Arrays can contain objects, and vice versa.
+- Use pipes to process arrays:
+  `[1, 2, 3] |map: $1 * 2`
+- Use pipes to extract properties:
+  `users |map: $1.name`
+
+## Edge Cases
+- Accessing a missing property returns `null`.
+- Accessing an array with a non-integer index returns `null`.
+- Modifying objects/arrays is not supported (expressions are immutable).
+
+Objects and arrays are essential for modeling and transforming data in UExL.
