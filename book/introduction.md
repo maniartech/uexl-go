@@ -80,6 +80,8 @@ UExL is designed to empower a wide range of use cases, making your applications 
 - **Visualization and Analytics**: Drive dashboards and visualizations with expressions that compute metrics, filter datasets, or trigger alerts based on live data.
 - **No Code / Low Code Platforms**: Enable end-users or administrators to define custom logic and automation without writing traditional code, accelerating development and reducing errors.
 - **Notifications and Alerts**: Trigger notifications or send alerts based on complex conditions, such as system health, security breaches, or usage patterns.
+- **Cross Language Expression**: UExL expressions can be used in multiple languages, such as YAML, JSON, Python, JavaScript, and more, enabling consistent and reliable logic across different environments in the same project and ecosyste.
+
 
 UExL's versatility means it can be embedded wherever dynamic evaluation is needed, from configuration files to user interfaces, automation scripts, and beyond.
 
