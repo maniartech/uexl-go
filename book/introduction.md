@@ -3,7 +3,20 @@
 UExL (Universal Expression Language) is a modern, cross-platform, embeddable expression language designed for flexibility, clarity, and power. It enables users to define, evaluate, and chain expressions in a concise and readable syntax, making it ideal for configuration, scripting, and dynamic logic in applications.
 
 ## Why UExL?
+
 UExL was created to address the need for a lightweight, expressive, and extensible language that can be embedded in any application. Whether you are building configuration systems, data transformation pipelines, or dynamic business logic, UExL provides a robust foundation with a gentle learning curve.
+
+The following example demonstrates how UExL expressions can be embedded in YAML to compute dynamic values based on runtime data.
+
+```yaml
+# Example: Using UExL in a YAML configuration file
+threshold: uexl! "100"                # number
+isActive: uexl! "user.score > 80 && user.isVerified"   # boolean
+welcomeMessage: uexl! "concat('Hello, ', user.name)"   # string
+items: uexl! "filter(products, $1.price < 50)"         # array
+
+This demonstrates how UExL expressions can be embedded in YAML to compute dynamic values of different types based on runtime data.
+```
 
 ## Key Features
 - Simple, expressive syntax that is easy to read and write
