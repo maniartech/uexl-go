@@ -14,9 +14,9 @@ threshold: uexl! "100"                # number
 isActive: uexl! "user.score > 80 && user.isVerified"   # boolean
 welcomeMessage: uexl! "concat('Hello, ', user.name)"   # string
 items: uexl! "filter(products, $1.price < 50)"         # array
+```
 
 This demonstrates how UExL expressions can be embedded in YAML to compute dynamic values of different types based on runtime data.
-```
 
 ## Key Features
 - Simple, expressive syntax that is easy to read and write
