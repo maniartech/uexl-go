@@ -19,16 +19,16 @@ The following examples demonstrate how UExL expressions can be embedded in diffe
 
 **YAML:**
 ```yaml
-threshold: uexl! "100"                # number
-isActive: uexl! "user.score > 80 && user.isVerified"   # boolean
-welcomeMessage: uexl! "concat('Hello, ', user.name)"   # string
-items: uexl! "filter(products, $1.price < 50)"         # array
+limit: uexl! "value > 100 ? 100 : value"                # number
+isActive: uexl! "user.score > 80 && user.isVerified"    # boolean
+welcomeMessage: uexl! "concat('Hello, ', user.name)"    # string
+items: uexl! "filter(products, $1.price < 50)"          # array
 ```
 
 **JSON:**
 ```json
 {
-  "threshold": "uexl! 100",
+  "limit": "uexl: value > 100 ? 100 : value",
   "isActive": "uexl! user.score > 80 && user.isVerified",
   "welcomeMessage": "uexl! concat('Hello, ', user.name)",
   "items": "uexl! filter(products, $1.price < 50)"
