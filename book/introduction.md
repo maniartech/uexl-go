@@ -90,6 +90,7 @@ UExL is designed to empower a wide range of use cases, making your applications 
 - **Validation**: Validate user input, API payloads, or configuration files with expressive rules that are easy to update as requirements evolve.
 - **Visualization and Analytics**: Drive dashboards and visualizations with expressions that compute metrics, filter datasets, or trigger alerts based on live data.
 - **No Code / Low Code Platforms**: Enable end-users or administrators to define custom logic and automation without writing traditional code, accelerating development and reducing errors.
+- **Notifications and Alerts**: Trigger notifications or send alerts based on complex conditions, such as system health, security breaches, or usage patterns.
 
 UExL's versatility means it can be embedded wherever dynamic evaluation is needed, from configuration files to user interfaces, automation scripts, and beyond.
 
