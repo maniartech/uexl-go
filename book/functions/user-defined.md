@@ -1,19 +1,11 @@
 # User-Defined Functions
 
-UExL allows you to extend the language by registering custom functions in the host environment (such as Go). These functions can then be called just like built-in functions.
+UExL allows you to extend the language by registering custom functions in the host environment. These functions can then be called just like built-in functions.
 
 ## Registering Functions
-- User-defined functions are registered in the host language (e.g., Go) and made available to UExL expressions.
+- User-defined functions are registered in the host language and made available to UExL expressions.
 - The function name must be unique and follow identifier rules.
 - Functions can accept any number of arguments and return any data type supported by UExL.
-
-## Example: Registering a Function in Go
-```go
-// Register a function named "double" that multiplies its argument by 2
-RegisterFunction("double", func(x float64) float64 {
-    return x * 2
-})
-```
 
 ## Calling User-Defined Functions
 - Call user-defined functions just like built-in ones:
@@ -48,6 +40,8 @@ User-defined functions make UExL highly extensible for custom logic and domain-s
 ```
 myFunc(10, 20)
 ```
+
+Refer to your host application's documentation for how to register and expose user-defined functions to UExL.
 
 ## Example
 Suppose you register a function named `double`:
