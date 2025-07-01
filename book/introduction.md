@@ -27,16 +27,33 @@ items: uexl! "filter(products, $1.price < 50)"         # array
 ```
 
 **Python:**
+
 ```python
-config = {
-    "threshold": uexl("100"),
-    "isActive": uexl("user.score > 80 and user.isVerified"),
-    "welcomeMessage": uexl("concat('Hello, ', user.name)"),
-    "items": uexl("filter(products, $1.price < 50)")
+from uexl import compile
+
+# Sample data: list of products
+context = {
+  "products": [
+      {"name": "Product A", "price": 45, "category": "Books"},
+      {"name": "Product B", "price": 75, "category": "Electronics"},
+      {"name": "Product C", "price": 25, "category": "Books"}
+  ]
 }
+
+# define expression, generally this expressions will be ready, dynamicallay
+# from db or config files.
+filter_expr = compile("filter(products, $1.price < 50)")
+book_count_expr = compile("count(filter(products, $1.category == 'Books'))")
+
+# Print filtered products
+print("Filtered products:", filter_expr.eval(context))
+
+# print the number of books
+print("Number of books:", book_count_expr.eval(context))
 ```
 
 **JavaScript:**
+
 ```javascript
 const config = {
   threshold: uexl("100"),
@@ -44,9 +61,37 @@ const config = {
   welcomeMessage: uexl("concat('Hello, ', user.name)"),
   items: uexl("filter(products, $1.price < 50)")
 };
-```
 
+const context = {
+  user: { score: 95, isVerified: true },
+  products: [
+    { name: "Product A", price: 45 },
+    { name: "Product B", price: 75 },
+    { name: "Product C", price: 25 }
+  ]
+}
+
+const threshold = config.threshold.eval(context);
+const isActive = config.isActive.eval(context);
+const welcomeMessage = config.welcomeMessage.eval(context);
+const items = config.items.eval(context);
+
+console.log(threshold, isActive, welcomeMessage, items);
+```
 Currently, we are working on the Golang library with Golang, YAML, and JSON processing support. Support for other languages will follow soon!
+
+## Applications of UExL
+
+UExL is designed to empower a wide range of use cases, making your applications more dynamic, flexible, and maintainable. Here are some of the most impactful ways UExL can be applied:
+
+- **Dynamic Configuration**: Define configuration settings that adapt at runtime, allowing changes without redeploying code. For example, feature flags or environment-specific settings can be controlled by expressions.
+- **Data Transformation and Pipelines**: Transform, filter, and aggregate data on the fly in ETL pipelines, analytics dashboards, or reporting tools, all using concise UExL expressions.
+- **Dynamic Logic and Business Rules**: Implement business logic or conditional workflows that can be updated by non-developers, such as pricing rules, eligibility checks, or approval flows.
+- **Validation**: Validate user input, API payloads, or configuration files with expressive rules that are easy to update as requirements evolve.
+- **Visualization and Analytics**: Drive dashboards and visualizations with expressions that compute metrics, filter datasets, or trigger alerts based on live data.
+- **No Code / Low Code Platforms**: Enable end-users or administrators to define custom logic and automation without writing traditional code, accelerating development and reducing errors.
+
+UExL's versatility means it can be embedded wherever dynamic evaluation is needed, from configuration files to user interfaces, automation scripts, and beyond.
 
 ## Key Features
 - Simple, expressive syntax that is easy to read and write
