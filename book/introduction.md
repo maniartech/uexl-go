@@ -6,6 +6,15 @@ UExL (Universal Expression Language) is a modern, cross-platform, embeddable exp
 
 UExL was created to address the need for a lightweight, expressive, and extensible language that can be embedded in any application. Whether you are building configuration systems, data transformation pipelines, or dynamic business logic, UExL provides a robust foundation with a gentle learning curve.
 
+**The Regex of Expression Evaluation**: Just as regular expressions became the universal standard for text pattern matching, UExL aims to become the universal standard for expression evaluation. It provides:
+
+- A consistent syntax for evaluating expressions across languages and platforms
+- Powerful built-in operations for common data manipulation tasks
+- Extensibility to add domain-specific functions and operators
+- Portability of expressions between different systems and layers
+
+This makes UExL expressions as reusable and interoperable as regex patterns are for text processing.
+
 The following examples demonstrate how UExL expressions can be embedded in different languages to compute dynamic values based on runtime data.
 
 **YAML:**
@@ -80,8 +89,7 @@ UExL is designed to empower a wide range of use cases, making your applications 
 - **Visualization and Analytics**: Drive dashboards and visualizations with expressions that compute metrics, filter datasets, or trigger alerts based on live data.
 - **No Code / Low Code Platforms**: Enable end-users or administrators to define custom logic and automation without writing traditional code, accelerating development and reducing errors.
 - **Notifications and Alerts**: Trigger notifications or send alerts based on complex conditions, such as system health, security breaches, or usage patterns.
-- **Cross Language Expression**: UExL expressions can be used in multiple languages, such as YAML, JSON, Python, JavaScript, and more, enabling consistent and reliable logic across different environments in the same project and ecosyste.
-
+- **Cross-Language Expression Sharing**: UExL expressions maintain identical syntax across different languages and platforms.
 
 UExL's versatility means it can be embedded wherever dynamic evaluation is needed, from configuration files to user interfaces, automation scripts, and beyond.
 
