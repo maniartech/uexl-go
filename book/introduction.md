@@ -29,27 +29,16 @@ items: uexl! "filter(products, $1.price < 50)"         # array
 **Python:**
 
 ```python
-from uexl import compile
+from uexl import evaluate
 
-# Sample data: list of products
-context = {
-  "products": [
-      {"name": "Product A", "price": 45, "category": "Books"},
-      {"name": "Product B", "price": 75, "category": "Electronics"},
-      {"name": "Product C", "price": 25, "category": "Books"}
-  ]
-}
+products = [
+    {"name": "Book 1", "price": 25, "category": "Books"},
+    {"name": "Gadget", "price": 75, "category": "Electronics"}
+]
 
-# define expression, generally this expressions will be ready, dynamicallay
-# from db or config files.
-filter_expr = compile("filter(products, $1.price < 50)")
-book_count_expr = compile("count(filter(products, $1.category == 'Books'))")
-
-# Print filtered products
-print("Filtered products:", filter_expr.eval(context))
-
-# print the number of books
-print("Number of books:", book_count_expr.eval(context))
+# Evaluate UExL expressions directly
+cheap_products = evaluate("filter(products, $1.price < 50)", locals())
+book_count = evaluate("count(filter(products, $1.category == 'Books'))", locals())
 ```
 
 **JavaScript:**
