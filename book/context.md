@@ -1,6 +1,9 @@
 # Context
 
-In UExL, context refers to the set of variables and values available during expression evaluation. Context determines how identifiers are resolved and how data flows through pipes and functions.
+Understanding context is essential for writing powerful and correct UExL expressions. In this chapter, you'll learn what context means in UExL, how variables are resolved, and how data flows through your expressions—with practical examples along the way.
+
+## What Is Context?
+Context refers to the set of variables and values available during expression evaluation. It determines how identifiers are resolved and how data is passed through pipes and functions.
 
 ## Variable Scope
 - Variables are resolved from the current context, which may include global, local, or function-specific variables.
@@ -23,8 +26,19 @@ users = [{"name": "Bob", "active": true}, {"name": "Eve", "active": false}]
 users |filter: $1.active |map: $1.name // Filters active users and extracts names
 ```
 
-## Edge Cases
+## Edge Cases and Tips
 - Referencing an undefined variable returns `null`.
 - Shadowing: Inner scopes can define variables with the same name as outer scopes, hiding the outer value.
+- Use descriptive variable names to avoid confusion.
 
-Understanding context is key to writing correct and powerful UExL expressions.
+## Practice: Try It Yourself
+Try these context-based expressions:
+```
+settings = {"theme": "dark", "lang": "en"}
+settings.theme
+
+[10, 20, 30] |map: $1 + 5
+users |filter: $1.role == "admin" |map: $1.email
+```
+
+Understanding context will help you write robust and maintainable UExL code. In the next chapter, we'll explore error handling and debugging strategies.

@@ -1,9 +1,13 @@
 # Syntax
 
-UExL syntax is concise, readable, and expressive. It supports a variety of constructs for defining values, operations, and transformations.
+Understanding the syntax of UExL is the first step to mastering the language. In this chapter, we'll explore the building blocks of UExL syntax, how to write clear expressions, and common patterns you'll use in real-world scenarios.
 
-## Expressions
-An expression in UExL can be:
+## What Is Syntax?
+Syntax defines the rules for how you write expressions, values, and operations in UExL. A good grasp of syntax helps you avoid errors and write readable, maintainable code.
+
+## Expressions: The Heart of UExL
+An expression is any valid combination of values, variables, operators, and functions that produces a result. Expressions can be simple or complex, and they are the foundation of all UExL logic.
+
 - A literal (number, string, boolean, null)
 - A variable or identifier
 - A binary or unary operation
@@ -23,21 +27,28 @@ user.name           // Object property access
 (a + b) * c         // Grouped expression
 ```
 
-### Whitespace and Formatting
-Whitespace (spaces, tabs, newlines) is generally ignored except where necessary to separate tokens. You can format expressions across multiple lines for readability:
-```
-result = (
-    a + b
-    + c
-)
-```
+## Whitespace and Formatting
+Whitespace (spaces, tabs, newlines) is generally ignored except where needed to separate tokens. You can format expressions across multiple lines for clarity:
 
-### Comments
-Comments are not currently supported in UExL. All content is treated as part of the expression.
 
-### Edge Cases
-- String literals can use single or double quotes, but must match.
+
+## Writing Clear Expressions
+- Use parentheses to control evaluation order.
+- Break long expressions into multiple lines for readability.
+- Choose descriptive variable names.
+
+## Edge Cases and Tips
+- String literals can use single or double quotes, but quotes must match.
 - Identifiers are case-sensitive: `Value` and `value` are different.
-- Parentheses can be used to control evaluation order.
+- Parentheses help clarify complex logic.
 
-Understanding these basics will help you write clear and correct UExL expressions.
+## Practice: Try It Yourself
+Here are some practice expressions to try in UExL:
+```
+(5 + 3) * 2
+"UExL" + " rocks!"
+[10, 20, 30] |filter: $1 > 15
+user.isActive && user.score > 80
+```
+
+Mastering syntax is the first step toward writing powerful UExL expressions. In the next chapter, we'll dive into data types and how to use them effectively.
