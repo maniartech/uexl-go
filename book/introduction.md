@@ -52,13 +52,10 @@ book_count = evaluate("count(filter(products, $1.category == 'Books'))", locals(
 
 **JavaScript:**
 
+Here is how you can evaluate these expressions in a JavaScript application. We'll use the JSON configuration defined above, which contains UExL expressions.
+
 ```javascript
-const config = {
-  threshold: uexl("100"),
-  isActive: uexl("user.score > 80 && user.isVerified"),
-  welcomeMessage: uexl("concat('Hello, ', user.name)"),
-  items: uexl("filter(products, $1.price < 50)")
-};
+import uexl from 'uexl';
 
 const context = {
   user: { score: 95, isVerified: true },
@@ -67,15 +64,22 @@ const context = {
     { name: "Product B", price: 75 },
     { name: "Product C", price: 25 }
   ]
-}
+};
+
+let configFile = loadconfig('./config.json'); // Load the JSON configuration file
+
+// Load the configuration JSON with UExL expressions and evaluate along with context
+let config = uexl.loadAndEval(configFile, context);
+
+// Or you can evaluate each expression individually after loading the configuration
+config = uexl.load(configFile); // With unevaluated UExL expressions
 
 const threshold = config.threshold.eval(context);
 const isActive = config.isActive.eval(context);
 const welcomeMessage = config.welcomeMessage.eval(context);
 const items = config.items.eval(context);
-
-console.log(threshold, isActive, welcomeMessage, items);
 ```
+
 Currently, we are working on the Golang library with Golang, YAML, and JSON processing support. Support for other languages will follow soon!
 
 ## Applications of UExL
