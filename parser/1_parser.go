@@ -271,6 +271,12 @@ func (p *Parser) parseMemberAccess() Expression {
 			continue // check for more member access operations
 		}
 
+		// Handle function call after member or index access
+		if p.current.Type == TokenLeftParen {
+			expr = p.parseFunctionCall(expr)
+			continue
+		}
+
 		// No more member access operations
 		break
 	}
@@ -375,7 +381,11 @@ func (p *Parser) parseString() Expression {
 		// Fallback to removing quotes manually if type assertion fails
 		value = strings.Trim(token.Token, "'\"")
 	}
-	return &StringLiteral{Value: value, Line: token.Line, Column: token.Column}
+
+	// Check if this was a raw string by looking at the original token
+	isRaw := strings.HasPrefix(token.Token, "r'") || strings.HasPrefix(token.Token, "r\"")
+
+	return &StringLiteral{Value: value, IsRaw: isRaw, Line: token.Line, Column: token.Column}
 }
 
 func (p *Parser) parseBoolean() Expression {
