@@ -125,7 +125,10 @@ func (p *Parser) parsePipeExpression() Expression {
 
 func (p *Parser) parsePipeAlias() (string, error) {
 	if p.current.Type == TokenAs {
-		// Parse alias
+		// If we're in a sub-expression (not top-level pipe), error
+		if p.subExpressionActive {
+			return "", fmt.Errorf("pipe expressions cannot be sub-expressions")
+		}
 		p.advance() // consume 'as'
 
 		if p.current.Type != TokenIdentifier || !strings.HasPrefix(p.current.Token, "$") {

@@ -209,7 +209,7 @@ func TestPipeExpressionWithInvalidAlias(t *testing.T) {
 		{"[1, x as $a, 2]", "pipe expressions cannot be sub-expressions"},
 		{"x as $a y as $b", "unexpected token"},
 		{"(x + 1 as $a)", "pipe expressions cannot be sub-expressions"},
-		{"func(1) as $a", "pipe expressions cannot be sub-expressions"},
+		{"func(1 as $a)", "pipe expressions cannot be sub-expressions"},
 	}
 
 	for _, tt := range tests {
@@ -260,7 +260,7 @@ func TestParserTrial(t *testing.T) {
 	input := "[1, x as $a, 2]" // This input is should fail becuase alias cannot be a sub-expression
 	p := parser.NewParser(input)
 	ast, err := p.Parse()
-	assert.NoError(t, err, "Parsing should not produce an error")
+	assert.Error(t, err, "Parsing should not produce an error")
 
 	utils.PrintJSON(ast)
 }
