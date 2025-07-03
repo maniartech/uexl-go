@@ -551,6 +551,15 @@ func (p *Parser) parseBinaryOp(parseFunc func() Expression, operators ...string)
 func (p *Parser) advance() {
 	p.current = p.tokenizer.NextToken()
 	p.pos++
+
+	// Check if the tokenizer returned an error token
+	if p.current.Type == TokenError {
+		if errorCode, ok := p.current.Value.(errors.ErrorCode); ok {
+			p.addError(errorCode, p.current.Token)
+		} else {
+			p.addError(errors.ErrInvalidToken, p.current.Token)
+		}
+	}
 }
 
 // addError adds an error message with current position information
