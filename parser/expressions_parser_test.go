@@ -10,7 +10,7 @@ import (
 
 func TestExpressionParsing(t *testing.T) {
 
-	node, err := parser.ParseString("SUM({ 'x': ['a', 'b', 'c', {'d': x}]}.x.3.d.y1.2, 2)  == 3 + 2 ")
+	node, err := parser.ParseString("SUM({ 'x': ['a', 'b', 'c', {'d': x}]}.x[3].d.y1[2], 2)  == 3 + 2 ")
 
 	// node, err := parser.ParseString("{ 'a': 1, 'b': 2, 'c': 3, 'd': 4 }")
 
