@@ -85,9 +85,13 @@ func (p *Parser) parsePipeExpression() Expression {
 
 		pipeType := "pipe" // default pipe type
 		if op.Value != nil {
-			// Convert op.Value to string if possible
 			if strValue, ok := op.Value.(string); ok && strValue != "" {
-				pipeType = strValue
+				// If the value is just ":", treat as default pipe
+				if strValue == ":" {
+					pipeType = "pipe"
+				} else {
+					pipeType = strValue
+				}
 			}
 		}
 		pipeTypes = append(pipeTypes, pipeType)

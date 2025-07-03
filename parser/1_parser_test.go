@@ -257,7 +257,7 @@ func TestPipeAliasInFunctionArgs(t *testing.T) {
 }
 
 func TestParserTrial(t *testing.T) {
-	input := "(x as $a)"
+	input := "[1, x as $a, 2]" // This input is should fail becuase alias cannot be a sub-expression
 	p := parser.NewParser(input)
 	ast, err := p.Parse()
 	assert.NoError(t, err, "Parsing should not produce an error")
