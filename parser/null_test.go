@@ -8,7 +8,7 @@ import (
 )
 
 func TestNull(t *testing.T) {
-	got, _ := ParseReader("", strings.NewReader("null"))
+	got, _ := ParseReaderNew("", strings.NewReader("null"))
 
 	// Change the type assertion to handle a pointer to NullNode
 	gotNode, ok := got.(*ast.NullNode)

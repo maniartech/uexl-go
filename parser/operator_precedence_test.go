@@ -9,7 +9,7 @@ import (
 )
 
 // TestOperatorPrecedence tests that the parser correctly follows
-// the operator precedence rules defined in grammar.peg
+// the operator precedence rules previously defined in grammar.peg (now replaced by custom tokenizer-based parser)
 func TestOperatorPrecedence(t *testing.T) {
 	tests := []struct {
 		name     string

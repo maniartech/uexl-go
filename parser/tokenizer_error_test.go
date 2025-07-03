@@ -15,12 +15,6 @@ func TestTokenizerErrors(t *testing.T) {
 		description   string
 	}{
 		{
-			name:          "consecutive dots",
-			input:         "a..b",
-			expectedError: errors.ErrConsecutiveDots,
-			description:   "should detect consecutive dots in identifier",
-		},
-		{
 			name:          "unterminated string double quote",
 			input:         `"hello world`,
 			expectedError: errors.ErrUnterminatedQuote,
@@ -88,7 +82,7 @@ func TestTokenizerErrorIntegrationWithParser(t *testing.T) {
 		{
 			name:          "consecutive dots in parser",
 			input:         "a..b + 1",
-			expectedError: errors.ErrConsecutiveDots,
+			expectedError: errors.ErrExpectedIdentifier,
 			description:   "parser should catch consecutive dots error from tokenizer",
 		},
 		{

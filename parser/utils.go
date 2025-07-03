@@ -6,7 +6,7 @@ import (
 
 func toIfaceSlice(v interface{}) []interface{} {
 	if v == nil {
-		return nil
+		return []interface{}{} // Return empty slice instead of nil
 	}
 
 	return v.([]interface{})
