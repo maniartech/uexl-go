@@ -10,7 +10,7 @@ import (
 
 func TestParser_old(t *testing.T) {
 	// Test for the Modulus (//) Operator.
-	_, err := parser.ParseReader("", strings.NewReader("10 + 4"))
+	_, err := parser.ParseReaderNew("", strings.NewReader("10 + 4"))
 	if err != nil {
 		log.Fatal(err)
 	}
