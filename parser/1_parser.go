@@ -1,19 +1,42 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
+// Constants for common pipe types and error messages
+const (
+	DefaultPipeType              = "pipe"
+	EmptyPipeError               = "empty pipe expression is not allowed"
+	EmptyPipeWithAliasError      = "empty pipe expression cannot have an alias"
+	PipeInSubExpressionError     = "pipe expressions cannot be sub-expressions"
+	ExpectedIdentifierWithDollar = "expected identifier starting with $"
+)
+
+// Parser represents a parser for the expression language
 type Parser struct {
 	tokenizer           *Tokenizer
 	current             Token
 	errors              []string
 	pos                 int
 	subExpressionActive bool
-	inParenthesis       bool // Add flag to track if we're inside parentheses
+	inParenthesis       bool
 }
 
+// IndexAccess represents array index access expressions
+type IndexAccess struct {
+	Array  Expression
+	Index  Expression
+	Line   int
+	Column int
+}
+
+func (ia *IndexAccess) expressionNode()      {}
+func (ia *IndexAccess) Position() (int, int) { return ia.Line, ia.Column }
+
+// NewParser creates a new parser instance with the given input
 func NewParser(input string) *Parser {
 	p := &Parser{
 		tokenizer: NewTokenizer(input),
@@ -22,10 +45,11 @@ func NewParser(input string) *Parser {
 	return p
 }
 
+// Parse parses the input and returns an Expression or an error
 func (p *Parser) Parse() (Expression, error) {
 	expr := p.parseExpression()
 
-	if len(p.errors) != 0 {
+	if len(p.errors) > 0 {
 		return nil, fmt.Errorf("parsing errors: %v", p.errors)
 	}
 
@@ -36,44 +60,40 @@ func (p *Parser) Parse() (Expression, error) {
 	if p.current.Type != TokenEOF {
 		return nil, fmt.Errorf("unexpected token at end: %v", p.current)
 	}
-	if len(p.errors) > 0 {
-		return nil, fmt.Errorf("parsing errors: %v", p.errors)
-	}
+
 	return expr, nil
 }
 
+// parseExpression is the entry point for parsing expressions
 func (p *Parser) parseExpression() Expression {
 	return p.parsePipeExpression()
 }
 
+// parsePipeExpression parses pipe expressions with proper error handling
 func (p *Parser) parsePipeExpression() Expression {
 	// Only disallow pipe expressions in sub-expressions that aren't in parentheses
 	if p.subExpressionActive && !p.inParenthesis {
-		p.addError("pipe expressions cannot be sub-expressions")
+		p.addError(PipeInSubExpressionError)
 		return nil
 	}
-	// Disallow leading pipe at the start of the expression
+
+	// Handle leading pipe at the start of the expression
 	if p.pos == 1 && p.current.Type == TokenPipe {
-		p.addError("empty pipe expression is not allowed")
-		return nil
+		return p.handleLeadingPipe()
 	}
 
 	firstExpression := p.parseLogicalOr()
-
 	if firstExpression == nil {
 		return nil
 	}
 
-	if p.subExpressionActive {
-
-		if !p.inParenthesis {
-			return firstExpression
-		}
+	if p.subExpressionActive && !p.inParenthesis {
+		return firstExpression
 	}
 
 	aliases := []string{}
 	expressions := []Expression{firstExpression}
-	pipeTypes := []string{"pipe"}
+	pipeTypes := []string{DefaultPipeType}
 
 	startLine, startColumn := expressions[0].Position()
 
@@ -85,42 +105,16 @@ func (p *Parser) parsePipeExpression() Expression {
 	aliases = append(aliases, alias)
 
 	for p.current.Type == TokenPipe {
-		op := p.current
-		p.advance()
-
-		pipeType := "pipe" // default pipe type
-		if op.Value != nil {
-			if strValue, ok := op.Value.(string); ok && strValue != "" {
-				// If the value is just ":", treat as default pipe
-				// This allows syntax like |: to be interpreted as a normal pipe.
-				if strValue == ":" {
-					pipeType = "pipe"
-				} else {
-					pipeType = strValue
-				}
-			}
-		}
-		pipeTypes = append(pipeTypes, pipeType)
-
-		nextExpr := p.parseLogicalOr()
-		if nextExpr == nil {
-			p.addError("empty pipe expression is not allowed")
+		if !p.processPipeSegment(&expressions, &pipeTypes, &aliases) {
 			return nil
 		}
-		expressions = append(expressions, nextExpr)
-		alias, e := p.parsePipeAlias()
-		if e != nil {
-			p.addError(e.Error())
-			return nil
-		}
-		aliases = append(aliases, alias)
 	}
 
 	if len(expressions) == 1 {
 		return expressions[0]
 	}
 
-	// Defensive: if pipeTypes and expressions are out of sync, error (should not happen)
+	// Defensive check for consistency
 	if len(expressions) > len(pipeTypes) {
 		p.addError("invalid pipe expression: missing pipe type or empty pipe segment")
 		return nil
@@ -139,18 +133,17 @@ func (p *Parser) parsePipeAlias() (string, error) {
 	if p.current.Type == TokenAs {
 		// If we're in a sub-expression (not top-level pipe), error
 		if p.subExpressionActive {
-			return "", fmt.Errorf("pipe expressions cannot be sub-expressions")
+			return "", errors.New(PipeInSubExpressionError)
 		}
 		p.advance() // consume 'as'
 
 		if p.current.Type != TokenIdentifier || !strings.HasPrefix(p.current.Token, "$") {
-			return "", fmt.Errorf("expected identifier starting with $")
+			return "", errors.New(ExpectedIdentifierWithDollar)
 		}
 
 		alias := p.current.Token
 		p.advance()
 
-		// Add alias to the first expression
 		return alias, nil
 	}
 	return "", nil
@@ -552,20 +545,92 @@ func (p *Parser) parseBinaryOp(parseFunc func() Expression, operators ...string)
 	return left
 }
 
+// advance moves to the next token in the input
 func (p *Parser) advance() {
 	p.current = p.tokenizer.NextToken()
-	if p.pos == 0 {
-		if p.current.Type == TokenPipe {
-			p.addError("unexpected token: " + p.current.Token)
-		}
-	}
 	p.pos++
 }
 
+// addError adds an error message with current position information
 func (p *Parser) addError(msg string) {
 	p.errors = append(p.errors, fmt.Sprintf("Line %d, Column %d: %s", p.current.Line, p.current.Column, msg))
 }
 
+func (p *Parser) handleLeadingPipe() Expression {
+	p.advance() // consume the pipe
+	// Check if it's followed by 'as' (empty pipe with alias)
+	if p.current.Type == TokenAs {
+		p.addError(EmptyPipeWithAliasError)
+		p.advance() // consume 'as'
+		if p.current.Type == TokenIdentifier {
+			p.advance() // consume alias identifier
+		}
+	} else {
+		p.addError(EmptyPipeError)
+	}
+	p.consumeRemainingTokens()
+	return nil
+}
+
+// processPipeSegment processes a single pipe segment and returns false if parsing should stop
+func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]string, aliases *[]string) bool {
+	op := p.current
+	p.advance()
+
+	pipeType := p.determinePipeType(op)
+	*pipeTypes = append(*pipeTypes, pipeType)
+
+	// Check for empty pipe with alias immediately after consuming pipe
+	if p.current.Type == TokenAs {
+		p.addError(EmptyPipeWithAliasError)
+		p.advance() // consume 'as'
+		if p.current.Type == TokenIdentifier {
+			p.advance() // consume alias identifier
+		}
+		p.consumeRemainingTokens()
+		return false
+	}
+
+	nextExpr := p.parseLogicalOr()
+	if nextExpr == nil {
+		p.addError(EmptyPipeError)
+		p.consumeRemainingTokens()
+		return false
+	}
+
+	*expressions = append(*expressions, nextExpr)
+	alias, e := p.parsePipeAlias()
+	if e != nil {
+		p.addError(e.Error())
+		return false
+	}
+	*aliases = append(*aliases, alias)
+	return true
+}
+
+// determinePipeType extracts the pipe type from the pipe token
+func (p *Parser) determinePipeType(op Token) string {
+	if op.Value != nil {
+		if strValue, ok := op.Value.(string); ok && strValue != "" {
+			// If the value is just ":", treat as default pipe
+			// This allows syntax like |: to be interpreted as a normal pipe.
+			if strValue == ":" {
+				return DefaultPipeType
+			}
+			return strValue
+		}
+	}
+	return DefaultPipeType
+}
+
+// consumeRemainingTokens consumes all tokens until EOF to prevent further errors
+func (p *Parser) consumeRemainingTokens() {
+	for p.current.Type != TokenEOF {
+		p.advance()
+	}
+}
+
+// contains checks if a slice contains a specific string
 func contains(slice []string, item string) bool {
 	for _, a := range slice {
 		if a == item {
@@ -574,14 +639,3 @@ func contains(slice []string, item string) bool {
 	}
 	return false
 }
-
-// Add a new expression type for array index access
-type IndexAccess struct {
-	Array  Expression
-	Index  Expression
-	Line   int
-	Column int
-}
-
-func (ia *IndexAccess) expressionNode()      {}
-func (ia *IndexAccess) Position() (int, int) { return ia.Line, ia.Column }

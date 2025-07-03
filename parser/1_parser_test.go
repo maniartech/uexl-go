@@ -286,3 +286,25 @@ func TestEmptyPipeExpressions(t *testing.T) {
 		})
 	}
 }
+
+// TestEmptyPipeWithAlias ensures empty pipe expressions cannot have aliases
+func TestEmptyPipeWithAlias(t *testing.T) {
+	tests := []struct {
+		input       string
+		expectedErr string
+	}{
+		{"x + 2 |: as $a", "empty pipe expression cannot have an alias"},
+		{"|: as $a", "empty pipe expression cannot have an alias"},
+		{"x + 1 |map: as $b", "empty pipe expression cannot have an alias"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			_, err := p.Parse()
+			assert.Error(t, err, "Expected error for input: %s", tt.input)
+			assert.Contains(t, err.Error(), tt.expectedErr,
+				"Expected error containing %q, but got %q", tt.expectedErr, err.Error())
+		})
+	}
+}
