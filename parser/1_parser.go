@@ -52,6 +52,11 @@ func (p *Parser) parsePipeExpression() Expression {
 		p.addError("pipe expressions cannot be sub-expressions")
 		return nil
 	}
+	// Disallow leading pipe at the start of the expression
+	if p.pos == 1 && p.current.Type == TokenPipe {
+		p.addError("empty pipe expression is not allowed")
+		return nil
+	}
 
 	firstExpression := p.parseLogicalOr()
 
@@ -97,7 +102,12 @@ func (p *Parser) parsePipeExpression() Expression {
 		}
 		pipeTypes = append(pipeTypes, pipeType)
 
-		expressions = append(expressions, p.parseLogicalOr())
+		nextExpr := p.parseLogicalOr()
+		if nextExpr == nil {
+			p.addError("empty pipe expression is not allowed")
+			return nil
+		}
+		expressions = append(expressions, nextExpr)
 		alias, e := p.parsePipeAlias()
 		if e != nil {
 			p.addError(e.Error())
@@ -110,9 +120,10 @@ func (p *Parser) parsePipeExpression() Expression {
 		return expressions[0]
 	}
 
+	// Defensive: if pipeTypes and expressions are out of sync, error (should not happen)
 	if len(expressions) > len(pipeTypes) {
-		// insert default pipe type at the beginning of the pipeTypes slice
-		pipeTypes = append([]string{"pipe"}, pipeTypes...)
+		p.addError("invalid pipe expression: missing pipe type or empty pipe segment")
+		return nil
 	}
 
 	return &PipeExpression{

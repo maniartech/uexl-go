@@ -264,3 +264,25 @@ func TestParserTrial(t *testing.T) {
 
 	utils.PrintJSON(ast)
 }
+
+// TestEmptyPipeExpressions ensures empty pipe expressions are rejected
+func TestEmptyPipeExpressions(t *testing.T) {
+	tests := []struct {
+		input       string
+		expectedErr string
+	}{
+		{"|: x + 1", "empty pipe expression is not allowed"},
+		{"x + 1 |: |map: y + 2", "empty pipe expression is not allowed"},
+		{"x + 1 |map:", "empty pipe expression is not allowed"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			_, err := p.Parse()
+			assert.Error(t, err, "Expected error for input: %s", tt.input)
+			assert.Contains(t, err.Error(), tt.expectedErr,
+				"Expected error containing %q, but got %q", tt.expectedErr, err.Error())
+		})
+	}
+}
