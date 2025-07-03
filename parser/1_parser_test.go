@@ -206,10 +206,10 @@ func TestPipeExpressionWithInvalidAlias(t *testing.T) {
 	}{
 		{"x + 10 as y", "expected identifier starting with $"},
 		{"x as $a as $b", "unexpected token"},
-		{"[1, x as $a, 2]", "pipe expressions cannot be sub-expressions"},
+		{"[1, x as $a, 2]", "aliases cannot be used in sub-expressions"},
 		{"x as $a y as $b", "unexpected token"},
-		{"(x + 1 as $a)", "pipe expressions cannot be sub-expressions"},
-		{"func(1 as $a)", "pipe expressions cannot be sub-expressions"},
+		{"(x + 1 as $a)", "aliases cannot be used in sub-expressions"},
+		{"func(1 as $a)", "aliases cannot be used in sub-expressions"},
 	}
 
 	for _, tt := range tests {
@@ -238,10 +238,9 @@ func TestPipeAliasInFunctionArgs(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			p := parser.NewParser(tt.input)
 			ast, err := p.Parse()
-
 			if strings.Contains(tt.input, "func($a + y as $b)") {
 				assert.Error(t, err, "Should error on nested alias in %s", tt.input)
-				assert.Contains(t, err.Error(), "pipe expressions cannot be sub-expressions",
+				assert.Contains(t, err.Error(), "aliases cannot be used in sub-expressions",
 					"Should give correct error message for nested alias")
 				return
 			}

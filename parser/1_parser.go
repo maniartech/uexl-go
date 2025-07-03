@@ -1,25 +1,22 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/maniartech/uexl_go/parser/errors"
 )
 
-// Constants for common pipe types and error messages
+// Constants for common pipe types
 const (
-	DefaultPipeType              = "pipe"
-	EmptyPipeError               = "empty pipe expression is not allowed"
-	EmptyPipeWithAliasError      = "empty pipe expression cannot have an alias"
-	PipeInSubExpressionError     = "pipe expressions cannot be sub-expressions"
-	ExpectedIdentifierWithDollar = "expected identifier starting with $"
+	DefaultPipeType = "pipe"
 )
 
 // Parser represents a parser for the expression language
 type Parser struct {
 	tokenizer           *Tokenizer
 	current             Token
-	errors              []string
+	errors              []errors.ParserError // Changed from []string
 	pos                 int
 	subExpressionActive bool
 	inParenthesis       bool
@@ -50,15 +47,15 @@ func (p *Parser) Parse() (Expression, error) {
 	expr := p.parseExpression()
 
 	if len(p.errors) > 0 {
-		return nil, fmt.Errorf("parsing errors: %v", p.errors)
+		return nil, &errors.ParseErrors{Errors: p.errors}
 	}
 
 	if expr == nil {
-		return nil, fmt.Errorf("expression is nil")
+		return nil, errors.NewParserError(errors.ErrEmptyExpression, p.current.Line, p.current.Column, "expression is nil")
 	}
 
 	if p.current.Type != TokenEOF {
-		return nil, fmt.Errorf("unexpected token at end: %v", p.current)
+		return nil, errors.NewParserErrorWithToken(errors.ErrUnexpectedToken, p.current.Line, p.current.Column, "unexpected token at end", p.current.Token)
 	}
 
 	return expr, nil
@@ -73,7 +70,7 @@ func (p *Parser) parseExpression() Expression {
 func (p *Parser) parsePipeExpression() Expression {
 	// Only disallow pipe expressions in sub-expressions that aren't in parentheses
 	if p.subExpressionActive && !p.inParenthesis {
-		p.addError(PipeInSubExpressionError)
+		p.addError(errors.ErrPipeInSubExpression, errors.GetErrorMessage(errors.ErrPipeInSubExpression))
 		return nil
 	}
 
@@ -99,7 +96,12 @@ func (p *Parser) parsePipeExpression() Expression {
 
 	alias, e := p.parsePipeAlias()
 	if e != nil {
-		p.addError(e.Error())
+		// Handle specific error types
+		if parserErr, ok := e.(errors.ParserError); ok {
+			p.errors = append(p.errors, parserErr)
+		} else {
+			p.addError(errors.ErrInvalidAlias, e.Error())
+		}
 		return nil
 	}
 	aliases = append(aliases, alias)
@@ -116,7 +118,7 @@ func (p *Parser) parsePipeExpression() Expression {
 
 	// Defensive check for consistency
 	if len(expressions) > len(pipeTypes) {
-		p.addError("invalid pipe expression: missing pipe type or empty pipe segment")
+		p.addError(errors.ErrMissingPipeType, errors.GetErrorMessage(errors.ErrMissingPipeType))
 		return nil
 	}
 
@@ -133,12 +135,12 @@ func (p *Parser) parsePipeAlias() (string, error) {
 	if p.current.Type == TokenAs {
 		// If we're in a sub-expression (not top-level pipe), error
 		if p.subExpressionActive {
-			return "", errors.New(PipeInSubExpressionError)
+			return "", errors.NewParserError(errors.ErrAliasInSubExpr, p.current.Line, p.current.Column, errors.GetErrorMessage(errors.ErrAliasInSubExpr))
 		}
 		p.advance() // consume 'as'
 
 		if p.current.Type != TokenIdentifier || !strings.HasPrefix(p.current.Token, "$") {
-			return "", errors.New(ExpectedIdentifierWithDollar)
+			return "", errors.NewParserError(errors.ErrMissingDollarSign, p.current.Line, p.current.Column, errors.GetErrorMessage(errors.ErrMissingDollarSign))
 		}
 
 		alias := p.current.Token
@@ -224,7 +226,7 @@ func (p *Parser) parseMemberAccess() Expression {
 			indexExpr := p.parseExpression()
 
 			if p.current.Type != TokenRightBracket {
-				p.addError("expected ']' after array index")
+				p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']' after array index", "]")
 			} else {
 				p.advance() // consume ']'
 			}
@@ -250,7 +252,7 @@ func (p *Parser) parseMemberAccess() Expression {
 
 			// Check for end of input or unexpected token after dot
 			if p.current.Type != TokenIdentifier {
-				p.addError("expected identifier after '.'")
+				p.addErrorWithExpected(errors.ErrExpectedIdentifier, "expected identifier after '.'", "identifier")
 				return expr // Return what we have so far since this is an error
 			}
 
@@ -295,7 +297,7 @@ func (p *Parser) parsePrimary() Expression {
 	case TokenLeftBrace:
 		return p.parseObject()
 	default:
-		p.addError(fmt.Sprintf("unexpected token: %v", p.current))
+		p.addErrorWithToken(errors.ErrUnexpectedToken, "unexpected token")
 		p.advance()
 		return nil
 	}
@@ -341,7 +343,7 @@ func (p *Parser) parseFunctionCall(function Expression) Expression {
 	}
 
 	if p.current.Type != TokenRightParen {
-		p.addError("expected ')' after function arguments")
+		p.addErrorWithExpected(errors.ErrUnclosedFunction, "expected ')' after function arguments", ")")
 		return nil
 	}
 	p.advance() // consume ')'
@@ -403,7 +405,7 @@ func (p *Parser) parseGroupedExpression() Expression {
 
 	expr := p.parseExpression()
 	if p.current.Type != TokenRightParen {
-		p.addError("expected ')'")
+		p.addErrorWithExpected(errors.ErrExpectedToken, "expected ')'", ")")
 	} else {
 		p.advance() // consume ')'
 	}
@@ -439,14 +441,14 @@ func (p *Parser) parseArray() Expression {
 
 			// Check for trailing comma
 			if p.current.Type == TokenRightBracket {
-				p.addError("expected ']'")
+				p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']'", "]")
 				break
 			}
 		}
 	}
 
 	if p.current.Type != TokenRightBracket {
-		p.addError("expected ']'")
+		p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']'", "]")
 	} else {
 		p.advance() // consume ']'
 	}
@@ -473,7 +475,7 @@ func (p *Parser) parseObject() Expression {
 	properties := make(map[string]Expression)
 	for p.current.Type != TokenRightBrace {
 		if p.current.Type != TokenString {
-			p.addError("expected string key")
+			p.addErrorWithExpected(errors.ErrInvalidObjectKey, "expected string key", "string")
 			break
 		}
 
@@ -490,14 +492,14 @@ func (p *Parser) parseObject() Expression {
 		p.advance()
 
 		if p.current.Type != TokenColon {
-			p.addError("expected ':'")
+			p.addErrorWithExpected(errors.ErrExpectedToken, "expected ':'", ":")
 			break
 		}
 		p.advance()
 
 		value := p.parseExpression()
 		if value == nil {
-			p.addError(fmt.Sprintf("invalid value for key '%s'", key))
+			p.addError(errors.ErrInvalidObjectValue, fmt.Sprintf("invalid value for key '%s'", key))
 			break
 		}
 
@@ -515,7 +517,7 @@ func (p *Parser) parseObject() Expression {
 	}
 
 	if p.current.Type != TokenRightBrace {
-		p.addError("expected '}'")
+		p.addErrorWithExpected(errors.ErrUnclosedObject, "expected '}'", "}")
 	} else {
 		p.advance() // consume '}'
 	}
@@ -552,21 +554,31 @@ func (p *Parser) advance() {
 }
 
 // addError adds an error message with current position information
-func (p *Parser) addError(msg string) {
-	p.errors = append(p.errors, fmt.Sprintf("Line %d, Column %d: %s", p.current.Line, p.current.Column, msg))
+func (p *Parser) addError(code errors.ErrorCode, message string) {
+	p.errors = append(p.errors, errors.NewParserError(code, p.current.Line, p.current.Column, message))
+}
+
+// addErrorWithToken adds an error with token information
+func (p *Parser) addErrorWithToken(code errors.ErrorCode, message string) {
+	p.errors = append(p.errors, errors.NewParserErrorWithToken(code, p.current.Line, p.current.Column, message, p.current.Token))
+}
+
+// addErrorWithExpected adds an error with expected token information
+func (p *Parser) addErrorWithExpected(code errors.ErrorCode, message, expected string) {
+	p.errors = append(p.errors, errors.NewParserErrorWithExpected(code, p.current.Line, p.current.Column, message, p.current.Token, expected))
 }
 
 func (p *Parser) handleLeadingPipe() Expression {
 	p.advance() // consume the pipe
 	// Check if it's followed by 'as' (empty pipe with alias)
 	if p.current.Type == TokenAs {
-		p.addError(EmptyPipeWithAliasError)
+		p.addErrorWithToken(errors.ErrEmptyPipeWithAlias, errors.GetErrorMessage(errors.ErrEmptyPipeWithAlias))
 		p.advance() // consume 'as'
 		if p.current.Type == TokenIdentifier {
 			p.advance() // consume alias identifier
 		}
 	} else {
-		p.addError(EmptyPipeError)
+		p.addError(errors.ErrEmptyPipe, errors.GetErrorMessage(errors.ErrEmptyPipe))
 	}
 	p.consumeRemainingTokens()
 	return nil
@@ -582,7 +594,7 @@ func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]stri
 
 	// Check for empty pipe with alias immediately after consuming pipe
 	if p.current.Type == TokenAs {
-		p.addError(EmptyPipeWithAliasError)
+		p.addErrorWithToken(errors.ErrEmptyPipeWithAlias, errors.GetErrorMessage(errors.ErrEmptyPipeWithAlias))
 		p.advance() // consume 'as'
 		if p.current.Type == TokenIdentifier {
 			p.advance() // consume alias identifier
@@ -593,7 +605,7 @@ func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]stri
 
 	nextExpr := p.parseLogicalOr()
 	if nextExpr == nil {
-		p.addError(EmptyPipeError)
+		p.addError(errors.ErrEmptyPipe, errors.GetErrorMessage(errors.ErrEmptyPipe))
 		p.consumeRemainingTokens()
 		return false
 	}
@@ -601,7 +613,12 @@ func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]stri
 	*expressions = append(*expressions, nextExpr)
 	alias, e := p.parsePipeAlias()
 	if e != nil {
-		p.addError(e.Error())
+		// Handle specific error types
+		if parserErr, ok := e.(errors.ParserError); ok {
+			p.errors = append(p.errors, parserErr)
+		} else {
+			p.addError(errors.ErrInvalidAlias, e.Error())
+		}
 		return false
 	}
 	*aliases = append(*aliases, alias)
