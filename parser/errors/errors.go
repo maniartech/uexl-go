@@ -48,7 +48,13 @@ const (
 	// Function Errors
 	ErrUnclosedFunction ErrorCode = "unclosed-function"
 	ErrInvalidArgument  ErrorCode = "invalid-argument"
-	ErrTooManyArguments ErrorCode = "too-many-arguments"
+
+	// Tokenizer Errors
+	ErrConsecutiveDots   ErrorCode = "consecutive-dots"
+	ErrInvalidToken      ErrorCode = "invalid-token"
+	ErrInvalidCharacter  ErrorCode = "invalid-character"
+	ErrUnterminatedQuote ErrorCode = "unterminated-quote"
+	ErrTooManyArguments  ErrorCode = "too-many-arguments"
 
 	// Operator Errors
 	ErrInvalidOperator ErrorCode = "invalid-operator"
@@ -154,6 +160,11 @@ var errorMessages = map[ErrorCode]string{
 	ErrUnclosedFunction: "unclosed function call, expected ')'",
 	ErrInvalidArgument:  "invalid function argument",
 	ErrTooManyArguments: "too many function arguments",
+
+	ErrConsecutiveDots:   "consecutive dots in identifier",
+	ErrInvalidToken:      "invalid token",
+	ErrInvalidCharacter:  "invalid character",
+	ErrUnterminatedQuote: "unterminated quoted string",
 
 	ErrInvalidOperator: "invalid operator",
 	ErrMissingOperand:  "missing operand",

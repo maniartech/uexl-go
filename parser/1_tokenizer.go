@@ -8,6 +8,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/maniartech/uexl_go/parser/errors"
 )
 
 type TokenType int
@@ -32,6 +34,7 @@ const (
 	TokenNull
 	TokenDollar
 	TokenAs
+	TokenError // Special token type for tokenizer errors
 )
 
 func (t TokenType) String() string {
@@ -74,6 +77,8 @@ func (t TokenType) String() string {
 		return "Dollar"
 	case TokenAs:
 		return "As"
+	case TokenError:
+		return "Error"
 	default:
 		return "Unknown"
 	}
@@ -148,8 +153,23 @@ func (t *Tokenizer) NextToken() Token {
 		return t.singleCharToken(TokenColon)
 	case ch == '|':
 		return t.readPipeOrBitwiseOr()
+	default:
+		// Check if it's a valid operator character
+		if isOperatorChar(ch) {
+			return t.readOperator()
+		}
+		// Invalid character - create error token
+		errMsg := errors.GetErrorMessage(errors.ErrInvalidCharacter)
+		token := Token{
+			Type:   TokenError,
+			Value:  errors.ErrInvalidCharacter,
+			Token:  fmt.Sprintf("%s: '%c'", errMsg, ch),
+			Line:   t.line,
+			Column: t.column,
+		}
+		t.advance() // consume the invalid character
+		return token
 	}
-	return t.readOperator()
 }
 
 func (t *Tokenizer) readNumber() Token {
@@ -169,7 +189,15 @@ func (t *Tokenizer) readNumber() Token {
 	originalToken := t.input[start:t.pos]
 	value, err := strconv.ParseFloat(originalToken, 64)
 	if err != nil {
-		value = 0.0
+		// Invalid number format - create error token
+		errMsg := errors.GetErrorMessage(errors.ErrInvalidNumber)
+		return Token{
+			Type:   TokenError,
+			Value:  errors.ErrInvalidNumber,
+			Token:  fmt.Sprintf("%s: '%s'", errMsg, originalToken),
+			Line:   t.line,
+			Column: t.column - (t.pos - start),
+		}
 	}
 	return Token{Type: TokenNumber, Value: value, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
 }
@@ -186,8 +214,15 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 	for t.pos < len(t.input) && (isLetter(t.current()) || isDigit(t.current()) || t.current() == '_' || t.current() == '.') {
 		if t.current() == '.' {
 			if hasDot {
-				// Error: consecutive dots
-				return Token{Type: TokenEOF, Value: "Error: consecutive dots", Token: "Error: consecutive dots", Line: t.line, Column: t.column}
+				// Error: consecutive dots - create an error token
+				errMsg := errors.GetErrorMessage(errors.ErrConsecutiveDots)
+				return Token{
+					Type:   TokenError,
+					Value:  errors.ErrConsecutiveDots,
+					Token:  errMsg,
+					Line:   t.line,
+					Column: t.column,
+				}
 			}
 			hasDot = true
 		} else {
@@ -230,6 +265,19 @@ func (t *Tokenizer) readString() Token {
 			t.advance() // skip escape character
 		}
 		t.advance()
+	}
+
+	// Check if we found the closing quote
+	if t.pos >= len(t.input) {
+		// Unterminated string error
+		errMsg := errors.GetErrorMessage(errors.ErrUnterminatedQuote)
+		return Token{
+			Type:   TokenError,
+			Value:  errors.ErrUnterminatedQuote,
+			Token:  errMsg,
+			Line:   t.line,
+			Column: startColumn,
+		}
 	}
 
 	if t.pos < len(t.input) {
