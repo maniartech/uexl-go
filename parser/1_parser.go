@@ -87,6 +87,7 @@ func (p *Parser) parsePipeExpression() Expression {
 		if op.Value != nil {
 			if strValue, ok := op.Value.(string); ok && strValue != "" {
 				// If the value is just ":", treat as default pipe
+				// This allows syntax like |: to be interpreted as a normal pipe.
 				if strValue == ":" {
 					pipeType = "pipe"
 				} else {
