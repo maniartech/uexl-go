@@ -41,6 +41,7 @@ func (nl *NumberLiteral) Position() (int, int) { return nl.Line, nl.Column }
 
 type StringLiteral struct {
 	Value  string
+	IsRaw  bool // Track if this was a raw string
 	Line   int
 	Column int
 }
