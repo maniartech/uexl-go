@@ -204,30 +204,13 @@ func (t *Tokenizer) readNumber() Token {
 
 func (t *Tokenizer) readIdentifierOrKeyword() Token {
 	start := t.pos
-	hasDot := false
 
 	// Allow the first character to be a letter, underscore, or dollar sign
 	if isLetter(t.current()) || t.current() == '_' || t.current() == '$' {
 		t.advance()
 	}
 
-	for t.pos < len(t.input) && (isLetter(t.current()) || isDigit(t.current()) || t.current() == '_' || t.current() == '.') {
-		if t.current() == '.' {
-			if hasDot {
-				// Error: consecutive dots - create an error token
-				errMsg := errors.GetErrorMessage(errors.ErrConsecutiveDots)
-				return Token{
-					Type:   TokenError,
-					Value:  errors.ErrConsecutiveDots,
-					Token:  errMsg,
-					Line:   t.line,
-					Column: t.column,
-				}
-			}
-			hasDot = true
-		} else {
-			hasDot = false
-		}
+	for t.pos < len(t.input) && (isLetter(t.current()) || isDigit(t.current()) || t.current() == '_') {
 		t.advance()
 	}
 
@@ -284,22 +267,31 @@ func (t *Tokenizer) readString() Token {
 		t.advance() // consume closing quote
 	}
 
-	var value string
 	originalToken := t.input[start:t.pos]
+	var value string
 	if rawString {
-		// Remove 'r' prefix with quotes from the original token
+		// Raw string: r'...' or r"..."
 		value = originalToken[2 : len(originalToken)-1]
-	} else {
-		value = originalToken[1 : len(originalToken)-1]
-
-		// Unescape the string
-		value = strings.ReplaceAll(value, "\\\\", "\\")
-		value = strings.ReplaceAll(value, "\\n", "\n")
-		value = strings.ReplaceAll(value, "\\t", "\t")
-		value = strings.ReplaceAll(value, "\\\"", "\"")
-		value = strings.ReplaceAll(value, "\\'", "'")
+	} else if quote == '"' {
+		// Double-quoted: use Go/JSON unescaping
+		quoted := originalToken
+		unescaped, err := strconv.Unquote(quoted)
+		if err != nil {
+			errMsg := errors.GetErrorMessage(errors.ErrInvalidString)
+			return Token{
+				Type:   TokenError,
+				Value:  errors.ErrInvalidString,
+				Token:  errMsg + ": '" + originalToken + "'",
+				Line:   t.line,
+				Column: startColumn,
+			}
+		}
+		value = unescaped
+	} else if quote == '\'' {
+		// Single-quoted: use custom unescape logic (Python-style)
+		content := originalToken[1 : len(originalToken)-1]
+		value = t.unescapeString(content)
 	}
-
 	return Token{Type: TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn}
 }
 
@@ -447,4 +439,93 @@ func (t *Tokenizer) PrintTokens() {
 	for i, t := range t.PreloadTokens() {
 		fmt.Printf("%d: %s\n", i, t)
 	}
+}
+
+// unescapeString manually handles common escape sequences
+// This is a fallback when strconv.Unquote fails
+func (t *Tokenizer) unescapeString(s string) string {
+	// Try to use strconv.Unquote by converting single-quoted to double-quoted
+	// This allows us to use Go's robust unescaping for most cases
+	if s != "" {
+		if unquoted, err := strconv.Unquote("\"" + strings.ReplaceAll(s, "\"", "\\\"") + "\""); err == nil {
+			return unquoted
+		}
+	}
+
+	// Fallback: manual unescaping for Python-style single-quoted strings
+	var result strings.Builder
+	i := 0
+	for i < len(s) {
+		if s[i] == '\\' && i+1 < len(s) {
+			switch s[i+1] {
+			case '\'':
+				result.WriteByte('\'')
+				i += 2
+			case '"':
+				result.WriteByte('"')
+				i += 2
+			case '\\':
+				result.WriteByte('\\')
+				i += 2
+			case 'n':
+				result.WriteByte('\n')
+				i += 2
+			case 't':
+				result.WriteByte('\t')
+				i += 2
+			case 'r':
+				result.WriteByte('\r')
+				i += 2
+			case 'b':
+				result.WriteByte('\b')
+				i += 2
+			case 'f':
+				result.WriteByte('\f')
+				i += 2
+			case 'a':
+				result.WriteByte('\a')
+				i += 2
+			case 'v':
+				result.WriteByte('\v')
+				i += 2
+			case '/':
+				result.WriteByte('/')
+				i += 2
+			case 'u':
+				// Unicode escape sequence \uXXXX
+				if i+5 < len(s) {
+					hexStr := s[i+2 : i+6]
+					if codePoint, err := strconv.ParseUint(hexStr, 16, 16); err == nil {
+						result.WriteRune(rune(codePoint))
+						i += 6
+						continue
+					}
+				}
+				// If unicode parsing fails, keep the escape sequence as-is
+				result.WriteByte(s[i])
+				i++
+			case 'U':
+				// Unicode escape sequence \UXXXXXXXX
+				if i+9 < len(s) {
+					hexStr := s[i+2 : i+10]
+					if codePoint, err := strconv.ParseUint(hexStr, 16, 32); err == nil {
+						result.WriteRune(rune(codePoint))
+						i += 10
+						continue
+					}
+				}
+				result.WriteByte(s[i])
+				i++
+			default:
+				// Unknown escape sequence, keep the backslash and next char
+				result.WriteByte(s[i])
+				result.WriteByte(s[i+1])
+				i += 2
+			}
+		} else {
+			result.WriteByte(s[i])
+			i++
+		}
+	}
+	return result.String()
 }

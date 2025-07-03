@@ -49,7 +49,9 @@ func TestTokenizer(t *testing.T) {
 		{
 			input: "a.b |: func(1, 'test')",
 			expected: []parser.Token{
-				{Type: parser.TokenIdentifier, Value: "a.b", Token: "a.b", Line: 1, Column: 1},
+				{Type: parser.TokenIdentifier, Value: "a", Token: "a", Line: 1, Column: 1},
+				{Type: parser.TokenDot, Value: ".", Token: ".", Line: 1, Column: 2},
+				{Type: parser.TokenIdentifier, Value: "b", Token: "b", Line: 1, Column: 3},
 				{Type: parser.TokenPipe, Value: ":", Token: ":", Line: 1, Column: 5},
 				{Type: parser.TokenIdentifier, Value: "func", Token: "func", Line: 1, Column: 8},
 				{Type: parser.TokenLeftParen, Value: "(", Token: "(", Line: 1, Column: 12},
@@ -119,11 +121,17 @@ func TestTokenizer(t *testing.T) {
 func TestPipe(t *testing.T) {
 	input := "a.b * 2 |map: $1.x.y * 2"
 	expected := []parser.Token{
-		{Type: parser.TokenIdentifier, Value: "a.b", Token: "a.b", Line: 1, Column: 1},
+		{Type: parser.TokenIdentifier, Value: "a", Token: "a", Line: 1, Column: 1},
+		{Type: parser.TokenDot, Value: ".", Token: ".", Line: 1, Column: 2},
+		{Type: parser.TokenIdentifier, Value: "b", Token: "b", Line: 1, Column: 3},
 		{Type: parser.TokenOperator, Value: "*", Token: "*", Line: 1, Column: 5},
 		{Type: parser.TokenNumber, Value: 2.0, Token: "2", Line: 1, Column: 7},
 		{Type: parser.TokenPipe, Value: "map", Token: "map", Line: 1, Column: 9},
-		{Type: parser.TokenIdentifier, Value: "$1.x.y", Token: "$1.x.y", Line: 1, Column: 15},
+		{Type: parser.TokenIdentifier, Value: "$1", Token: "$1", Line: 1, Column: 15},
+		{Type: parser.TokenDot, Value: ".", Token: ".", Line: 1, Column: 17},
+		{Type: parser.TokenIdentifier, Value: "x", Token: "x", Line: 1, Column: 18},
+		{Type: parser.TokenDot, Value: ".", Token: ".", Line: 1, Column: 19},
+		{Type: parser.TokenIdentifier, Value: "y", Token: "y", Line: 1, Column: 20},
 		{Type: parser.TokenOperator, Value: "*", Token: "*", Line: 1, Column: 22},
 		{Type: parser.TokenNumber, Value: 2.0, Token: "2", Line: 1, Column: 24},
 		{Type: parser.TokenEOF, Line: 1, Column: 25},
