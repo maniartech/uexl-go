@@ -1,126 +1,98 @@
-package parser
+package parser_test
 
 import (
 	"testing"
+
+	"github.com/maniartech/uexl_go/parser"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBooleans(t *testing.T) {
-	// got, _ := ParseReader("", strings.NewReader("true"))
-	// gotNode := got.(ast.BooleanNode)
-	// nodeVal := gotNode.Value
-	// nodeToken := gotNode.Token
-	// if nodeToken != "true" {
-	// 	t.Errorf("Token: Expected true, got, %v", nodeToken)
-	// }
-	// if nodeVal != true {
-	// 	t.Errorf("Value: Expected true, got, %v", nodeVal)
-	// }
+	// Test simple boolean true
+	p := parser.NewParser("true")
+	expr, err := p.Parse()
+	assert.NoError(t, err)
+	boolLit, ok := expr.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected BooleanLiteral")
+	assert.True(t, boolLit.Value, "Expected true value")
 
-	// got, _ = ParseReader("", strings.NewReader("false"))
-	// gotNode = got.(ast.BooleanNode)
-	// nodeVal = gotNode.Value
-	// nodeToken = gotNode.Token
-	// if nodeToken != "false" {
-	// 	t.Errorf("Token: Expected false, got, %v", nodeToken)
-	// }
-	// if nodeVal != false {
-	// 	t.Errorf("Value: Expected false, got, %v", nodeVal)
-	// }
+	// Test simple boolean false
+	p = parser.NewParser("false")
+	expr, err = p.Parse()
+	assert.NoError(t, err)
+	boolLit, ok = expr.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected BooleanLiteral")
+	assert.False(t, boolLit.Value, "Expected false value")
 
-	// got, _ = ParseReader("", strings.NewReader("true || false"))
-	// gotExpNode := got.(ast.ExpressionNode)
-	// nodeExpToken := gotExpNode.Token
-	// if nodeExpToken != "true || false" {
-	// 	t.Errorf("Token: Expected true || false, got, %v", nodeToken)
-	// }
-	// leftNodeVal := gotExpNode.Left.(ast.BooleanNode).Value
-	// leftNodeToken := gotExpNode.Left.(ast.BooleanNode).Token
-	// rightNodeVal := gotExpNode.Right.(ast.BooleanNode).Value
-	// rightNodeToken := gotExpNode.Right.(ast.BooleanNode).Token
-	// if leftNodeToken != "true" {
-	// 	t.Errorf("Token: Expected true, got %v", leftNodeToken)
-	// }
-	// if leftNodeVal != true {
-	// 	t.Errorf("Value: Expected true, got %v", leftNodeVal)
-	// }
-	// if rightNodeToken != "false" {
-	// 	t.Errorf("Token: Expected false, got %v", rightNodeToken)
-	// }
-	// if rightNodeVal != false {
-	// 	t.Errorf("Value: Expected false, got %v", rightNodeVal)
-	// }
+	// Test boolean OR expression: true || false
+	p = parser.NewParser("true || false")
+	expr, err = p.Parse()
+	assert.NoError(t, err)
+	binExpr, ok := expr.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected BinaryExpression")
+	assert.Equal(t, "||", binExpr.Operator)
 
-	// got, _ = ParseReader("", strings.NewReader("true && (true || false)"))
-	// gotExpNode = got.(ast.ExpressionNode)
-	// leftNodeToken = gotExpNode.Left.(ast.BooleanNode).Token
-	// leftNodeValue := gotExpNode.Left.(ast.BooleanNode).Value
-	// if leftNodeToken != "true" {
-	// 	t.Errorf("Token: Expected true, got %v", leftNodeToken)
-	// }
-	// if leftNodeValue != true {
-	// 	t.Errorf("Token: Expected true, got %v", leftNodeValue)
-	// }
-	// rightNodeToken = gotExpNode.Right.(ast.ExpressionNode).Token
-	// if rightNodeToken != "true || false" {
-	// 	t.Errorf("Token: Expceted true || false, got %v", rightNodeToken)
-	// }
-	// rightLeftToken := gotExpNode.Right.(ast.ExpressionNode).Left.(ast.BooleanNode).Token
-	// rightLeftNode := gotExpNode.Right.(ast.ExpressionNode).Left.(ast.BooleanNode).Value
-	// rightRightToken := gotExpNode.Right.(ast.ExpressionNode).Right.(ast.BooleanNode).Token
-	// rightRightNode := gotExpNode.Right.(ast.ExpressionNode).Right.(ast.BooleanNode).Value
-	// if rightLeftToken != "true" {
-	// 	t.Errorf("Token: Expected true, got %v", rightLeftToken)
-	// }
-	// if rightRightToken != "false" {
-	// 	t.Errorf("Token: Expected false, got %v", rightRightToken)
-	// }
-	// if rightLeftNode != true {
-	// 	t.Errorf("Value: Expected true, got %v", rightLeftNode)
-	// }
-	// if rightRightNode != false {
-	// 	t.Errorf("Value: Expected false, got %v", rightRightNode)
-	// }
+	leftBool, ok := binExpr.Left.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected left operand to be BooleanLiteral")
+	assert.True(t, leftBool.Value, "Expected left operand to be true")
 
-	// got, _ = ParseReader("", strings.NewReader("(true || true) && (true || false)"))
-	// gotExpNode = got.(ast.ExpressionNode)
-	// leftNodeToken = gotExpNode.Left.(ast.ExpressionNode).Token
-	// if leftNodeToken != "true || true" {
-	// 	t.Errorf("Token: Expected true || true, got %v", leftNodeToken)
-	// }
-	// leftLeftToken := gotExpNode.Left.(ast.ExpressionNode).Left.(ast.BooleanNode).Token
-	// leftLeftNode := gotExpNode.Left.(ast.ExpressionNode).Left.(ast.BooleanNode).Value
-	// leftRightToken := gotExpNode.Left.(ast.ExpressionNode).Right.(ast.BooleanNode).Token
-	// leftRightNode := gotExpNode.Left.(ast.ExpressionNode).Right.(ast.BooleanNode).Value
-	// if leftLeftToken != "true" {
-	// 	t.Errorf("Token: Expected true, got %v", rightLeftToken)
-	// }
-	// if leftRightToken != "true" {
-	// 	t.Errorf("Token: Expected true, got %v", rightRightToken)
-	// }
-	// if leftLeftNode != true {
-	// 	t.Errorf("Value: Expected true, got %v", rightLeftNode)
-	// }
-	// if leftRightNode != true {
-	// 	t.Errorf("Value: Expected true, got %v", rightRightNode)
-	// }
-	// rightNodeToken = gotExpNode.Right.(ast.ExpressionNode).Token
-	// if rightNodeToken != "true || false" {
-	// 	t.Errorf("Token: Expceted true || false, got %v", rightNodeToken)
-	// }
-	// rightLeftToken = gotExpNode.Right.(ast.ExpressionNode).Left.(ast.BooleanNode).Token
-	// rightLeftNode = gotExpNode.Right.(ast.ExpressionNode).Left.(ast.BooleanNode).Value
-	// rightRightToken = gotExpNode.Right.(ast.ExpressionNode).Right.(ast.BooleanNode).Token
-	// rightRightNode = gotExpNode.Right.(ast.ExpressionNode).Right.(ast.BooleanNode).Value
-	// if rightLeftToken != "true" {
-	// 	t.Errorf("Token: Expected true, got %v", rightLeftToken)
-	// }
-	// if rightRightToken != "false" {
-	// 	t.Errorf("Token: Expected false, got %v", rightRightToken)
-	// }
-	// if rightLeftNode != true {
-	// 	t.Errorf("Value: Expected true, got %v", rightLeftNode)
-	// }
-	// if rightRightNode != false {
-	// 	t.Errorf("Value: Expected false, got %v", rightRightNode)
-	// }
+	rightBool, ok := binExpr.Right.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected right operand to be BooleanLiteral")
+	assert.False(t, rightBool.Value, "Expected right operand to be false")
+
+	// Test boolean AND expression with parentheses: true && (true || false)
+	p = parser.NewParser("true && (true || false)")
+	expr, err = p.Parse()
+	assert.NoError(t, err)
+	binExpr, ok = expr.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected BinaryExpression")
+	assert.Equal(t, "&&", binExpr.Operator)
+
+	leftBool, ok = binExpr.Left.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected left operand to be BooleanLiteral")
+	assert.True(t, leftBool.Value, "Expected left operand to be true")
+
+	rightBinExpr, ok := binExpr.Right.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected right operand to be BinaryExpression")
+	assert.Equal(t, "||", rightBinExpr.Operator)
+
+	rightLeftBool, ok := rightBinExpr.Left.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected right-left operand to be BooleanLiteral")
+	assert.True(t, rightLeftBool.Value, "Expected right-left operand to be true")
+
+	rightRightBool, ok := rightBinExpr.Right.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected right-right operand to be BooleanLiteral")
+	assert.False(t, rightRightBool.Value, "Expected right-right operand to be false")
+
+	// Test complex boolean expression: (true || true) && (true || false)
+	p = parser.NewParser("(true || true) && (true || false)")
+	expr, err = p.Parse()
+	assert.NoError(t, err)
+	binExpr, ok = expr.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected BinaryExpression")
+	assert.Equal(t, "&&", binExpr.Operator)
+
+	leftBinExpr, ok := binExpr.Left.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected left operand to be BinaryExpression")
+	assert.Equal(t, "||", leftBinExpr.Operator)
+
+	leftLeftBool, ok := leftBinExpr.Left.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected left-left operand to be BooleanLiteral")
+	assert.True(t, leftLeftBool.Value, "Expected left-left operand to be true")
+
+	leftRightBool, ok := leftBinExpr.Right.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected left-right operand to be BooleanLiteral")
+	assert.True(t, leftRightBool.Value, "Expected left-right operand to be true")
+
+	rightBinExpr, ok = binExpr.Right.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected right operand to be BinaryExpression")
+	assert.Equal(t, "||", rightBinExpr.Operator)
+
+	rightLeftBool, ok = rightBinExpr.Left.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected right-left operand to be BooleanLiteral")
+	assert.True(t, rightLeftBool.Value, "Expected right-left operand to be true")
+
+	rightRightBool, ok = rightBinExpr.Right.(*parser.BooleanLiteral)
+	assert.True(t, ok, "Expected right-right operand to be BooleanLiteral")
+	assert.False(t, rightRightBool.Value, "Expected right-right operand to be false")
 }
