@@ -3,7 +3,6 @@ package parser_test
 import (
 	"testing"
 
-	"github.com/maniartech/uexl_go/internal/json"
 	"github.com/maniartech/uexl_go/parser"
 	"github.com/stretchr/testify/assert"
 )
@@ -161,14 +160,9 @@ func TestDotExpressionPrecedence(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := parser.NewParser(tt.input)
-			ast, err := p.Parse()
-
-			if err != nil {
-				t.Logf("Input: %s, Error: %v", tt.input, err)
-			}
+			_, err := p.Parse()
 
 			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
-			json.PrintJSON(ast) // For visual inspection
 		})
 	}
 }
@@ -208,10 +202,9 @@ func TestPipeExpressionPrecedence(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := parser.NewParser(tt.input)
-			ast, err := p.Parse()
+			_, err := p.Parse()
 
 			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
-			json.PrintJSON(ast) // For visual inspection
 		})
 	}
 }
