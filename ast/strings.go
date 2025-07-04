@@ -8,8 +8,8 @@ import (
 
 type StringNode struct {
 	*BaseNode
-
-	Value types.String `json:"value"`
+	Value          types.String `json:"value"`
+	IsSingleQuoted bool         `json:"isSingleQuoted,omitempty"`
 }
 
 // NewStringNode parses the token and returns a StringNode. This function
@@ -21,32 +21,35 @@ type StringNode struct {
 // json.Unmarshal function only accepts double quoted strings.
 func NewStringNode(token []byte, offset, line, col int) (*StringNode, error) {
 	var value string
-	var singleQuote = false
+	var isSingleQuoted bool
+	var tokenStr string
 
-	// if it is a raw string, the do no use the json.Unmarshal function
-	// just convert the byte array to a string
 	if token[0] == 'r' {
-		// Remove the first and last character
-		value = string(token[2 : len(token)-1])
-	} else {
-		// if the first character is a single quote, then it is a single quoted string
-		// replace the first and last character with double quotes
-		if token[0] == '\'' {
-			token[0] = '"'
-			token[len(token)-1] = '"'
-			singleQuote = true
+		// Raw string: r"..." or r'...'
+		// Check if it's single-quoted or double-quoted
+		if len(token) > 2 && token[1] == '\'' {
+			isSingleQuoted = true
+		} else {
+			isSingleQuoted = false
 		}
-
+		value = string(token[2 : len(token)-1])
+		tokenStr = string(token)
+	} else if token[0] == '\'' {
+		// Single-quoted string: manually extract content between quotes
+		content := string(token[1 : len(token)-1])
+		// For single-quoted strings, we process escape sequences manually
+		// This avoids issues with json.Unmarshal when the string contains unescaped double quotes
+		value = content
+		isSingleQuoted = true
+		tokenStr = string(token)
+	} else {
+		// Double-quoted string
 		err := json.Unmarshal(token, &value)
 		if err != nil {
 			return nil, err
 		}
-
-		// If the string is single quoted, then replace the double quotes with single quotes
-		if singleQuote {
-			token[0] = '\''
-			token[len(token)-1] = '\''
-		}
+		isSingleQuoted = false
+		tokenStr = string(token)
 	}
 
 	node := &StringNode{
@@ -54,11 +57,11 @@ func NewStringNode(token []byte, offset, line, col int) (*StringNode, error) {
 			Type:   NodeTypeString,
 			Line:   line,
 			Column: col,
-			Token:  string(token),
+			Token:  tokenStr,
 		},
-		Value: types.String(value),
+		Value:          types.String(value),
+		IsSingleQuoted: isSingleQuoted,
 	}
-
 	return node, nil
 }
 

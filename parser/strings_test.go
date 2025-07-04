@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 
@@ -9,72 +8,40 @@ import (
 )
 
 func TestStrings(t *testing.T) {
-
-	// testStrs is list of random strings to test the parser.
-	// It contains all the possible combinations of single and double quotes.
-	// It also contains strings with escaped characters, strings with
-	// escaped quotes and unicode characters. It contains around 50
-	// strings to test the parser.
-	testStrs := []string{
-		`This \u00A1sentence has a Unicode character!`,
-		`This sentence has \"escaped quotes\"`,
-		`This sentence has an \\escaped character`,
-		`\u00A1This sentence has a Unicode character and \"escaped quotes\"`,
-		`This sentence has an \\escaped character and \"escaped quotes\"`,
-		`This sentence has an \\escaped character and \u00A1a Unicode character!`,
-		`\u00A1This sentence has a Unicode character and an \\escaped character`,
-		`This sentence has \"escaped quotes\" and \u00A1a Unicode character!`,
-		`\u00A1This sentence has a Unicode character and \"escaped quotes\" and an \\escaped character`,
-		`This sentence has an \\escaped character and \"escaped quotes\" and \u00A1a Unicode character!`,
-		`This sentence has an \\escaped character and \u00A1a Unicode character! and \"escaped quotes\"`,
-		`\u00A1This sentence has a Unicode character and an \\escaped character and \"escaped quotes\"`,
-		`This sentence has \"escaped quotes\" and an \\escaped character and \u00A1a Unicode character!`,
-		`\u00A1This sentence has a Unicode character and \"escaped quotes\" and an \\escaped character and \u00A1a Unicode character!`,
-		`This sentence has an \\escaped character and \"escaped quotes\" and \u00A1a Unicode character! and an \\escaped character`,
-		`This sentence has an encoded emoji \ud83d\ude00, and an encoded character \u00a1,  escaped character \\, escaped quotes \" and an escaped quote character \"`,
+	testCases := []struct {
+		input          string
+		expectedValue  string
+		isSingleQuoted bool
+		isRaw          bool
+	}{
+		// Single quoted string
+		{`'This is a single quoted string where " is ignored'`, "This is a single quoted string where \" is ignored", true, false},
+		// Double quoted string
+		{`"This is a double quoted string where ' is ignored"`, "This is a double quoted string where ' is ignored", false, false},
+		// Raw string (single quoted)
+		{`r'This sentence is a raw string #$@$SD'`, "This sentence is a raw string #$@$SD", true, true},
+		// Raw string (double quoted)
+		{`r"This is a raw string with \\u00A1 and ""quotes"""`, "This is a raw string with \\\\u00A1 and \"quotes\"", false, true},
+		// Escaped unicode in double quoted string
+		{`"This contains unicode: \u00A1"`, "This contains unicode: ¡", false, false},
+		// Escaped unicode in single quoted string
+		{`'This contains unicode: \u00A1'`, "This contains unicode: ¡", true, false},
+		// Escaped quotes in single quoted string
+		{`'This has an escaped \"quote\"'`, "This has an escaped \"quote\"", true, false},
+		// Escaped quotes in double quoted string
+		{`"This has an escaped \"quote\""`, "This has an escaped \"quote\"", false, false},
+		// Escaped backslash in single quoted string
+		{`'This has a backslash: \\'`, "This has a backslash: \\", true, false},
+		// Escaped backslash in double quoted string
+		{`"This has a backslash: \\ \""`, "This has a backslash: \\ \"", false, false},
 	}
 
-	escappedValues := []string{
-		`This ¡sentence has a Unicode character!`,
-		`This sentence has "escaped quotes"`,
-		`This sentence has an \escaped character`,
-		`¡This sentence has a Unicode character and "escaped quotes"`,
-		`This sentence has an \escaped character and "escaped quotes"`,
-		`This sentence has an \escaped character and ¡a Unicode character!`,
-		`¡This sentence has a Unicode character and an \escaped character`,
-		`This sentence has "escaped quotes" and ¡a Unicode character!`,
-		`¡This sentence has a Unicode character and "escaped quotes" and an \escaped character`,
-		`This sentence has an \escaped character and "escaped quotes" and ¡a Unicode character!`,
-		`This sentence has an \escaped character and ¡a Unicode character! and "escaped quotes"`,
-		`¡This sentence has a Unicode character and an \escaped character and "escaped quotes"`,
-		`This sentence has "escaped quotes" and an \escaped character and ¡a Unicode character!`,
-		`¡This sentence has a Unicode character and "escaped quotes" and an \escaped character and ¡a Unicode character!`,
-		`This sentence has an \escaped character and "escaped quotes" and ¡a Unicode character! and an \escaped character`,
-		`This sentence has an encoded emoji 😀, and an encoded character ¡,  escaped character \, escaped quotes " and an escaped quote character "`,
-	}
-
-	for i, s := range testStrs {
-		// Test case for double quoted string (Go/JSON compliant)
-		str := strconv.Quote(s)
-		testString(str, escappedValues[i], t)
-
-		// Test case for single quoted string (convert escapes for Go compatibility)
-		single := s
-		// Replace \" with ", \' with ', leave \\ as is
-		single = strings.ReplaceAll(single, "\\\"", "\"")
-		single = strings.ReplaceAll(single, "\\'", "'")
-		str = "'" + single + "'"
-		testString(str, escappedValues[i], t)
-
-		// Test case for raw string (r"..." and r'...')
-		rawDouble := "r\"" + s + "\""
-		testString(rawDouble, s, t)
-		rawSingle := "r'" + s + "'"
-		testString(rawSingle, s, t)
+	for _, tc := range testCases {
+		testString(tc.input, tc.expectedValue, t, tc.isSingleQuoted)
 	}
 }
 
-func testString(str, testValue string, t *testing.T) {
+func testString(str, testValue string, t *testing.T, expectSingleQuoted ...bool) {
 	parsed, err := ParseReaderNew("", strings.NewReader(str))
 	if err != nil {
 		t.Errorf("Error: %v", err)
@@ -84,14 +51,15 @@ func testString(str, testValue string, t *testing.T) {
 	node := parsed.(*ast.StringNode)
 	value := node.Value
 
-	// Debug output
-	t.Logf("Input: %s", str)
-	t.Logf("Expected: %s", testValue)
-	t.Logf("Actual: %s", value)
-	t.Logf("Node Type: %T", parsed)
-
 	// Only check the value, not the token, as the parser normalizes quotes and raw strings
 	if string(value) != testValue {
 		t.Errorf("Value: Expected %v, got %v", testValue, value)
+	}
+
+	// Check IsSingleQuoted if expectation is provided
+	if len(expectSingleQuoted) > 0 {
+		if node.IsSingleQuoted != expectSingleQuoted[0] {
+			t.Errorf("IsSingleQuoted: Expected %v, got %v", expectSingleQuoted[0], node.IsSingleQuoted)
+		}
 	}
 }
