@@ -72,8 +72,7 @@ The UExl parser implementation demonstrates solid fundamentals with proper token
   - `1_parser.go` → `parser.go`
   - `1_ast_defs.go` → `ast_definitions.go`
 
-- [ ] **Legacy Code Removal**
-  - Remove unused PEG-related files from `/path/bakup/`
+- [ ] **Legacy Code Removal 1**
   - Clean up `expressions_parser.go` (appears to be legacy)
   - Remove conversion functions between old/new AST if no longer needed
 
@@ -87,6 +86,9 @@ The UExl parser implementation demonstrates solid fundamentals with proper token
   - Move operator constants to dedicated file
   - Create proper enum types for token values
   - Centralize magic strings and constants
+
+- [ ] **Legacy Code Removal 2**
+  - Remove unused PEG-related files from `/path/backup/`
 
 #### Deliverables
 
