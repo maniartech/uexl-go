@@ -170,7 +170,10 @@ func TestTrial(t *testing.T) {
 	input := `r"hello\nworld"`
 	tokenizer := parser.NewTokenizer(input)
 
-	tokenizer.PrintTokens()
+	tokens := tokenizer.PreloadTokens()
+	if len(tokens) == 0 {
+		t.Error("Expected tokens but got none")
+	}
 }
 
 func TestRawString(t *testing.T) {

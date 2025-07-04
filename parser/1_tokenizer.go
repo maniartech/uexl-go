@@ -85,11 +85,12 @@ func (t TokenType) String() string {
 }
 
 type Token struct {
-	Type   TokenType
-	Value  any    // Stores native parsed values (float64, string without quotes, etc.)
-	Token  string // Stores the original token string
-	Line   int
-	Column int
+	Type           TokenType
+	Value          any    // Stores native parsed values (float64, string without quotes, etc.)
+	Token          string // Stores the original token string
+	Line           int
+	Column         int
+	IsSingleQuoted bool // Only set for TokenString
 }
 
 type Tokenizer struct {
@@ -243,11 +244,31 @@ func (t *Tokenizer) readString() Token {
 	t.advance() // consume opening quote
 
 	// Read until closing quote
-	for t.pos < len(t.input) && t.current() != quote {
-		if !rawString && t.current() == '\\' {
-			t.advance() // skip escape character
+	if rawString {
+		// Raw string: handle doubled quotes for escaping the delimiter
+		for t.pos < len(t.input) {
+			if t.current() == quote {
+				// Check if it's a doubled quote (escaped delimiter)
+				if t.pos+1 < len(t.input) && rune(t.input[t.pos+1]) == quote {
+					// Skip both quotes (this is an escaped delimiter)
+					t.advance()
+					t.advance()
+				} else {
+					// Single quote - this is the end of the string
+					break
+				}
+			} else {
+				t.advance()
+			}
 		}
-		t.advance()
+	} else {
+		// Regular string: handle backslash escapes
+		for t.pos < len(t.input) && t.current() != quote {
+			if t.current() == '\\' {
+				t.advance() // skip escape character
+			}
+			t.advance()
+		}
 	}
 
 	// Check if we found the closing quote
@@ -269,11 +290,18 @@ func (t *Tokenizer) readString() Token {
 
 	originalToken := t.input[start:t.pos]
 	var value string
+	isSingleQuoted := false
 	if rawString {
-		// Raw string: r'...' or r"..."
-		value = originalToken[2 : len(originalToken)-1]
+		// For raw strings, extract content between quotes and handle doubled quotes
+		content := originalToken[2 : len(originalToken)-1] // Remove 'r' prefix and quotes
+		// Replace doubled quotes with single quotes
+		if quote == '"' {
+			value = strings.ReplaceAll(content, `""`, `"`)
+		} else {
+			value = strings.ReplaceAll(content, `''`, `'`)
+			isSingleQuoted = true
+		}
 	} else if quote == '"' {
-		// Double-quoted: use Go/JSON unescaping
 		quoted := originalToken
 		unescaped, err := strconv.Unquote(quoted)
 		if err != nil {
@@ -288,11 +316,11 @@ func (t *Tokenizer) readString() Token {
 		}
 		value = unescaped
 	} else if quote == '\'' {
-		// Single-quoted: use custom unescape logic (Python-style)
+		isSingleQuoted = true
 		content := originalToken[1 : len(originalToken)-1]
 		value = t.unescapeString(content)
 	}
-	return Token{Type: TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn}
+	return Token{Type: TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn, IsSingleQuoted: isSingleQuoted}
 }
 
 // Ref: https://regex101.com/r/w6qtHq/1
