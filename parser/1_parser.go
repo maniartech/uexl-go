@@ -269,12 +269,19 @@ func (p *Parser) parseMemberAccess() Expression {
 				Column:   dot.Column,
 			}
 			continue // check for more member access operations
-		}
-
-		// Handle function call after member or index access
+		} // Handle function call after member or index access
 		if p.current.Type == TokenLeftParen {
 			expr = p.parseFunctionCall(expr)
-			continue
+
+			// After a function call, check for invalid chaining
+			if p.current.Type == TokenDot || p.current.Type == TokenLeftBracket || p.current.Type == TokenLeftParen {
+				// This is invalid - function calls cannot be chained
+				p.addErrorWithToken(errors.ErrInvalidSyntax, "function calls cannot be chained with member access or other function calls")
+				return expr
+			}
+
+			// Function calls end the chain - no more member access allowed
+			break
 		}
 
 		// No more member access operations
@@ -317,10 +324,8 @@ func (p *Parser) parseIdentifierOrFunctionCall() Expression {
 	}
 	p.advance()
 
-	if p.current.Type == TokenLeftParen {
-		return p.parseFunctionCall(identifier)
-	}
-
+	// Don't handle function calls here - let parseMemberAccess handle them
+	// so we can detect chaining
 	return identifier
 }
 

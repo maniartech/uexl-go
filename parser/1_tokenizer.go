@@ -175,18 +175,35 @@ func (t *Tokenizer) NextToken() Token {
 
 func (t *Tokenizer) readNumber() Token {
 	start := t.pos
+
+	// Read integer part and decimal part
 	for t.pos < len(t.input) && (isDigit(t.current()) || t.current() == '.') {
 		t.advance()
 	}
+
+	// Check for scientific notation - only if followed by proper exponent
 	if t.pos < len(t.input) && (t.current() == 'e' || t.current() == 'E') {
-		t.advance()
+		// Look ahead to see if this is a valid exponent
+		savedPos := t.pos
+		t.advance() // consume 'e' or 'E'
+
+		// Optional sign
 		if t.pos < len(t.input) && (t.current() == '+' || t.current() == '-') {
 			t.advance()
 		}
-		for t.pos < len(t.input) && isDigit(t.current()) {
-			t.advance()
+
+		// Must have at least one digit after e/E or optional sign
+		if t.pos >= len(t.input) || !isDigit(t.current()) {
+			// Not a valid scientific notation, backtrack
+			t.pos = savedPos
+		} else {
+			// Valid scientific notation, consume all digits
+			for t.pos < len(t.input) && isDigit(t.current()) {
+				t.advance()
+			}
 		}
 	}
+
 	originalToken := t.input[start:t.pos]
 	value, err := strconv.ParseFloat(originalToken, 64)
 	if err != nil {
@@ -211,8 +228,16 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 		t.advance()
 	}
 
-	for t.pos < len(t.input) && (isLetter(t.current()) || isDigit(t.current()) || t.current() == '_') {
-		t.advance()
+	// Continue reading alphanumeric characters, underscores, and dollar signs
+	// NO dot handling - dots will be separate tokens
+	for t.pos < len(t.input) {
+		ch := t.current()
+
+		if isLetter(ch) || isDigit(ch) || ch == '_' || ch == '$' {
+			t.advance()
+		} else {
+			break
+		}
 	}
 
 	originalToken := t.input[start:t.pos]

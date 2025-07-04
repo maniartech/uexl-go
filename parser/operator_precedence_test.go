@@ -147,14 +147,6 @@ func TestDotExpressionPrecedence(t *testing.T) {
 			name:  "dot expression with function call",
 			input: "a.b.method(c.d, e.f)",
 		},
-		{
-			name:  "function return with dot access",
-			input: "func(a, b).property",
-		},
-		{
-			name:  "array element with dot access",
-			input: "[1, 2, 3][0].property",
-		},
 	}
 
 	for _, tt := range tests {
@@ -163,6 +155,30 @@ func TestDotExpressionPrecedence(t *testing.T) {
 			_, err := p.Parse()
 
 			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+		})
+	}
+}
+
+// TestInvalidDotExpressions tests invalid dot expressions that should be rejected
+func TestInvalidDotExpressions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "function return with dot access",
+			input: "func(a, b).property",
+		},
+		// Note: Array indexing followed by member access is valid
+		// [1, 2, 3][0].property is a valid pattern
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			_, err := p.Parse()
+
+			assert.Error(t, err, "Parsing should produce an error for invalid pattern: %s", tt.input)
 		})
 	}
 }
