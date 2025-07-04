@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maniartech/uexl_go/internal/utils"
 	"github.com/maniartech/uexl_go/parser"
 	"github.com/stretchr/testify/assert"
 )
@@ -258,10 +257,8 @@ func TestPipeAliasInFunctionArgs(t *testing.T) {
 func TestParserTrial(t *testing.T) {
 	input := "[1, x as $a, 2]" // This input is should fail becuase alias cannot be a sub-expression
 	p := parser.NewParser(input)
-	ast, err := p.Parse()
+	_, err := p.Parse()
 	assert.Error(t, err, "Parsing should not produce an error")
-
-	utils.PrintJSON(ast)
 }
 
 // TestEmptyPipeExpressions ensures empty pipe expressions are rejected

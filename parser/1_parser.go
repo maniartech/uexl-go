@@ -384,8 +384,27 @@ func (p *Parser) parseString() Expression {
 
 	// Check if this was a raw string by looking at the original token
 	isRaw := strings.HasPrefix(token.Token, "r'") || strings.HasPrefix(token.Token, "r\"")
+	isSingleQuoted := false
+	if isRaw {
+		// For raw strings, check the second character
+		if len(token.Token) > 1 && token.Token[1] == '\'' {
+			isSingleQuoted = true
+		}
+	} else {
+		// For regular strings, check the first character
+		if len(token.Token) > 0 && token.Token[0] == '\'' {
+			isSingleQuoted = true
+		}
+	}
 
-	return &StringLiteral{Value: value, IsRaw: isRaw, Line: token.Line, Column: token.Column}
+	return &StringLiteral{
+		Value:          value,
+		Token:          token.Token,
+		IsRaw:          isRaw,
+		IsSingleQuoted: isSingleQuoted,
+		Line:           token.Line,
+		Column:         token.Column,
+	}
 }
 
 func (p *Parser) parseBoolean() Expression {
