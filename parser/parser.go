@@ -57,19 +57,16 @@ func convertExpressionToAST(expr Expression) ast.Node {
 		}
 		return node
 	case *StringLiteral:
-		// NewStringNode expects []byte, not string, and we need to preserve single quotes if that's what's expected
-		// For raw strings, preserve the 'r' prefix
-		var token string
-		if e.IsRaw {
-			token = "r'" + e.Value + "'"
-		} else {
-			token = "'" + e.Value + "'"
-		}
-		node, err := ast.NewStringNode([]byte(token), 0, e.Line, e.Column)
-		if err != nil {
-			// Fallback on error
-			fallback, _ := ast.NewStringNode([]byte("''"), 0, e.Line, e.Column)
-			return fallback
+		// Create the AST node directly with the processed value and original token
+		node := &ast.StringNode{
+			BaseNode: &ast.BaseNode{
+				Type:   ast.NodeTypeString,
+				Line:   e.Line,
+				Column: e.Column,
+				Token:  e.Token,
+			},
+			Value:          types.String(e.Value),
+			IsSingleQuoted: e.IsSingleQuoted,
 		}
 		return node
 	case *BooleanLiteral:

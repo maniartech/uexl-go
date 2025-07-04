@@ -40,10 +40,12 @@ func (nl *NumberLiteral) expressionNode()      {}
 func (nl *NumberLiteral) Position() (int, int) { return nl.Line, nl.Column }
 
 type StringLiteral struct {
-	Value  string
-	IsRaw  bool // Track if this was a raw string
-	Line   int
-	Column int
+	Value          string
+	Token          string // The original token, including quotes and escapes
+	IsRaw          bool   // Track if this was a raw string
+	IsSingleQuoted bool   // Track if this was a single-quoted string
+	Line           int
+	Column         int
 }
 
 func (sl *StringLiteral) expressionNode()      {}
