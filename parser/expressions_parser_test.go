@@ -1,7 +1,6 @@
 package parser_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
@@ -42,8 +41,10 @@ func TestExpressionParsing(t *testing.T) {
 		}`)
 
 	result, err := node.Eval(ctx)
+	_ = result // Suppress unused variable warning
+	_ = err    // Suppress unused variable warning
 
-	fmt.Println("result", result, err)
+	// fmt.Println("result", result, err)
 
 	// parsed, err := parser.ParseReader("", strings.NewReader("test.0.abc"))
 	// if err != nil {
