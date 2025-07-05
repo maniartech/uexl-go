@@ -133,6 +133,7 @@ func (o Operator) String() string {
 }
 
 // StartOperator returns true if the given character is the start of an operator
+// TODO: This function is currently not used in the codebase. Check and remove if not needed.
 func StartOperator(ch rune) bool {
 	return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '%' ||
 		ch == '&' || ch == '|' || ch == '^' || ch == '~' ||
