@@ -493,9 +493,12 @@ func TestIdentifierTokenization(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tokenizer := parser.NewTokenizer(tt.input)
 			var tokens []parser.Token
-
 			for {
-				token := tokenizer.NextToken()
+				token, err := tokenizer.NextToken()
+				if err != nil {
+					t.Errorf("Tokenization error: %v", err)
+					break
+				}
 				if token.Type == constants.TokenEOF {
 					break
 				}

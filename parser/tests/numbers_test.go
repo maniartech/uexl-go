@@ -140,8 +140,9 @@ func TestNumberTokenizer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tokenizer := parser.NewTokenizer(tt.input)
-			token := tokenizer.NextToken()
+			token, err := tokenizer.NextToken()
 
+			assert.NoError(t, err, "Should not return error for valid input")
 			assert.Equal(t, tt.expected.Type, token.Type, "Token type should match")
 			assert.Equal(t, tt.expected.Value, token.Value, "Token value should match")
 			assert.Equal(t, tt.expected.Token, token.Token, "Token string should match")
@@ -277,11 +278,12 @@ func TestNumberErrorCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tokenizer := parser.NewTokenizer(tt.input)
-			token := tokenizer.NextToken()
+			token, err := tokenizer.NextToken()
 
 			if tt.expectError {
-				assert.Equal(t, constants.TokenError, token.Type, "Expected error token")
+				assert.Error(t, err, "Expected error for invalid input")
 			} else {
+				assert.NoError(t, err, "Should not return error for valid input")
 				// For valid cases, just check it's not an error token
 				assert.NotEqual(t, constants.TokenError, token.Type, "Should not be error token")
 			}
@@ -320,8 +322,9 @@ func TestNumberPrecision(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tokenizer := parser.NewTokenizer(tt.input)
-			token := tokenizer.NextToken()
+			token, err := tokenizer.NextToken()
 
+			assert.NoError(t, err, "Should not return error for valid input")
 			assert.Equal(t, constants.TokenNumber, token.Type, "Should be a number token")
 			assert.Equal(t, tt.expected, token.Value, "Value should match expected precision")
 		})

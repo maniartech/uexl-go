@@ -14,6 +14,7 @@ const (
 	ErrExpectedToken   ErrorCode = "expected-token"
 	ErrUnexpectedEOF   ErrorCode = "unexpected-eof"
 	ErrInvalidSyntax   ErrorCode = "invalid-syntax"
+	ErrGeneric         ErrorCode = "generic-error"
 
 	// Expression Errors
 	ErrEmptyExpression   ErrorCode = "empty-expression"
@@ -64,6 +65,11 @@ const (
 	// General Errors
 	ErrInternal ErrorCode = "internal-error"
 	ErrUnknown  ErrorCode = "unknown-error"
+
+	// Bounds Checking Errors
+	ErrIndexOutOfBounds ErrorCode = "index-out-of-bounds"
+	ErrStringAccess     ErrorCode = "string-access-error"
+	ErrBufferOverflow   ErrorCode = "buffer-overflow"
 )
 
 // ParserError represents a structured parser error
@@ -131,6 +137,7 @@ var errorMessages = map[ErrorCode]string{
 	ErrExpectedToken:   "expected token",
 	ErrUnexpectedEOF:   "unexpected end of input",
 	ErrInvalidSyntax:   "invalid syntax",
+	ErrGeneric:         "generic error",
 
 	ErrEmptyExpression:   "empty expression",
 	ErrInvalidExpression: "invalid expression",
@@ -172,6 +179,10 @@ var errorMessages = map[ErrorCode]string{
 
 	ErrInternal: "internal parser error",
 	ErrUnknown:  "unknown error",
+
+	ErrIndexOutOfBounds: "index out of bounds",
+	ErrStringAccess:     "string access error",
+	ErrBufferOverflow:   "buffer overflow detected",
 }
 
 // GetErrorMessage returns the default message for an error code

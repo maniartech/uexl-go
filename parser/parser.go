@@ -39,12 +39,38 @@ func (ia *IndexAccess) expressionNode()      {}
 func (ia *IndexAccess) Position() (int, int) { return ia.Line, ia.Column }
 
 // NewParser creates a new parser instance with the given input
+// This function maintains backward compatibility and does not return errors
 func NewParser(input string) *Parser {
 	p := &Parser{
 		tokenizer: NewTokenizer(input),
 	}
 	p.advance()
 	return p
+}
+
+// NewParserWithValidation creates a new parser instance with the given input
+// and returns an error if the input is invalid or initialization fails
+func NewParserWithValidation(input string) (*Parser, error) {
+	if input == "" {
+		return nil, errors.NewParserError(errors.ErrEmptyExpression, 1, 1, constants.MsgEmptyExpression)
+	}
+
+	p := &Parser{
+		tokenizer: NewTokenizer(input),
+	}
+
+	// Get the first token and check for immediate errors
+	p.advance()
+
+	// If the first token is an error, return it immediately
+	if p.current.Type == constants.TokenError {
+		if errorCode, ok := p.current.Value.(errors.ErrorCode); ok {
+			return nil, errors.NewParserError(errorCode, p.current.Line, p.current.Column, p.current.Token)
+		}
+		return nil, errors.NewParserError(errors.ErrInvalidToken, p.current.Line, p.current.Column, p.current.Token)
+	}
+
+	return p, nil
 }
 
 // Parse parses the input and returns an Expression or an error
@@ -588,17 +614,32 @@ func (p *Parser) parseBinaryOp(parseFunc func() Expression, operators ...string)
 
 // advance moves to the next token in the input
 func (p *Parser) advance() {
-	p.current = p.tokenizer.NextToken()
-	p.pos++
-
-	// Check if the tokenizer returned an error token
-	if p.current.Type == constants.TokenError {
-		if errorCode, ok := p.current.Value.(errors.ErrorCode); ok {
-			p.addError(errorCode, p.current.Token)
+	token, err := p.tokenizer.NextToken()
+	if err != nil {
+		// Convert error to ParserError if it's not already
+		if parserErr, ok := err.(errors.ParserError); ok {
+			p.errors = append(p.errors, parserErr)
 		} else {
-			p.addError(errors.ErrInvalidToken, p.current.Token)
+			p.errors = append(p.errors, errors.NewParserError(
+				errors.ErrInvalidToken,
+				p.tokenizer.line,
+				p.tokenizer.column,
+				err.Error(),
+			))
 		}
+		// Set current to an error token so parsing can continue
+		p.current = Token{
+			Type:   constants.TokenError,
+			Value:  err.Error(),
+			Token:  err.Error(),
+			Line:   p.tokenizer.line,
+			Column: p.tokenizer.column,
+		}
+		return
 	}
+
+	p.current = token
+	p.pos++
 }
 
 // addError adds an error message with current position information
@@ -715,7 +756,11 @@ func contains(slice []string, item string) bool {
 //	}
 //	fmt.Println(node.Eval(nil))
 func ParseString(expr string) (ast.Node, error) {
-	parser := NewParser(expr)
+	parser, err := NewParserWithValidation(expr)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := parser.Parse()
 	if err != nil {
 		return nil, err
@@ -749,7 +794,19 @@ func convertExpressionToAST(expr Expression) ast.Node {
 		node, err := ast.NewNumberNode(e.Value, 0, e.Line, e.Column)
 		if err != nil {
 			// Fallback to a default value on error
-			fallback, _ := ast.NewNumberNode("0", 0, e.Line, e.Column)
+			fallback, fallbackErr := ast.NewNumberNode("0", 0, e.Line, e.Column)
+			if fallbackErr != nil {
+				// If even the fallback fails, create a minimal node
+				return &ast.NumberNode{
+					BaseNode: &ast.BaseNode{
+						Type:   ast.NodeTypeNumber,
+						Line:   e.Line,
+						Column: e.Column,
+						Token:  "0",
+					},
+					Value: 0,
+				}
+			}
 			return fallback
 		}
 		return node
@@ -774,7 +831,19 @@ func convertExpressionToAST(expr Expression) ast.Node {
 		}
 		node, err := ast.NewBooleanNode(token, 0, e.Line, e.Column)
 		if err != nil {
-			fallback, _ := ast.NewBooleanNode("false", 0, e.Line, e.Column)
+			fallback, fallbackErr := ast.NewBooleanNode("false", 0, e.Line, e.Column)
+			if fallbackErr != nil {
+				// If even the fallback fails, create a minimal node
+				return &ast.BooleanNode{
+					BaseNode: &ast.BaseNode{
+						Type:   ast.NodeTypeBoolean,
+						Line:   e.Line,
+						Column: e.Column,
+						Token:  "false",
+					},
+					Value: false,
+				}
+			}
 			return fallback
 		}
 		return node
@@ -783,7 +852,19 @@ func convertExpressionToAST(expr Expression) ast.Node {
 	case *Identifier:
 		node, err := ast.NewIdentifierNode(e.Name, 0, e.Line, e.Column)
 		if err != nil {
-			fallback, _ := ast.NewIdentifierNode("unknown", 0, e.Line, e.Column)
+			fallback, fallbackErr := ast.NewIdentifierNode("unknown", 0, e.Line, e.Column)
+			if fallbackErr != nil {
+				// If even the fallback fails, create a minimal node
+				return &ast.IdentifierNode{
+					BaseNode: ast.BaseNode{
+						Type:   ast.NodeTypeIdentifier,
+						Line:   e.Line,
+						Column: e.Column,
+						Token:  "unknown",
+					},
+					Name: "unknown",
+				}
+			}
 			return fallback
 		}
 		return node

@@ -44,14 +44,13 @@ func TestTokenizerErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tokenizer := parser.NewTokenizer(tt.input)
-
-			// Tokenize until we find an error token
-			var errorToken parser.Token
+			// Tokenize until we find an error
+			var err error
 			found := false
 			for {
-				token := tokenizer.NextToken()
-				if token.Type == constants.TokenError {
-					errorToken = token
+				token, tokenErr := tokenizer.NextToken()
+				if tokenErr != nil {
+					err = tokenErr
 					found = true
 					break
 				}
@@ -59,15 +58,19 @@ func TestTokenizerErrors(t *testing.T) {
 					break
 				}
 			}
-
 			if !found {
-				t.Errorf("Expected to find error token for %s, but no error was found", tt.description)
+				t.Errorf("Expected to find error for %s, but no error was found", tt.description)
 				return
 			}
-
-			if errorCode, ok := errorToken.Value.(errors.ErrorCode); !ok || errorCode != tt.expectedError {
-				t.Errorf("Expected error code %s for %s, but got %v",
-					tt.expectedError, tt.description, errorToken.Value)
+			// Check if the error is a ParserError with the expected error code
+			if parserErr, ok := err.(errors.ParserError); ok {
+				if parserErr.Code != tt.expectedError {
+					t.Errorf("Expected error code %s for %s, but got %v",
+						tt.expectedError, tt.description, parserErr.Code)
+				}
+			} else {
+				t.Errorf("Expected ParserError for %s, but got %T: %v",
+					tt.description, err, err)
 			}
 		})
 	}

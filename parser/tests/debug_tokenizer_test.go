@@ -20,7 +20,11 @@ func TestTokenizationDebugNew(t *testing.T) {
 		tokenizer := parser.NewTokenizer(testCase)
 
 		for {
-			token := tokenizer.NextToken()
+			token, err := tokenizer.NextToken()
+			if err != nil {
+				t.Errorf("Tokenization error: %v", err)
+				break
+			}
 			if token.Type == constants.TokenEOF {
 				break
 			}

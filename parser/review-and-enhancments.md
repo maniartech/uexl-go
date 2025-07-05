@@ -45,8 +45,10 @@ The UExl parser implementation demonstrates solid fundamentals with proper token
 
 2. **Error Handling** 🔄 **NEXT PRIORITY**
    - Limited error recovery mechanisms
-   - Panic usage instead of proper error handling
+   - ~~Panic usage instead of proper error handling~~ ✅ **FIXED**
    - Parser stops on first major error
+   - Error propagation not aligned with Go/industry standards
+   - Tokenizer embeds errors in tokens instead of returning them directly
 
 3. **State Management**
    - Multiple boolean flags for parser state
@@ -105,31 +107,93 @@ The UExl parser implementation demonstrates solid fundamentals with proper token
 
 #### Error Handling Tasks
 
-- [ ] **Remove Panic Usage**
-  - Replace all `panic()` calls with proper error handling
-  - Add error return values to all parsing functions
-  - Create specific error types for different failure scenarios
+- [x] **Remove Panic Usage** ✅ **COMPLETED**
+  - Replaced all potential `panic()` scenarios with proper error handling
+  - Added bounds checking for array and string access in tokenizer
+  - Enhanced error recovery mechanisms for AST conversion
+  - Created specific error types for bounds checking failures
+
+- [ ] **Industry Standards Alignment** 🎯 **NEW PRIORITY**
+  - **Tokenizer Interface Refactoring**: Modify tokenizer to return `(Token, error)` instead of embedding errors in tokens
+  - **Parser API Standardization**: Update parser methods to follow Go standard library pattern `(result, error)`
+  - **Direct Error Propagation**: Implement explicit error propagation from tokenizer → parser → consumer
+  - **Error Context Enhancement**: Add rich error information including position, context, and suggestions
 
 - [ ] **Error Recovery Implementation**
   - Add synchronization points in parser
   - Implement error recovery strategies
   - Allow parser to continue after non-fatal errors
+  - Return partial AST with error nodes (following Tree-sitter pattern)
 
 - [ ] **Enhanced Error Messages**
   - Add more context to error messages
   - Include suggestions for common mistakes
   - Improve error position reporting
+  - Implement error categorization (lexical, syntactic, semantic)
 
 - [ ] **Error Testing**
   - Add comprehensive error scenario tests
   - Test error recovery mechanisms
   - Validate error message quality
+  - Test industry standard compliance
 
-#### Deliverables
+#### Milestone 2 Deliverables
 
-- Robust error handling system
+- Robust error handling system aligned with industry standards
 - No panic usage in production code
+- Go standard library compliant error propagation
+- Direct error return from tokenizer and parser APIs
 - Better error messages for developers
+- Partial AST support with error recovery
+
+### 🎯 Milestone 2.5: Industry Standards Compliance (Priority: High)
+
+#### Timeline: 1 week
+
+#### Industry Alignment Tasks
+
+- [ ] **Go Standard Library Pattern Adoption**
+  - Refactor `Tokenizer.NextToken()` to return `(Token, error)`
+  - Update `Parser.Parse()` to return `(*AST, error)`
+  - Implement `ParseExpression()` following `go/parser.ParseExpr` pattern
+  - Add `ParseFile()` equivalent for file-based parsing
+
+- [ ] **Error Accumulation and Reporting**
+  - Implement `ErrorList` similar to `scanner.ErrorList`
+  - Add error accumulation during parsing
+  - Return multiple errors as single aggregated error
+  - Support partial parsing with error collection
+
+- [ ] **Tree-sitter Inspired Features**
+  - Add error nodes in AST for malformed expressions
+  - Implement timeout/cancellation support
+  - Add progress callback mechanisms
+  - Support incremental parsing capabilities
+
+- [ ] **API Modernization**
+
+  ```go
+  // Current approach (to be updated)
+  parser := NewParser(input)
+  result := parser.Parse() // No error return
+
+  // Industry standard approach (target)
+  parser, err := NewParserWithValidation(input) // Early validation
+  if err != nil { return nil, err }
+  result, err := parser.Parse() // Explicit error propagation
+  if err != nil { return nil, err }
+
+  // Or convenience function
+  result, err := ParseString(input) // Direct Go stdlib style
+  ```
+
+#### Milestone 2.5 Deliverables
+
+- Tokenizer and Parser APIs aligned with Go standard library patterns
+- Direct error propagation without embedding errors in tokens
+- Support for partial parsing and error recovery
+- Industry-standard error handling and reporting
+- Backward compatibility maintained through wrapper functions
 
 ### 🎯 Milestone 3: Parser State Management (Priority: Medium)
 
@@ -256,14 +320,17 @@ The UExl parser implementation demonstrates solid fundamentals with proper token
 
 ## Success Metrics
 
-### Phase 1 (Milestones 1-2) - **MILESTONE 1 COMPLETED ✅**
+### Phase 1 (Milestones 1-2.5) - **MILESTONE 1 COMPLETED ✅**
 
-- [ ] Zero panic usage in production code
+- [x] Zero panic usage in production code ✅ **COMPLETED**
+- [ ] Go standard library compliant error handling
+- [ ] Direct error propagation from tokenizer and parser
+- [ ] Industry-aligned API patterns (Token, error) returns
 - [ ] 100% test coverage for error scenarios
 - [x] Clean file organization with conventional naming ✅
 - [x] Established sub-package organization structure ✅
 - [x] Centralized constants and enums ✅
-- [ ] Comprehensive error messages
+- [ ] Comprehensive error messages with context
 
 ### Phase 2 (Milestones 3-4)
 
@@ -278,6 +345,71 @@ The UExl parser implementation demonstrates solid fundamentals with proper token
 - [ ] Advanced error recovery capabilities
 - [ ] Extensible parser architecture
 - [ ] Production-ready parser implementation
+
+## Industry Standards Research Findings
+
+### Go Standard Library Pattern Analysis
+
+Based on comprehensive analysis of `go/parser`, `go/scanner`, and other Go standard library parsers, the following patterns are considered industry standard:
+
+#### **Error Handling Patterns**
+- **Dual Return Pattern**: All parsing functions return `(result, error)`
+- **Error Accumulation**: Use `scanner.ErrorList` pattern for collecting multiple errors
+- **Partial Results**: Return partial AST even when errors occur
+- **Position Information**: All errors include precise source location details
+
+#### **API Design Patterns**
+```go
+// Go Standard Library Pattern
+func ParseFile(fset *token.FileSet, filename string, src any, mode Mode) (f *ast.File, err error)
+func ParseExpr(x string) (ast.Expr, error)
+func ParseExprFrom(fset *token.FileSet, filename string, src any, mode Mode) (expr ast.Expr, err error)
+```
+
+### Tree-sitter Pattern Analysis
+
+Tree-sitter provides additional insights for robust parser design:
+
+#### **Error Recovery Patterns**
+- **Error Nodes**: Malformed syntax becomes `ERROR` nodes in AST
+- **Timeout Support**: Built-in parsing timeout and cancellation
+- **Progress Monitoring**: Callback mechanisms for parsing progress
+- **Incremental Parsing**: Support for re-parsing modified content
+
+### Current UExl Parser Assessment
+
+#### **✅ Aligned with Standards**
+- Comprehensive AST structure
+- Position tracking (line/column)
+- Structured error types
+- Good separation of concerns
+
+#### **❌ Needs Industry Alignment**
+- Tokenizer embeds errors instead of returning them
+- Parser doesn't follow `(result, error)` pattern
+- Limited error recovery mechanisms
+- No support for partial parsing with errors
+
+### Recommended Architecture Changes
+
+#### **Tokenizer Interface**
+```go
+// Current (non-standard)
+func (t *Tokenizer) NextToken() Token // errors embedded in token
+
+// Industry Standard (target)
+func (t *Tokenizer) NextToken() (Token, error) // explicit error return
+```
+
+#### **Parser Interface**
+```go
+// Current (non-standard)
+func (p *Parser) Parse() Expression // no error return, errors in internal state
+
+// Industry Standard (target)
+func (p *Parser) Parse() (*AST, error) // explicit error propagation
+func ParseString(input string) (*AST, error) // convenience function
+```
 
 ## Implementation Guidelines
 

@@ -42,11 +42,11 @@ func NewTokenizer(input string) *Tokenizer {
 	}
 }
 
-func (t *Tokenizer) NextToken() Token {
+func (t *Tokenizer) NextToken() (Token, error) {
 	t.skipWhitespace()
 
 	if t.pos >= len(t.input) {
-		return Token{Type: constants.TokenEOF, Line: t.line, Column: t.column}
+		return Token{Type: constants.TokenEOF, Line: t.line, Column: t.column}, nil
 	}
 
 	switch ch := t.current(); {
@@ -88,21 +88,18 @@ func (t *Tokenizer) NextToken() Token {
 		if isOperatorChar(ch) {
 			return t.readOperator()
 		}
-		// Invalid character - create error token
-		errMsg := errors.GetErrorMessage(errors.ErrInvalidCharacter)
-		token := Token{
-			Type:   constants.TokenError,
-			Value:  errors.ErrInvalidCharacter,
-			Token:  fmt.Sprintf("%s: '%c'", errMsg, ch),
-			Line:   t.line,
-			Column: t.column,
-		}
+		// Return actual error instead of error token
 		t.advance() // consume the invalid character
-		return token
+		return Token{}, errors.NewParserError(
+			errors.ErrInvalidCharacter,
+			t.line,
+			t.column,
+			fmt.Sprintf("invalid character: '%c'", ch),
+		)
 	}
 }
 
-func (t *Tokenizer) readNumber() Token {
+func (t *Tokenizer) readNumber() (Token, error) {
 	start := t.pos
 
 	// Read integer part and decimal part
@@ -136,20 +133,14 @@ func (t *Tokenizer) readNumber() Token {
 	originalToken := t.input[start:t.pos]
 	value, err := strconv.ParseFloat(originalToken, 64)
 	if err != nil {
-		// Invalid number format - create error token
+		// Invalid number format - return error
 		errMsg := errors.GetErrorMessage(errors.ErrInvalidNumber)
-		return Token{
-			Type:   constants.TokenError,
-			Value:  errors.ErrInvalidNumber,
-			Token:  fmt.Sprintf("%s: '%s'", errMsg, originalToken),
-			Line:   t.line,
-			Column: t.column - (t.pos - start),
-		}
+		return Token{}, errors.NewParserError(errors.ErrInvalidNumber, t.line, t.column-(t.pos-start), fmt.Sprintf("%s: '%s'", errMsg, originalToken))
 	}
-	return Token{Type: constants.TokenNumber, Value: value, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
+	return Token{Type: constants.TokenNumber, Value: value, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
 }
 
-func (t *Tokenizer) readIdentifierOrKeyword() Token {
+func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 	start := t.pos
 
 	// Allow the first character to be a letter, underscore, or dollar sign
@@ -172,22 +163,22 @@ func (t *Tokenizer) readIdentifierOrKeyword() Token {
 	originalToken := t.input[start:t.pos]
 	switch originalToken {
 	case "true", "false":
-		return Token{Type: constants.TokenBoolean, Value: originalToken == "true", Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: constants.TokenBoolean, Value: originalToken == "true", Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
 	case "null":
-		return Token{Type: constants.TokenNull, Value: nil, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: constants.TokenNull, Value: nil, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
 	case "as":
-		return Token{Type: constants.TokenAs, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: constants.TokenAs, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
 	default:
-		return Token{Type: constants.TokenIdentifier, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: constants.TokenIdentifier, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
 	}
 }
-func (t *Tokenizer) readString() Token {
+func (t *Tokenizer) readString() (Token, error) {
 	start := t.pos
 	startColumn := t.column
 
 	// Check for raw string prefix
 	rawString := false
-	if t.input[t.pos] == 'r' {
+	if t.pos < len(t.input) && t.input[t.pos] == 'r' {
 		rawString = true
 		// Advance past 'r'
 		t.advance()
@@ -229,13 +220,7 @@ func (t *Tokenizer) readString() Token {
 	if t.pos >= len(t.input) {
 		// Unterminated string error
 		errMsg := errors.GetErrorMessage(errors.ErrUnterminatedQuote)
-		return Token{
-			Type:   constants.TokenError,
-			Value:  errors.ErrUnterminatedQuote,
-			Token:  errMsg,
-			Line:   t.line,
-			Column: startColumn,
-		}
+		return Token{}, errors.NewParserError(errors.ErrUnterminatedQuote, t.line, startColumn, errMsg)
 	}
 
 	if t.pos < len(t.input) {
@@ -260,13 +245,7 @@ func (t *Tokenizer) readString() Token {
 		unescaped, err := strconv.Unquote(quoted)
 		if err != nil {
 			errMsg := errors.GetErrorMessage(errors.ErrInvalidString)
-			return Token{
-				Type:   constants.TokenError,
-				Value:  errors.ErrInvalidString,
-				Token:  errMsg + ": '" + originalToken + "'",
-				Line:   t.line,
-				Column: startColumn,
-			}
+			return Token{}, errors.NewParserError(errors.ErrInvalidString, t.line, startColumn, errMsg+": '"+originalToken+"'")
 		}
 		value = unescaped
 	} else if quote == '\'' {
@@ -274,25 +253,25 @@ func (t *Tokenizer) readString() Token {
 		content := originalToken[1 : len(originalToken)-1]
 		value = t.unescapeString(content)
 	}
-	return Token{Type: constants.TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn, IsSingleQuoted: isSingleQuoted}
+	return Token{Type: constants.TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn, IsSingleQuoted: isSingleQuoted}, nil
 }
 
 // Ref: https://regex101.com/r/w6qtHq/1
 var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-z]+)?:`)
 
-func (t *Tokenizer) readPipeOrBitwiseOr() Token {
+func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
 	start := t.pos
 	t.advance() // consume first '|'
 	if t.current() == '|' {
 		t.advance() // consume second '|'
 		operator := "||"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: t.column - (t.pos - start)}, nil
 	}
 
 	if t.current() == ':' {
 		t.advance() // consume ':'
 		pipeValue := ":"
-		return Token{Type: constants.TokenPipe, Value: pipeValue, Token: pipeValue, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: constants.TokenPipe, Value: pipeValue, Token: pipeValue, Line: t.line, Column: t.column - (t.pos - start)}, nil
 	}
 
 	// Fetch the next 10 characters or the rest of the input if less than 10 characters are available
@@ -301,20 +280,20 @@ func (t *Tokenizer) readPipeOrBitwiseOr() Token {
 	)]
 
 	pipeMatch := pipePattern.FindStringSubmatch(nextChars)
-	if len(pipeMatch) > 0 {
+	if len(pipeMatch) > 1 && pipeMatch[1] != "" {
 		pipeName := pipeMatch[1]
 		for range pipeName {
 			t.advance()
 		}
 		t.advance() // consume ':'
-		return Token{Type: constants.TokenPipe, Value: pipeName, Token: pipeName, Line: t.line, Column: t.column - (t.pos - start)}
+		return Token{Type: constants.TokenPipe, Value: pipeName, Token: pipeName, Line: t.line, Column: t.column - (t.pos - start)}, nil
 	}
 
 	operator := "|"
-	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: t.column - (t.pos - start)}
+	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: t.column - (t.pos - start)}, nil
 }
 
-func (t *Tokenizer) readOperator() Token {
+func (t *Tokenizer) readOperator() (Token, error) {
 	// This function does not handle operators starting with '|' because that is
 	// handled by the readPipeOrBitwiseOr function.
 
@@ -326,7 +305,7 @@ func (t *Tokenizer) readOperator() Token {
 		t.advance()
 		t.advance()
 		operator := "&&"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle single-character operators
@@ -334,14 +313,14 @@ func (t *Tokenizer) readOperator() Token {
 		t.advance()
 	}
 	operator := t.input[start:t.pos]
-	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}
+	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 }
 
-func (t *Tokenizer) singleCharToken(tokenType constants.TokenType) Token {
+func (t *Tokenizer) singleCharToken(tokenType constants.TokenType) (Token, error) {
 	charValue := string(t.current())
 	token := Token{Type: tokenType, Value: charValue, Token: charValue, Line: t.line, Column: t.column}
 	t.advance()
-	return token
+	return token, nil
 }
 
 func (t *Tokenizer) current() rune {
@@ -365,7 +344,7 @@ func (t *Tokenizer) advance() {
 	if t.pos >= len(t.input) {
 		return
 	}
-	if t.input[t.pos] == '\n' {
+	if t.pos < len(t.input) && t.input[t.pos] == '\n' {
 		t.line++
 		t.column = 1
 	} else {
@@ -408,7 +387,19 @@ func (t *Tokenizer) PreloadTokens() []Token {
 
 	// Loop until the end of the input
 	for {
-		token := t.NextToken()
+		token, err := t.NextToken()
+		if err != nil {
+			// On error, create an error token for debugging purposes
+			errorToken := Token{
+				Type:   constants.TokenError,
+				Value:  err.Error(),
+				Token:  err.Error(),
+				Line:   t.line,
+				Column: t.column,
+			}
+			tokens = append(tokens, errorToken)
+			break
+		}
 		tokens = append(tokens, token)
 		if token.Type == constants.TokenEOF {
 			break
