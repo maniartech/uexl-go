@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/parser/constants"
 )
 
 func TestTokenizationDebugNew(t *testing.T) {
@@ -20,7 +21,7 @@ func TestTokenizationDebugNew(t *testing.T) {
 
 		for {
 			token := tokenizer.NextToken()
-			if token.Type == parser.TokenEOF {
+			if token.Type == constants.TokenEOF {
 				break
 			}
 			t.Logf("Token: '%s', Type: %v", token.Token, token.Type)

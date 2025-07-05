@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/parser/constants"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +18,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Simple integer",
 			input: "42",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  float64(42),
 				Token:  "42",
 				Line:   1,
@@ -28,7 +29,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Zero",
 			input: "0",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  float64(0),
 				Token:  "0",
 				Line:   1,
@@ -39,7 +40,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Floating point",
 			input: "3.14",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  3.14,
 				Token:  "3.14",
 				Line:   1,
@@ -50,7 +51,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Floating point with leading zero",
 			input: "0.5",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  0.5,
 				Token:  "0.5",
 				Line:   1,
@@ -61,7 +62,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Scientific notation lowercase e",
 			input: "1e3",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  1000.0,
 				Token:  "1e3",
 				Line:   1,
@@ -72,7 +73,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Scientific notation uppercase E",
 			input: "2E4",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  20000.0,
 				Token:  "2E4",
 				Line:   1,
@@ -83,7 +84,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Scientific notation with positive exponent",
 			input: "1.5e+2",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  150.0,
 				Token:  "1.5e+2",
 				Line:   1,
@@ -94,7 +95,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Scientific notation with negative exponent",
 			input: "1.5e-2",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  0.015,
 				Token:  "1.5e-2",
 				Line:   1,
@@ -105,7 +106,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Large integer",
 			input: "123456789",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  123456789.0,
 				Token:  "123456789",
 				Line:   1,
@@ -116,7 +117,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Very small decimal",
 			input: "0.000001",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  0.000001,
 				Token:  "0.000001",
 				Line:   1,
@@ -127,7 +128,7 @@ func TestNumberTokenizer(t *testing.T) {
 			name:  "Number with multiple decimal places",
 			input: "123.456789",
 			expected: parser.Token{
-				Type:   parser.TokenNumber,
+				Type:   constants.TokenNumber,
 				Value:  123.456789,
 				Token:  "123.456789",
 				Line:   1,
@@ -279,10 +280,10 @@ func TestNumberErrorCases(t *testing.T) {
 			token := tokenizer.NextToken()
 
 			if tt.expectError {
-				assert.Equal(t, parser.TokenError, token.Type, "Expected error token")
+				assert.Equal(t, constants.TokenError, token.Type, "Expected error token")
 			} else {
 				// For valid cases, just check it's not an error token
-				assert.NotEqual(t, parser.TokenError, token.Type, "Should not be error token")
+				assert.NotEqual(t, constants.TokenError, token.Type, "Should not be error token")
 			}
 		})
 	}
@@ -321,7 +322,7 @@ func TestNumberPrecision(t *testing.T) {
 			tokenizer := parser.NewTokenizer(tt.input)
 			token := tokenizer.NextToken()
 
-			assert.Equal(t, parser.TokenNumber, token.Type, "Should be a number token")
+			assert.Equal(t, constants.TokenNumber, token.Type, "Should be a number token")
 			assert.Equal(t, tt.expected, token.Value, "Value should match expected precision")
 		})
 	}

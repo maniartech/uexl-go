@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/parser/constants"
 	"github.com/maniartech/uexl_go/parser/errors"
 )
 
@@ -49,12 +50,12 @@ func TestTokenizerErrors(t *testing.T) {
 			found := false
 			for {
 				token := tokenizer.NextToken()
-				if token.Type == parser.TokenError {
+				if token.Type == constants.TokenError {
 					errorToken = token
 					found = true
 					break
 				}
-				if token.Type == parser.TokenEOF {
+				if token.Type == constants.TokenEOF {
 					break
 				}
 			}

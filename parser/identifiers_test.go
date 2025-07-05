@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/parser/constants"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +15,7 @@ func TestIdentifierTokenization(t *testing.T) {
 		input          string
 		expectedTokens []struct {
 			token     string
-			tokenType parser.TokenType
+			tokenType constants.TokenType
 		}
 		description string
 	}{
@@ -24,9 +25,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "x",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"x", parser.TokenIdentifier},
+				{"x", constants.TokenIdentifier},
 			},
 			description: "Simple alpha identifier",
 		},
@@ -35,9 +36,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "X",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"X", parser.TokenIdentifier},
+				{"X", constants.TokenIdentifier},
 			},
 			description: "Uppercase alpha identifier",
 		},
@@ -46,9 +47,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "myVar",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"myVar", parser.TokenIdentifier},
+				{"myVar", constants.TokenIdentifier},
 			},
 			description: "Mixed case identifier",
 		},
@@ -57,9 +58,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "_var",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"_var", parser.TokenIdentifier},
+				{"_var", constants.TokenIdentifier},
 			},
 			description: "Underscore start identifier",
 		},
@@ -68,9 +69,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "__var",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"__var", parser.TokenIdentifier},
+				{"__var", constants.TokenIdentifier},
 			},
 			description: "Double underscore start",
 		},
@@ -81,9 +82,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "$var",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"$var", parser.TokenIdentifier},
+				{"$var", constants.TokenIdentifier},
 			},
 			description: "Dollar sign start identifier",
 		},
@@ -92,9 +93,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "$1",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"$1", parser.TokenIdentifier},
+				{"$1", constants.TokenIdentifier},
 			},
 			description: "Dollar with number",
 		},
@@ -103,9 +104,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "$_var",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"$_var", parser.TokenIdentifier},
+				{"$_var", constants.TokenIdentifier},
 			},
 			description: "Dollar underscore identifier",
 		},
@@ -114,9 +115,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "$$var",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"$$var", parser.TokenIdentifier},
+				{"$$var", constants.TokenIdentifier},
 			},
 			description: "Double dollar identifier",
 		},
@@ -127,9 +128,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "var123",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"var123", parser.TokenIdentifier},
+				{"var123", constants.TokenIdentifier},
 			},
 			description: "Alpha numeric identifier",
 		},
@@ -138,9 +139,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "var1test",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"var1test", parser.TokenIdentifier},
+				{"var1test", constants.TokenIdentifier},
 			},
 			description: "Number in middle",
 		},
@@ -149,9 +150,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "_123var",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"_123var", parser.TokenIdentifier},
+				{"_123var", constants.TokenIdentifier},
 			},
 			description: "Underscore with numbers",
 		},
@@ -160,9 +161,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "$123var",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"$123var", parser.TokenIdentifier},
+				{"$123var", constants.TokenIdentifier},
 			},
 			description: "Dollar with numbers",
 		},
@@ -173,9 +174,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "myVar_123",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"myVar_123", parser.TokenIdentifier},
+				{"myVar_123", constants.TokenIdentifier},
 			},
 			description: "Complex valid identifier",
 		},
@@ -184,9 +185,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "var$test",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"var$test", parser.TokenIdentifier},
+				{"var$test", constants.TokenIdentifier},
 			},
 			description: "Identifier with dollar sign",
 		},
@@ -195,10 +196,10 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "a1_ $b2_",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"a1_", parser.TokenIdentifier},
-				{"$b2_", parser.TokenIdentifier},
+				{"a1_", constants.TokenIdentifier},
+				{"$b2_", constants.TokenIdentifier},
 			},
 			description: "Two separate identifiers",
 		},
@@ -209,11 +210,11 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "obj.prop",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"obj", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"prop", parser.TokenIdentifier},
+				{"obj", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"prop", constants.TokenIdentifier},
 			},
 			description: "Simple dot notation should be separate tokens",
 		},
@@ -222,13 +223,13 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "user.profile.name",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"user", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"profile", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"name", parser.TokenIdentifier},
+				{"user", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"profile", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"name", constants.TokenIdentifier},
 			},
 			description: "Chained dot notation should be separate tokens",
 		},
@@ -237,11 +238,11 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "obj._private",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"obj", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"_private", parser.TokenIdentifier},
+				{"obj", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"_private", constants.TokenIdentifier},
 			},
 			description: "Dot notation with underscore should be separate tokens",
 		},
@@ -250,11 +251,11 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "obj.$special",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"obj", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"$special", parser.TokenIdentifier},
+				{"obj", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"$special", constants.TokenIdentifier},
 			},
 			description: "Dot notation with dollar sign should be separate tokens",
 		},
@@ -263,13 +264,13 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "data.items.name",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"data", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"items", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"name", parser.TokenIdentifier},
+				{"data", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"items", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"name", constants.TokenIdentifier},
 			},
 			description: "Complex dot notation should be separate tokens",
 		},
@@ -278,14 +279,14 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "data.items.0.name",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"data", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"items", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"0.", parser.TokenNumber},
-				{"name", parser.TokenIdentifier},
+				{"data", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"items", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"0.", constants.TokenNumber},
+				{"name", constants.TokenIdentifier},
 			},
 			description: "Dot notation with number should be separate tokens (0. is a valid number)",
 		},
@@ -296,12 +297,12 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "obj..prop",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"obj", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{".", parser.TokenDot},
-				{"prop", parser.TokenIdentifier},
+				{"obj", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{".", constants.TokenDot},
+				{"prop", constants.TokenIdentifier},
 			},
 			description: "Double dots tokenized correctly (but invalid syntax)",
 		},
@@ -310,10 +311,10 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "obj.",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"obj", parser.TokenIdentifier},
-				{".", parser.TokenDot},
+				{"obj", constants.TokenIdentifier},
+				{".", constants.TokenDot},
 			},
 			description: "Trailing dot tokenized correctly (but invalid syntax)",
 		},
@@ -322,11 +323,11 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "obj.123",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"obj", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"123", parser.TokenNumber},
+				{"obj", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"123", constants.TokenNumber},
 			},
 			description: "Dot followed by number tokenized correctly (but invalid syntax)",
 		},
@@ -335,13 +336,13 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "obj...prop",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"obj", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{".", parser.TokenDot},
-				{".", parser.TokenDot},
-				{"prop", parser.TokenIdentifier},
+				{"obj", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{".", constants.TokenDot},
+				{".", constants.TokenDot},
+				{"prop", constants.TokenIdentifier},
 			},
 			description: "Three consecutive dots should be separate tokens",
 		},
@@ -350,12 +351,12 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: ".method()",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{".", parser.TokenDot},
-				{"method", parser.TokenIdentifier},
-				{"(", parser.TokenLeftParen},
-				{")", parser.TokenRightParen},
+				{".", constants.TokenDot},
+				{"method", constants.TokenIdentifier},
+				{"(", constants.TokenLeftParen},
+				{")", constants.TokenRightParen},
 			},
 			description: "Dot at start should be separate token",
 		},
@@ -364,16 +365,16 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "obj.prop..method.name",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"obj", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"prop", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{".", parser.TokenDot},
-				{"method", parser.TokenIdentifier},
-				{".", parser.TokenDot},
-				{"name", parser.TokenIdentifier},
+				{"obj", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"prop", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{".", constants.TokenDot},
+				{"method", constants.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"name", constants.TokenIdentifier},
 			},
 			description: "Mixed valid and invalid dot patterns should be separate tokens",
 		},
@@ -384,9 +385,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "a",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"a", parser.TokenIdentifier},
+				{"a", constants.TokenIdentifier},
 			},
 			description: "Single letter identifier",
 		},
@@ -395,9 +396,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "_",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"_", parser.TokenIdentifier},
+				{"_", constants.TokenIdentifier},
 			},
 			description: "Single underscore",
 		},
@@ -406,9 +407,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "$",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"$", parser.TokenIdentifier},
+				{"$", constants.TokenIdentifier},
 			},
 			description: "Single dollar sign",
 		},
@@ -419,10 +420,10 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "123var",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"123", parser.TokenNumber},
-				{"var", parser.TokenIdentifier},
+				{"123", constants.TokenNumber},
+				{"var", constants.TokenIdentifier},
 			},
 			description: "Number followed by identifier - should be two tokens",
 		},
@@ -433,9 +434,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "true",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"true", parser.TokenBoolean},
+				{"true", constants.TokenBoolean},
 			},
 			description: "Boolean true - not identifier",
 		},
@@ -444,9 +445,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "false",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"false", parser.TokenBoolean},
+				{"false", constants.TokenBoolean},
 			},
 			description: "Boolean false - not identifier",
 		},
@@ -455,9 +456,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "null",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"null", parser.TokenNull},
+				{"null", constants.TokenNull},
 			},
 			description: "Null keyword - not identifier",
 		},
@@ -466,9 +467,9 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: "as",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{"as", parser.TokenAs},
+				{"as", constants.TokenAs},
 			},
 			description: "As keyword - not identifier",
 		},
@@ -479,10 +480,10 @@ func TestIdentifierTokenization(t *testing.T) {
 			input: ".invalid",
 			expectedTokens: []struct {
 				token     string
-				tokenType parser.TokenType
+				tokenType constants.TokenType
 			}{
-				{".", parser.TokenDot},
-				{"invalid", parser.TokenIdentifier},
+				{".", constants.TokenDot},
+				{"invalid", constants.TokenIdentifier},
 			},
 			description: "Identifier cannot start with dot",
 		},
@@ -495,7 +496,7 @@ func TestIdentifierTokenization(t *testing.T) {
 
 			for {
 				token := tokenizer.NextToken()
-				if token.Type == parser.TokenEOF {
+				if token.Type == constants.TokenEOF {
 					break
 				}
 				tokens = append(tokens, token)

@@ -7,13 +7,14 @@ import (
 	"strings"
 
 	"github.com/maniartech/uexl_go/ast"
+	"github.com/maniartech/uexl_go/parser/constants"
 	"github.com/maniartech/uexl_go/parser/errors"
 	"github.com/maniartech/uexl_go/types"
 )
 
 // Constants for common pipe types
 const (
-	DefaultPipeType = "pipe"
+	DefaultPipeType = constants.DefaultPipeType
 )
 
 // Parser represents a parser for the expression language
@@ -55,11 +56,11 @@ func (p *Parser) Parse() (Expression, error) {
 	}
 
 	if expr == nil {
-		return nil, errors.NewParserError(errors.ErrEmptyExpression, p.current.Line, p.current.Column, "expression is nil")
+		return nil, errors.NewParserError(errors.ErrEmptyExpression, p.current.Line, p.current.Column, constants.MsgEmptyExpression)
 	}
 
-	if p.current.Type != TokenEOF {
-		return nil, errors.NewParserErrorWithToken(errors.ErrUnexpectedToken, p.current.Line, p.current.Column, "unexpected token at end", p.current.Token)
+	if p.current.Type != constants.TokenEOF {
+		return nil, errors.NewParserErrorWithToken(errors.ErrUnexpectedToken, p.current.Line, p.current.Column, constants.MsgUnexpectedToken, p.current.Token)
 	}
 
 	return expr, nil
@@ -79,7 +80,7 @@ func (p *Parser) parsePipeExpression() Expression {
 	}
 
 	// Handle leading pipe at the start of the expression
-	if p.pos == 1 && p.current.Type == TokenPipe {
+	if p.pos == 1 && p.current.Type == constants.TokenPipe {
 		return p.handleLeadingPipe()
 	}
 
@@ -110,7 +111,7 @@ func (p *Parser) parsePipeExpression() Expression {
 	}
 	aliases = append(aliases, alias)
 
-	for p.current.Type == TokenPipe {
+	for p.current.Type == constants.TokenPipe {
 		if !p.processPipeSegment(&expressions, &pipeTypes, &aliases) {
 			return nil
 		}
@@ -136,14 +137,14 @@ func (p *Parser) parsePipeExpression() Expression {
 }
 
 func (p *Parser) parsePipeAlias() (string, error) {
-	if p.current.Type == TokenAs {
+	if p.current.Type == constants.TokenAs {
 		// If we're in a sub-expression (not top-level pipe), error
 		if p.subExpressionActive {
 			return "", errors.NewParserError(errors.ErrAliasInSubExpr, p.current.Line, p.current.Column, errors.GetErrorMessage(errors.ErrAliasInSubExpr))
 		}
 		p.advance() // consume 'as'
 
-		if p.current.Type != TokenIdentifier || !strings.HasPrefix(p.current.Token, "$") {
+		if p.current.Type != constants.TokenIdentifier || !strings.HasPrefix(p.current.Token, constants.SymbolDollar) {
 			return "", errors.NewParserError(errors.ErrMissingDollarSign, p.current.Line, p.current.Column, errors.GetErrorMessage(errors.ErrMissingDollarSign))
 		}
 
@@ -156,27 +157,27 @@ func (p *Parser) parsePipeAlias() (string, error) {
 }
 
 func (p *Parser) parseLogicalOr() Expression {
-	return p.parseBinaryOp(p.parseLogicalAnd, "||")
+	return p.parseBinaryOp(p.parseLogicalAnd, constants.SymbolLogicalOr)
 }
 
 func (p *Parser) parseLogicalAnd() Expression {
-	return p.parseBinaryOp(p.parseBitwiseOr, "&&")
+	return p.parseBinaryOp(p.parseBitwiseOr, constants.SymbolLogicalAnd)
 }
 
 func (p *Parser) parseBitwiseOr() Expression {
-	return p.parseBinaryOp(p.parseBitwiseXor, "|")
+	return p.parseBinaryOp(p.parseBitwiseXor, constants.SymbolBitwiseOr)
 }
 
 func (p *Parser) parseBitwiseXor() Expression {
-	return p.parseBinaryOp(p.parseBitwiseAnd, "^")
+	return p.parseBinaryOp(p.parseBitwiseAnd, constants.SymbolBitwiseXor)
 }
 
 func (p *Parser) parseBitwiseAnd() Expression {
-	return p.parseBinaryOp(p.parseEquality, "&")
+	return p.parseBinaryOp(p.parseEquality, constants.SymbolBitwiseAnd)
 }
 
 func (p *Parser) parseEquality() Expression {
-	return p.parseBinaryOp(p.parseComparison, "==", "!=")
+	return p.parseBinaryOp(p.parseComparison, constants.SymbolEqual, constants.SymbolNotEqual)
 }
 
 func (p *Parser) parseComparison() Expression {
@@ -196,7 +197,7 @@ func (p *Parser) parseMultiplicative() Expression {
 }
 
 func (p *Parser) parseUnary() Expression {
-	if p.current.Type == TokenOperator {
+	if p.current.Type == constants.TokenOperator {
 		// Check if the operator is "-" or "!"
 		if opValue, ok := p.current.Value.(string); ok && (opValue == "-" || opValue == "!") {
 			op := p.current
@@ -214,7 +215,7 @@ func (p *Parser) parseMemberAccess() Expression {
 
 	for {
 		// Handle array index access
-		if p.current.Type == TokenLeftBracket {
+		if p.current.Type == constants.TokenLeftBracket {
 			bracket := p.current
 			p.advance() // consume '['
 
@@ -229,7 +230,7 @@ func (p *Parser) parseMemberAccess() Expression {
 			// Parse the index expression
 			indexExpr := p.parseExpression()
 
-			if p.current.Type != TokenRightBracket {
+			if p.current.Type != constants.TokenRightBracket {
 				p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']' after array index", "]")
 			} else {
 				p.advance() // consume ']'
@@ -250,12 +251,12 @@ func (p *Parser) parseMemberAccess() Expression {
 		}
 
 		// Handle dot access
-		if p.current.Type == TokenDot {
+		if p.current.Type == constants.TokenDot {
 			dot := p.current
 			p.advance()
 
 			// Check for end of input or unexpected token after dot
-			if p.current.Type != TokenIdentifier {
+			if p.current.Type != constants.TokenIdentifier {
 				p.addErrorWithExpected(errors.ErrExpectedIdentifier, "expected identifier after '.'", "identifier")
 				return expr // Return what we have so far since this is an error
 			}
@@ -274,11 +275,11 @@ func (p *Parser) parseMemberAccess() Expression {
 			}
 			continue // check for more member access operations
 		} // Handle function call after member or index access
-		if p.current.Type == TokenLeftParen {
+		if p.current.Type == constants.TokenLeftParen {
 			expr = p.parseFunctionCall(expr)
 
 			// After a function call, check for invalid chaining
-			if p.current.Type == TokenDot || p.current.Type == TokenLeftBracket || p.current.Type == TokenLeftParen {
+			if p.current.Type == constants.TokenDot || p.current.Type == constants.TokenLeftBracket || p.current.Type == constants.TokenLeftParen {
 				// This is invalid - function calls cannot be chained
 				p.addErrorWithToken(errors.ErrInvalidSyntax, "function calls cannot be chained with member access or other function calls")
 				return expr
@@ -297,21 +298,21 @@ func (p *Parser) parseMemberAccess() Expression {
 
 func (p *Parser) parsePrimary() Expression {
 	switch p.current.Type {
-	case TokenNumber:
+	case constants.TokenNumber:
 		return p.parseNumber()
-	case TokenString:
+	case constants.TokenString:
 		return p.parseString()
-	case TokenBoolean:
+	case constants.TokenBoolean:
 		return p.parseBoolean()
-	case TokenNull:
+	case constants.TokenNull:
 		return p.parseNull()
-	case TokenIdentifier:
+	case constants.TokenIdentifier:
 		return p.parseIdentifierOrFunctionCall()
-	case TokenLeftParen:
+	case constants.TokenLeftParen:
 		return p.parseGroupedExpression()
-	case TokenLeftBracket:
+	case constants.TokenLeftBracket:
 		return p.parseArray()
-	case TokenLeftBrace:
+	case constants.TokenLeftBrace:
 		return p.parseObject()
 	default:
 		p.addErrorWithToken(errors.ErrUnexpectedToken, "unexpected token")
@@ -347,17 +348,17 @@ func (p *Parser) parseFunctionCall(function Expression) Expression {
 
 	args := []Expression{}
 
-	if p.current.Type != TokenRightParen {
+	if p.current.Type != constants.TokenRightParen {
 		for {
 			args = append(args, p.parseExpression())
-			if p.current.Type != TokenComma {
+			if p.current.Type != constants.TokenComma {
 				break
 			}
 			p.advance() // consume ','
 		}
 	}
 
-	if p.current.Type != TokenRightParen {
+	if p.current.Type != constants.TokenRightParen {
 		p.addErrorWithExpected(errors.ErrUnclosedFunction, "expected ')' after function arguments", ")")
 		return nil
 	}
@@ -442,7 +443,7 @@ func (p *Parser) parseGroupedExpression() Expression {
 	p.subExpressionActive = true
 
 	expr := p.parseExpression()
-	if p.current.Type != TokenRightParen {
+	if p.current.Type != constants.TokenRightParen {
 		p.addErrorWithExpected(errors.ErrExpectedToken, "expected ')'", ")")
 	} else {
 		p.advance() // consume ')'
@@ -469,23 +470,23 @@ func (p *Parser) parseArray() Expression {
 
 	elements := []Expression{}
 
-	if p.current.Type != TokenRightBracket {
+	if p.current.Type != constants.TokenRightBracket {
 		for {
 			elements = append(elements, p.parseExpression())
-			if p.current.Type != TokenComma {
+			if p.current.Type != constants.TokenComma {
 				break
 			}
 			p.advance() // consume ','
 
 			// Check for trailing comma
-			if p.current.Type == TokenRightBracket {
+			if p.current.Type == constants.TokenRightBracket {
 				p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']'", "]")
 				break
 			}
 		}
 	}
 
-	if p.current.Type != TokenRightBracket {
+	if p.current.Type != constants.TokenRightBracket {
 		p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']'", "]")
 	} else {
 		p.advance() // consume ']'
@@ -511,8 +512,8 @@ func (p *Parser) parseObject() Expression {
 	p.subExpressionActive = true
 
 	properties := make(map[string]Expression)
-	for p.current.Type != TokenRightBrace {
-		if p.current.Type != TokenString {
+	for p.current.Type != constants.TokenRightBrace {
+		if p.current.Type != constants.TokenString {
 			p.addErrorWithExpected(errors.ErrInvalidObjectKey, "expected string key", "string")
 			break
 		}
@@ -529,7 +530,7 @@ func (p *Parser) parseObject() Expression {
 		// Advance past the string token
 		p.advance()
 
-		if p.current.Type != TokenColon {
+		if p.current.Type != constants.TokenColon {
 			p.addErrorWithExpected(errors.ErrExpectedToken, "expected ':'", ":")
 			break
 		}
@@ -543,18 +544,18 @@ func (p *Parser) parseObject() Expression {
 
 		properties[key] = value
 
-		if p.current.Type != TokenComma {
+		if p.current.Type != constants.TokenComma {
 			break
 		}
 		p.advance() // consume ','
 
 		// Check for trailing comma
-		if p.current.Type == TokenRightBrace {
+		if p.current.Type == constants.TokenRightBrace {
 			break
 		}
 	}
 
-	if p.current.Type != TokenRightBrace {
+	if p.current.Type != constants.TokenRightBrace {
 		p.addErrorWithExpected(errors.ErrUnclosedObject, "expected '}'", "}")
 	} else {
 		p.advance() // consume '}'
@@ -570,7 +571,7 @@ func (p *Parser) parseObject() Expression {
 func (p *Parser) parseBinaryOp(parseFunc func() Expression, operators ...string) Expression {
 	left := parseFunc()
 
-	for p.current.Type == TokenOperator {
+	for p.current.Type == constants.TokenOperator {
 		// Type assertion for operator value
 		opValue, ok := p.current.Value.(string)
 		if !ok || !contains(operators, opValue) {
@@ -591,7 +592,7 @@ func (p *Parser) advance() {
 	p.pos++
 
 	// Check if the tokenizer returned an error token
-	if p.current.Type == TokenError {
+	if p.current.Type == constants.TokenError {
 		if errorCode, ok := p.current.Value.(errors.ErrorCode); ok {
 			p.addError(errorCode, p.current.Token)
 		} else {
@@ -618,10 +619,10 @@ func (p *Parser) addErrorWithExpected(code errors.ErrorCode, message, expected s
 func (p *Parser) handleLeadingPipe() Expression {
 	p.advance() // consume the pipe
 	// Check if it's followed by 'as' (empty pipe with alias)
-	if p.current.Type == TokenAs {
+	if p.current.Type == constants.TokenAs {
 		p.addErrorWithToken(errors.ErrEmptyPipeWithAlias, errors.GetErrorMessage(errors.ErrEmptyPipeWithAlias))
 		p.advance() // consume 'as'
-		if p.current.Type == TokenIdentifier {
+		if p.current.Type == constants.TokenIdentifier {
 			p.advance() // consume alias identifier
 		}
 	} else {
@@ -640,10 +641,10 @@ func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]stri
 	*pipeTypes = append(*pipeTypes, pipeType)
 
 	// Check for empty pipe with alias immediately after consuming pipe
-	if p.current.Type == TokenAs {
+	if p.current.Type == constants.TokenAs {
 		p.addErrorWithToken(errors.ErrEmptyPipeWithAlias, errors.GetErrorMessage(errors.ErrEmptyPipeWithAlias))
 		p.advance() // consume 'as'
-		if p.current.Type == TokenIdentifier {
+		if p.current.Type == constants.TokenIdentifier {
 			p.advance() // consume alias identifier
 		}
 		p.consumeRemainingTokens()
@@ -689,7 +690,7 @@ func (p *Parser) determinePipeType(op Token) string {
 
 // consumeRemainingTokens consumes all tokens until EOF to prevent further errors
 func (p *Parser) consumeRemainingTokens() {
-	for p.current.Type != TokenEOF {
+	for p.current.Type != constants.TokenEOF {
 		p.advance()
 	}
 }
