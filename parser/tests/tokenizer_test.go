@@ -1,8 +1,9 @@
-package parser
+package parser_test
 
 import (
 	"testing"
 
+	. "github.com/maniartech/uexl_go/parser"
 	"github.com/maniartech/uexl_go/parser/constants"
 )
 

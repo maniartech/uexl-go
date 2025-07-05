@@ -1,4 +1,4 @@
-package parser
+package parser_test
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/maniartech/uexl_go/ast"
+	. "github.com/maniartech/uexl_go/parser"
 )
 
 func TestArray(t *testing.T) {

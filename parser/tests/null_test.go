@@ -1,10 +1,11 @@
-package parser
+package parser_test
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/maniartech/uexl_go/ast"
+	. "github.com/maniartech/uexl_go/parser"
 )
 
 func TestNull(t *testing.T) {

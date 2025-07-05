@@ -1,9 +1,10 @@
-package parser
+package parser_test
 
 import (
 	"testing"
 
 	"github.com/maniartech/uexl_go/internal/utils"
+	. "github.com/maniartech/uexl_go/parser"
 )
 
 func TestPlayground(t *testing.T) {
