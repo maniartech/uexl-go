@@ -52,19 +52,21 @@ func testConstants(
 	}
 	for i, constant := range expected {
 		switch constant := constant.(type) {
-		case parser.NumberLiteral:
-			if err := testNumerLiteral(constant.Value, actual[i]); err != nil {
+		case float64:
+			if err := testNumerLiteral(constant, actual[i]); err != nil {
 				return fmt.Errorf("test case %d: %s", i, err)
 			}
+		default:
+			return fmt.Errorf("unknown constant type %T", constant)
 		}
 	}
 	return nil
 }
 
-func testNumerLiteral(expected string, actual parser.Node) error {
+func testNumerLiteral(expected float64, actual parser.Node) error {
 	if num, ok := actual.(*parser.NumberLiteral); ok {
 		if num.Value != expected {
-			return fmt.Errorf("wrong number literal. got=%s, want=%s",
+			return fmt.Errorf("wrong number literal. got=%v, want=%v",
 				num.Value, expected)
 		}
 		return nil
