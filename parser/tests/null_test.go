@@ -1,24 +1,21 @@
 package parser_test
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/maniartech/uexl_go/ast"
-	. "github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/parser"
 )
 
 func TestNull(t *testing.T) {
-	got, _ := ParseReaderNew("", strings.NewReader("null"))
+	parserInstance := parser.NewParser("null")
+	got, _ := parserInstance.Parse()
 
-	// Change the type assertion to handle a pointer to NullNode
-	gotNode, ok := got.(*ast.NullNode)
+	gotNode, ok := got.(*parser.NullLiteral)
 	if !ok {
-		t.Fatalf("Expected *ast.NullNode, got %T", got)
+		t.Fatalf("Expected *parser.NullLiteral, got %T", got)
 	}
 
-	token := gotNode.Token
-	if token != "null" {
-		t.Errorf("Expected null, got %v", token)
+	if gotNode == nil {
+		t.Fatalf("NullLiteral is nil")
 	}
 }

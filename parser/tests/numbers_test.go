@@ -344,17 +344,17 @@ func TestNumberInArrays(t *testing.T) {
 	// Check first element (1)
 	numLit1, ok := arrayLit.Elements[0].(*parser.NumberLiteral)
 	assert.True(t, ok, "First element should be NumberLiteral")
-	assert.Equal(t, "1", numLit1.Value)
+	assert.Equal(t, 1.0, numLit1.Value)
 
 	// Check second element (2.5)
 	numLit2, ok := arrayLit.Elements[1].(*parser.NumberLiteral)
 	assert.True(t, ok, "Second element should be NumberLiteral")
-	assert.Equal(t, "2.5", numLit2.Value)
+	assert.Equal(t, 2.5, numLit2.Value)
 
 	// Check third element (3e2)
 	numLit3, ok := arrayLit.Elements[2].(*parser.NumberLiteral)
 	assert.True(t, ok, "Third element should be NumberLiteral")
-	assert.Equal(t, "3e2", numLit3.Value)
+	assert.Equal(t, 300.0, numLit3.Value)
 }
 
 func TestNumberInObjects(t *testing.T) {

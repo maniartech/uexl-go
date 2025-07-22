@@ -1,11 +1,9 @@
 package parser_test
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/maniartech/uexl_go/ast"
-	. "github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/parser"
 )
 
 func TestStrings(t *testing.T) {
@@ -41,19 +39,23 @@ func TestStrings(t *testing.T) {
 		testString(tc.input, tc.expectedValue, t, tc.isSingleQuoted)
 	}
 }
-
 func testString(str, testValue string, t *testing.T, expectSingleQuoted ...bool) {
-	parsed, err := ParseReaderNew("", strings.NewReader(str))
+	p := parser.NewParser(str)
+	parsed, err := p.Parse()
 	if err != nil {
 		t.Errorf("Error: %v", err)
 		return
 	}
 
-	node := parsed.(*ast.StringNode)
+	node, ok := parsed.(*parser.StringLiteral)
+	if !ok {
+		t.Errorf("Expected *parser.StringLiteral, got %T", parsed)
+		return
+	}
 	value := node.Value
 
 	// Only check the value, not the token, as the parser normalizes quotes and raw strings
-	if string(value) != testValue {
+	if value != testValue {
 		t.Errorf("Value: Expected %v, got %v", testValue, value)
 	}
 

@@ -733,7 +733,8 @@ func TestIdentifierInExpressions(t *testing.T) {
 			assert.NotNil(t, expr, "Expression should not be nil for input '%s'", tt.input)
 
 			// Verify that the expression can be converted to AST
-			node, err := parser.ParseString(tt.input)
+			parserInstance := parser.NewParser(tt.input)
+			node, err := parserInstance.Parse()
 			assert.NoError(t, err, "AST conversion failed for '%s': %v", tt.input, err)
 			assert.NotNil(t, node, "AST node should not be nil for input '%s'", tt.input)
 
