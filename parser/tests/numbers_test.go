@@ -156,37 +156,37 @@ func TestNumberParser(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		expected string
+		expected float64
 	}{
 		{
 			name:     "Simple integer",
 			input:    "42",
-			expected: "42",
+			expected: 42.0,
 		},
 		{
 			name:     "Zero",
 			input:    "0",
-			expected: "0",
+			expected: 0.0,
 		},
 		{
 			name:     "Floating point",
 			input:    "3.14",
-			expected: "3.14",
+			expected: 3.14,
 		},
 		{
 			name:     "Scientific notation",
 			input:    "1e3",
-			expected: "1e3",
+			expected: 1000.0,
 		},
 		{
 			name:     "Scientific notation with decimal",
 			input:    "1.5e-2",
-			expected: "1.5e-2",
+			expected: 0.015,
 		},
 		{
 			name:     "Large number",
 			input:    "123456789.987654321",
-			expected: "123456789.987654321",
+			expected: 123456789.987654321,
 		},
 	}
 
@@ -372,19 +372,19 @@ func TestNumberInObjects(t *testing.T) {
 	assert.True(t, exists, "int property should exist")
 	numLit1, ok := intVal.(*parser.NumberLiteral)
 	assert.True(t, ok, "int value should be NumberLiteral")
-	assert.Equal(t, "42", numLit1.Value)
+	assert.Equal(t, float64(42), numLit1.Value)
 
 	// Check float property
 	floatVal, exists := objLit.Properties["float"]
 	assert.True(t, exists, "float property should exist")
 	numLit2, ok := floatVal.(*parser.NumberLiteral)
 	assert.True(t, ok, "float value should be NumberLiteral")
-	assert.Equal(t, "3.14", numLit2.Value)
+	assert.Equal(t, 3.14, numLit2.Value)
 
 	// Check sci property
 	sciVal, exists := objLit.Properties["sci"]
 	assert.True(t, exists, "sci property should exist")
 	numLit3, ok := sciVal.(*parser.NumberLiteral)
 	assert.True(t, ok, "sci value should be NumberLiteral")
-	assert.Equal(t, "1e3", numLit3.Value)
+	assert.Equal(t, float64(1000), numLit3.Value)
 }

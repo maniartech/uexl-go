@@ -12,9 +12,9 @@ import (
 func TestSimpleBinaryExpression(t *testing.T) {
 	input := "1 + 2"
 	expected := &parser.BinaryExpression{
-		Left:     &parser.NumberLiteral{Value: "1", Line: 1, Column: 1},
+		Left:     &parser.NumberLiteral{Value: 1, Line: 1, Column: 1},
 		Operator: "+",
-		Right:    &parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
+		Right:    &parser.NumberLiteral{Value: 2, Line: 1, Column: 5},
 		Line:     1,
 		Column:   3,
 	}
@@ -25,12 +25,12 @@ func TestSimpleBinaryExpression(t *testing.T) {
 func TestNestedBinaryExpression(t *testing.T) {
 	input := "1 + 2 * 3"
 	expected := &parser.BinaryExpression{
-		Left:     &parser.NumberLiteral{Value: "1", Line: 1, Column: 1},
+		Left:     &parser.NumberLiteral{Value: 1, Line: 1, Column: 1},
 		Operator: "+",
 		Right: &parser.BinaryExpression{
-			Left:     &parser.NumberLiteral{Value: "2", Line: 1, Column: 5},
+			Left:     &parser.NumberLiteral{Value: 2, Line: 1, Column: 5},
 			Operator: "*",
-			Right:    &parser.NumberLiteral{Value: "3", Line: 1, Column: 9},
+			Right:    &parser.NumberLiteral{Value: 3, Line: 1, Column: 9},
 			Line:     1,
 			Column:   7,
 		},
@@ -71,7 +71,7 @@ func TestObjectLiteral(t *testing.T) {
 	input := `{"a": 1, "b": true}`
 	expected := &parser.ObjectLiteral{
 		Properties: map[string]parser.Expression{
-			"a": &parser.NumberLiteral{Value: "1", Line: 1, Column: 7},
+			"a": &parser.NumberLiteral{Value: 1, Line: 1, Column: 7},
 			"b": &parser.BooleanLiteral{Value: true, Line: 1, Column: 15},
 		},
 		Line:   1,

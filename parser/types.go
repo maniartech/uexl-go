@@ -31,7 +31,7 @@ func (ue *UnaryExpression) expressionNode()      {}
 func (ue *UnaryExpression) Position() (int, int) { return ue.Line, ue.Column }
 
 type NumberLiteral struct {
-	Value  string
+	Value  float64 // Parsed numeric value
 	Line   int
 	Column int
 }

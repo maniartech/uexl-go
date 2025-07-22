@@ -143,7 +143,7 @@ type Expression interface {
 #### Literals
 ```go
 type NumberLiteral struct {
-    Value  string // Original string representation
+    Value  float64 // Parsed numeric value
     Line   int
     Column int
 }
