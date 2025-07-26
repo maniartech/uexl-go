@@ -50,20 +50,21 @@ type Definition struct {
 }
 
 var definations = map[Opcode]*Definition{
-	OpConstant:    {"OpConstant", []int{2}},
-	OpContextVar:  {"OpContextVar", []int{2}},
-	OpPop:         {"OpPop", []int{}},
-	OpAdd:         {"OpAdd", []int{}},
-	OpSub:         {"OpSub", []int{}},
-	OpMul:         {"OpMul", []int{}},
-	OpDiv:         {"OpDiv", []int{}},
-	OpTrue:        {"OpTrue", []int{}},
-	OpFalse:       {"OpFalse", []int{}},
-	OpEqual:       {"OpEqual", []int{}},
-	OpNotEqual:    {"OpNotEqual", []int{}},
-	OpGreaterThan: {"OpGreaterThan", []int{}},
-	OpMinus:       {"OpMinus", []int{}},
-	OpBang:        {"OpBang", []int{}},
+	OpConstant:           {"OpConstant", []int{2}},
+	OpContextVar:         {"OpContextVar", []int{2}},
+	OpPop:                {"OpPop", []int{}},
+	OpAdd:                {"OpAdd", []int{}},
+	OpSub:                {"OpSub", []int{}},
+	OpMul:                {"OpMul", []int{}},
+	OpDiv:                {"OpDiv", []int{}},
+	OpTrue:               {"OpTrue", []int{}},
+	OpFalse:              {"OpFalse", []int{}},
+	OpEqual:              {"OpEqual", []int{}},
+	OpNotEqual:           {"OpNotEqual", []int{}},
+	OpGreaterThan:        {"OpGreaterThan", []int{}},
+	OpGreaterThanOrEqual: {"OpGreaterThanOrEqual", []int{}},
+	OpMinus:              {"OpMinus", []int{}},
+	OpBang:               {"OpBang", []int{}},
 }
 
 func Lookup(op byte) (*Definition, error) {
@@ -78,7 +79,8 @@ func Lookup(op byte) (*Definition, error) {
 func Make(op Opcode, operands ...int) []byte {
 	def, ok := definations[op]
 	if !ok {
-		return []byte{}
+		// should never happen, but if it does, we panic
+		panic(fmt.Sprintf("unknown opcode: %d", op))
 	}
 	instructionLen := 1
 	for _, w := range def.OperandWidths {
