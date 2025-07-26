@@ -68,7 +68,7 @@ func (vm *VM) Top() parser.Node {
 }
 
 // BinaryExpression evaluates the binary expression by popping the top two elements from the stack, applying the operator, and pushing the result back onto the stack.
-func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right parser.Node) error {
+func (vm *VM) executeBinaryArithmaticOperation(operator code.Opcode, left, right parser.Node) error {
 	leftValue := left.(*parser.NumberLiteral).Value
 	rightValue := right.(*parser.NumberLiteral).Value
 
@@ -97,98 +97,57 @@ func (vm *VM) executeNumberComparisonOperation(operator code.Opcode, left, right
 	rightValue := right.(*parser.NumberLiteral).Value
 	switch operator {
 	case code.OpEqual:
-		if leftValue == rightValue {
-			vm.Push(&True)
-		} else {
-			vm.Push(&False)
-		}
+		vm.Push(&parser.BooleanLiteral{Value: leftValue == rightValue})
 	case code.OpNotEqual:
-		if leftValue != rightValue {
-			vm.Push(&True)
-		} else {
-			vm.Push(&False)
-		}
+		vm.Push(&parser.BooleanLiteral{Value: leftValue != rightValue})
 	case code.OpGreaterThan:
-		if leftValue > rightValue {
-			vm.Push(&True)
-		} else {
-			vm.Push(&False)
-		}
+		vm.Push(&parser.BooleanLiteral{Value: leftValue > rightValue})
 	case code.OpGreaterThanOrEqual:
-		if leftValue >= rightValue {
-			vm.Push(&True)
-		} else {
-			vm.Push(&False)
-		}
+		vm.Push(&parser.BooleanLiteral{Value: leftValue >= rightValue})
 	default:
 		return fmt.Errorf("unknown comparison operator: %v", operator)
 	}
 	return nil
 }
-
 func (vm *VM) executeStringComparisonOperation(operator code.Opcode, left, right parser.Node) error {
 	leftValue := left.(*parser.StringLiteral).Value
 	rightValue := right.(*parser.StringLiteral).Value
 	switch operator {
 	case code.OpEqual:
-		if leftValue == rightValue {
-			vm.Push(&True)
-		} else {
-			vm.Push(&False)
-		}
+		vm.Push(&parser.BooleanLiteral{Value: leftValue == rightValue})
 	case code.OpNotEqual:
-		if leftValue != rightValue {
-			vm.Push(&True)
-		} else {
-			vm.Push(&False)
-		}
+		vm.Push(&parser.BooleanLiteral{Value: leftValue != rightValue})
 	default:
 		return fmt.Errorf("unknown string comparison operator: %v", operator)
 	}
 	return nil
 }
-
 func (vm *VM) executeBooleanComparisonOperation(operator code.Opcode, left, right parser.Node) error {
+	// Check if both left and right are NumberLiteral nodes
 	leftValue := left.(*parser.BooleanLiteral).Value
 	rightValue := right.(*parser.BooleanLiteral).Value
 	switch operator {
 	case code.OpEqual:
-		if leftValue == rightValue {
-			vm.Push(&True)
-		} else {
-			vm.Push(&False)
-		}
+		vm.Push(&parser.BooleanLiteral{Value: leftValue == rightValue})
 	case code.OpNotEqual:
-		if leftValue != rightValue {
-			vm.Push(&True)
-		} else {
-			vm.Push(&False)
-		}
+		vm.Push(&parser.BooleanLiteral{Value: leftValue != rightValue})
 	default:
 		return fmt.Errorf("unknown boolean comparison operator: %v", operator)
 	}
 	return nil
 }
 
-func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right parser.Node) error {
-	// Check if both left and right are NumberLiteral nodes
-	switch left := left.(type) {
+func (vm *VM) executeUnaryExpression(operator code.Opcode, operand parser.Node) error {
+	switch operand := operand.(type) {
 	case *parser.NumberLiteral:
-		if right, ok := right.(*parser.NumberLiteral); ok {
-			return vm.executeNumberComparisonOperation(operator, left, right)
-		}
+		return vm.executeUnaryArithmeticOperation(operator, operand)
 	case *parser.StringLiteral:
-		if right, ok := right.(*parser.StringLiteral); ok {
-			return vm.executeStringComparisonOperation(operator, left, right)
-		}
+		return fmt.Errorf("unary operations not supported for strings")
 	case *parser.BooleanLiteral:
-		if right, ok := right.(*parser.BooleanLiteral); ok {
-			return vm.executeBooleanComparisonOperation(operator, left, right)
-		}
+		return fmt.Errorf("unary operations not supported for booleans")
 	default:
-		return fmt.Errorf("unsupported comparison operation for types: %T and %T", left, right)
+		return fmt.Errorf("unknown operand type: %T", operand)
 	}
-	return nil
 }
 
 func (vm *VM) executeUnaryArithmeticOperation(operator code.Opcode, operand parser.Node) error {
@@ -200,6 +159,22 @@ func (vm *VM) executeUnaryArithmeticOperation(operator code.Opcode, operand pars
 		return fmt.Errorf("unknown unary operator: %v", operator)
 	}
 	return nil
+}
+
+func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right parser.Node) error {
+	if left.Type() != right.Type() {
+		return fmt.Errorf("type mismatch: cannot compare %T with %T", left, right)
+	}
+	switch left.(type) {
+	case *parser.NumberLiteral:
+		return vm.executeNumberComparisonOperation(operator, left, right)
+	case *parser.StringLiteral:
+		return vm.executeStringComparisonOperation(operator, left, right)
+	case *parser.BooleanLiteral:
+		return vm.executeBooleanComparisonOperation(operator, left, right)
+	default:
+		return fmt.Errorf("unsupported comparison for type: %T", left)
+	}
 }
 
 func (vm *VM) Run() error {
@@ -219,7 +194,7 @@ func (vm *VM) Run() error {
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod:
 			right := vm.Pop()
 			left := vm.Pop()
-			vm.executeBinaryArithmeticOperation(opcode, left, right)
+			vm.executeBinaryArithmaticOperation(opcode, left, right)
 			ip += 1
 		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan, code.OpGreaterThanOrEqual:
 			right := vm.Pop()
@@ -228,7 +203,7 @@ func (vm *VM) Run() error {
 			ip += 1
 		case code.OpMinus:
 			operand := vm.Pop()
-			vm.executeUnaryArithmeticOperation(opcode, operand)
+			vm.executeUnaryExpression(opcode, operand)
 			ip += 1
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, ip)
