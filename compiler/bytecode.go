@@ -8,6 +8,7 @@ import (
 type ByteCode struct {
 	Instructions code.Instructions
 	Constants    []parser.Node
+	ContextVars  []parser.Node
 }
 
 func (c *Compiler) ByteCode() *ByteCode {

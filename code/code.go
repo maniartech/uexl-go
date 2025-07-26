@@ -7,12 +7,11 @@ import (
 )
 
 // Instructions represents a sequence of bytecode instructions.
-type Instructions []byte
-
 type Opcode byte
 
 const (
 	OpConstant Opcode = iota
+	OpContextVar
 	OpPop
 	OpAdd
 	OpSub
@@ -37,6 +36,14 @@ const (
 	OpShiftRight
 )
 
+func (op Opcode) String() string {
+	def, ok := definations[op]
+	if !ok {
+		return fmt.Sprintf("UNKNOWN(%d)", op)
+	}
+	return def.Name
+}
+
 type Definition struct {
 	Name          string
 	OperandWidths []int
@@ -44,6 +51,7 @@ type Definition struct {
 
 var definations = map[Opcode]*Definition{
 	OpConstant:    {"OpConstant", []int{2}},
+	OpContextVar:  {"OpContextVar", []int{2}},
 	OpPop:         {"OpPop", []int{}},
 	OpAdd:         {"OpAdd", []int{}},
 	OpSub:         {"OpSub", []int{}},
@@ -96,21 +104,26 @@ func ReadUint16(ins Instructions) uint16 {
 	return binary.BigEndian.Uint16(ins)
 }
 
+type Instructions []byte
+
 func (ins Instructions) String() string {
 	var out bytes.Buffer
 	i := 0
 	for i < len(ins) {
+		op := Opcode(ins[i])
 		def, err := Lookup(ins[i])
 		if err != nil {
 			fmt.Fprintf(&out, "ERROR: %s\n", err)
+			i++
 			continue
 		}
 		operands, read := ReadOperands(def, ins[i+1:])
-		fmt.Fprintf(&out, "%04d %s\n", i, ins.fmtInstruction(def, operands))
+		fmt.Fprintf(&out, "%04d %s %v\n", i, op.String(), operands)
 		i += 1 + read
 	}
 	return out.String()
 }
+
 func (ins Instructions) fmtInstruction(def *Definition, operands []int) string {
 	operandCount := len(def.OperandWidths)
 	if len(operands) != operandCount {

@@ -58,9 +58,10 @@ func New() *Compiler {
 		previousInstruction: EmmittedInstruction{},
 	}
 	return &Compiler{
-		constants:  []parser.Node{},
-		scopes:     []CompilationScope{mainScope},
-		scopeIndex: 0,
+		constants:   []parser.Node{},
+		scopes:      []CompilationScope{mainScope},
+		scopeIndex:  0,
+		contextVars: []parser.Node{},
 	}
 }
 
@@ -73,4 +74,9 @@ func NewWithState(constants []parser.Node) *Compiler {
 func (c *Compiler) addConstant(node parser.Node) int {
 	c.constants = append(c.constants, node)
 	return len(c.constants) - 1
+}
+
+func (c *Compiler) addContextVar(node parser.Node) int {
+	c.contextVars = append(c.contextVars, node)
+	return len(c.contextVars) - 1
 }
