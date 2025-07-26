@@ -226,3 +226,52 @@ func TestBitwiseOperators(t *testing.T) {
 	}
 	runCompilerTestCases(t, cases)
 }
+func TestContextVariables(t *testing.T) {
+	cases := []compilerTestCase{
+		{"foo", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+		}},
+		{"foo + bar", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpContextVar, 1),
+			code.Make(code.OpAdd),
+		}},
+		{"foo - bar * baz", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpContextVar, 1),
+			code.Make(code.OpContextVar, 2),
+			code.Make(code.OpMul),
+			code.Make(code.OpSub),
+		}},
+		{"-foo", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpMinus),
+		}},
+		{"foo && bar", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpContextVar, 1),
+			code.Make(code.OpLogicalAnd),
+		}},
+		{"foo == bar", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpContextVar, 1),
+			code.Make(code.OpEqual),
+		}},
+		{"foo != bar", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpContextVar, 1),
+			code.Make(code.OpNotEqual),
+		}},
+		{"foo < bar", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpContextVar, 1),
+			code.Make(code.OpGreaterThan),
+		}},
+		{"foo <= bar", []any{}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpContextVar, 1),
+			code.Make(code.OpGreaterThanOrEqual),
+		}},
+	}
+	runCompilerTestCases(t, cases)
+}

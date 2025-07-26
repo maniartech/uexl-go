@@ -6,9 +6,10 @@ import (
 )
 
 type Compiler struct {
-	constants  []parser.Node
-	scopes     []CompilationScope
-	scopeIndex int
+	constants   []parser.Node
+	contextVars []parser.Node
+	scopes      []CompilationScope
+	scopeIndex  int
 }
 
 type EmmittedInstruction struct {
@@ -103,6 +104,9 @@ func (c *Compiler) Compile(node parser.Node) error {
 		} else {
 			c.emit(code.OpFalse)
 		}
+	case *parser.Identifier:
+		// Identifiers are variables passed via go's environment context. They are "Constant" in a sense that they are not computed at runtime.
+		c.emit(code.OpContextVar, c.addContextVar(node))
 	}
 	return nil
 }
