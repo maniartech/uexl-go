@@ -225,6 +225,7 @@ func (vm *VM) Run() error {
 			right := vm.Pop()
 			left := vm.Pop()
 			vm.executeComparisonOperation(opcode, left, right)
+			ip += 1
 		case code.OpMinus:
 			operand := vm.Pop()
 			vm.executeUnaryArithmeticOperation(opcode, operand)
