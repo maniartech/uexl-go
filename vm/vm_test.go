@@ -135,7 +135,6 @@ func TestNumberArithmetic(t *testing.T) {
 }
 
 func TestNumberComparison(t *testing.T) {
-
 	// Contains tests for number comparison operations (float and integer)
 	// starts with simple comparisons and includes more complex expressions
 	tests := []vmTestCase{
@@ -163,3 +162,20 @@ func TestNumberComparison(t *testing.T) {
 	}
 	runVmTests(t, tests)
 }
+func TestBitwiseOperations(t *testing.T) {
+	tests := []vmTestCase{
+		{"5 & 3", 1},      // 0101 & 0011 = 0001
+		{"5 | 3", 7},      // 0101 | 0011 = 0111
+		{"5 ^ 3", 6},      // 0101 ^ 0011 = 0110
+		{"8 << 2", 32},    // 1000 << 2 = 100000
+		{"32 >> 3", 4},    // 100000 >> 3 = 100
+		{"15 & 7", 7},     // 1111 & 0111 = 0111
+		{"15 | 7", 15},    // 1111 | 0111 = 1111
+		{"15 ^ 7", 8},     // 1111 ^ 0111 = 1000
+		{"1 << 4", 16},    // 0001 << 4 = 10000
+		{"16 >> 2", 4},    // 10000 >> 2 = 100
+		{"(5 & 3) | (2 ^ 1)", 3}, // (1) | (3) = 3
+	}
+	runVmTests(t, tests)
+}
+
