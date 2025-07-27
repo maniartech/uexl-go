@@ -19,18 +19,10 @@ func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right parser.N
 		return vm.executeBinaryArithmeticOperation(operator, left, right)
 	case *parser.StringLiteral:
 		return vm.executeStringBinaryOperation(operator, left, right)
+	case *parser.BooleanLiteral:
+		return vm.executeBooleanBinaryOperation(operator, left, right)
 	default:
 		return fmt.Errorf("unsupported binary operation for type: %T", left)
-	}
-}
-
-func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right parser.Node) error {
-	switch operator {
-	case code.OpAdd:
-		return vm.Push(&parser.StringLiteral{
-			Value: left.(*parser.StringLiteral).Value + right.(*parser.StringLiteral).Value})
-	default:
-		return fmt.Errorf("unsupported string operation: %s", operator.String())
 	}
 }
 
@@ -66,6 +58,32 @@ func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right
 		vm.Push(&parser.NumberLiteral{Value: float64(int(leftValue) >> int(rightValue))})
 	default:
 		return fmt.Errorf("unknown operator: %v", operator)
+	}
+	return nil
+}
+
+func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right parser.Node) error {
+	switch operator {
+	case code.OpAdd:
+		return vm.Push(&parser.StringLiteral{
+			Value: left.(*parser.StringLiteral).Value + right.(*parser.StringLiteral).Value})
+	default:
+		return fmt.Errorf("unsupported string operation: %s", operator.String())
+	}
+}
+
+func (vm *VM) executeBooleanBinaryOperation(operator code.Opcode, left, right parser.Node) error {
+	switch operator {
+	case code.OpLogicalAnd:
+		leftValue := left.(*parser.BooleanLiteral).Value
+		rightValue := right.(*parser.BooleanLiteral).Value
+		vm.Push(&parser.BooleanLiteral{Value: leftValue && rightValue})
+	case code.OpLogicalOr:
+		leftValue := left.(*parser.BooleanLiteral).Value
+		rightValue := right.(*parser.BooleanLiteral).Value
+		vm.Push(&parser.BooleanLiteral{Value: leftValue || rightValue})
+	default:
+		return fmt.Errorf("unsupported boolean operation: %s", operator.String())
 	}
 	return nil
 }
@@ -118,21 +136,32 @@ func (vm *VM) executeBooleanComparisonOperation(operator code.Opcode, left, righ
 func (vm *VM) executeUnaryExpression(operator code.Opcode, operand parser.Node) error {
 	switch operand := operand.(type) {
 	case *parser.NumberLiteral:
-		return vm.executeUnaryArithmeticOperation(operator, operand)
+		return vm.executeUnaryNumericOperation(operator, operand)
 	case *parser.StringLiteral:
 		return fmt.Errorf("unary operations not supported for strings")
 	case *parser.BooleanLiteral:
-		return fmt.Errorf("unary operations not supported for booleans")
+		return vm.executeUnaryBooleanOperation(operator, operand)
 	default:
 		return fmt.Errorf("unknown operand type: %T", operand)
 	}
 }
 
-func (vm *VM) executeUnaryArithmeticOperation(operator code.Opcode, operand parser.Node) error {
+func (vm *VM) executeUnaryNumericOperation(operator code.Opcode, operand parser.Node) error {
 	operandValue := operand.(*parser.NumberLiteral).Value
 	switch operator {
 	case code.OpMinus:
 		vm.Push(&parser.NumberLiteral{Value: -operandValue})
+	default:
+		return fmt.Errorf("unknown unary operator: %v", operator)
+	}
+	return nil
+}
+
+func (vm *VM) executeUnaryBooleanOperation(operator code.Opcode, operand parser.Node) error {
+	operandValue := operand.(*parser.BooleanLiteral).Value
+	switch operator {
+	case code.OpBang:
+		vm.Push(&parser.BooleanLiteral{Value: !operandValue})
 	default:
 		return fmt.Errorf("unknown unary operator: %v", operator)
 	}
