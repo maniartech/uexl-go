@@ -104,6 +104,10 @@ func (c *Compiler) Compile(node parser.Node) error {
 		} else {
 			c.emit(code.OpFalse)
 		}
+	case *parser.StringLiteral:
+		// Add the string literal to constants
+		stringLiteral := &parser.StringLiteral{Value: node.Value}
+		c.emit(code.OpConstant, c.addConstant(stringLiteral))
 	case *parser.Identifier:
 		// Identifiers are variables passed via go's environment context. They are "Constant" in a sense that they are not computed at runtime.
 		c.emit(code.OpContextVar, c.addContextVar(node))
