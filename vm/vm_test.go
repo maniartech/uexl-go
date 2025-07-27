@@ -215,3 +215,57 @@ func TestBooleanLogic(t *testing.T) {
 	}
 	runVmTests(t, tests)
 }
+func TestStringLiterals(t *testing.T) {
+	tests := []vmTestCase{
+		{`"hello"`, "hello"},
+		{`"world"`, "world"},
+		{`""`, ""},
+	}
+	runVmTests(t, tests)
+}
+
+func TestStringConcatenation(t *testing.T) {
+	tests := []vmTestCase{
+		{`"hello" + " " + "world"`, "hello world"},
+		{`"foo" + "bar"`, "foobar"},
+		{`"a" + "" + "b"`, "ab"},
+	}
+	runVmTests(t, tests)
+}
+
+func TestStringComparison(t *testing.T) {
+	tests := []vmTestCase{
+		{`"abc" == "abc"`, true},
+		{`"abc" == "def"`, false},
+		{`"abc" != "def"`, true},
+		{`"abc" != "abc"`, false},
+	}
+	runVmTests(t, tests)
+}
+
+func TestStringLengthFunction(t *testing.T) {
+	tests := []vmTestCase{
+		{`len("hello")`, 5},
+		{`len("")`, 0},
+		{`len("abcde")`, 5},
+	}
+	runVmTests(t, tests)
+}
+
+func TestStringSubstringFunction(t *testing.T) {
+	tests := []vmTestCase{
+		{`substr("hello", 0, 2)`, "he"},
+		{`substr("world", 1, 3)`, "orl"},
+		{`substr("foobar", 3, 3)`, "bar"},
+	}
+	runVmTests(t, tests)
+}
+
+func TestStringContainsFunction(t *testing.T) {
+	tests := []vmTestCase{
+		{`contains("hello", "ll")`, true},
+		{`contains("hello", "z")`, false},
+		{`contains("foobar", "foo")`, true},
+	}
+	runVmTests(t, tests)
+}
