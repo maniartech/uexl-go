@@ -178,4 +178,40 @@ func TestBitwiseOperations(t *testing.T) {
 	}
 	runVmTests(t, tests)
 }
+func TestBooleanLiterals(t *testing.T) {
+	tests := []vmTestCase{
+		{"true", true},
+		{"false", false},
+	}
+	runVmTests(t, tests)
+}
 
+func TestBooleanComparisons(t *testing.T) {
+	tests := []vmTestCase{
+		{"true == true", true},
+		{"true == false", false},
+		{"false == false", true},
+		{"true != false", true},
+		{"false != true", true},
+		{"true != true", false},
+		{"false != false", false},
+	}
+	runVmTests(t, tests)
+}
+
+func TestBooleanLogic(t *testing.T) {
+	tests := []vmTestCase{
+		{"true && true", true},
+		{"true && false", false},
+		{"false && false", false},
+		{"true || false", true},
+		{"false || false", false},
+		{"!true", false},
+		{"!false", true},
+		{"!(true == false)", true},
+		{"!(1 == 1)", false},
+		{"(1 == 1) && (2 == 2)", true},
+		{"(1 == 2) || (2 == 2)", true},
+	}
+	runVmTests(t, tests)
+}
