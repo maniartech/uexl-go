@@ -65,6 +65,14 @@ var definations = map[Opcode]*Definition{
 	OpGreaterThanOrEqual: {"OpGreaterThanOrEqual", []int{}},
 	OpMinus:              {"OpMinus", []int{}},
 	OpBang:               {"OpBang", []int{}},
+	OpLogicalAnd:         {"OpLogicalAnd", []int{}},
+	OpLogicalOr:          {"OpLogicalOr", []int{}},
+	OpBitwiseAnd:         {"OpBitwiseAnd", []int{}},
+	OpBitwiseOr:          {"OpBitwiseOr", []int{}},
+	OpBitwiseXor:         {"OpBitwiseXor", []int{}},
+	OpBitwiseNot:         {"OpBitwiseNot", []int{}},
+	OpShiftLeft:          {"OpShiftLeft", []int{}},
+	OpShiftRight:         {"OpShiftRight", []int{}},
 }
 
 func Lookup(op byte) (*Definition, error) {
