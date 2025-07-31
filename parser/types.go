@@ -1,6 +1,24 @@
 package parser
 
+type NodeType string
+
+const (
+	NodeTypeBinaryExpression NodeType = "BinaryExpression"
+	NodeTypeUnaryExpression  NodeType = "UnaryExpression"
+	NodeTypeNumberLiteral    NodeType = "NumberLiteral"
+	NodeTypeStringLiteral    NodeType = "StringLiteral"
+	NodeTypeBooleanLiteral   NodeType = "BooleanLiteral"
+	NodeTypeNullLiteral      NodeType = "NullLiteral"
+	NodeTypeIdentifier       NodeType = "Identifier"
+	NodeTypeArrayLiteral     NodeType = "ArrayLiteral"
+	NodeTypeObjectLiteral    NodeType = "ObjectLiteral"
+	NodeTypeFunctionCall     NodeType = "FunctionCall"
+	NodeTypeMemberAccess     NodeType = "MemberAccess"
+	NodeTypePipeExpression   NodeType = "PipeExpression"
+)
+
 type Node interface {
+	Type() NodeType
 	Position() (line, column int)
 }
 
@@ -18,6 +36,7 @@ type BinaryExpression struct {
 }
 
 func (be *BinaryExpression) expressionNode()      {}
+func (be *BinaryExpression) Type() NodeType       { return NodeTypeBinaryExpression }
 func (be *BinaryExpression) Position() (int, int) { return be.Line, be.Column }
 
 type UnaryExpression struct {
@@ -28,6 +47,7 @@ type UnaryExpression struct {
 }
 
 func (ue *UnaryExpression) expressionNode()      {}
+func (ue *UnaryExpression) Type() NodeType       { return NodeTypeUnaryExpression }
 func (ue *UnaryExpression) Position() (int, int) { return ue.Line, ue.Column }
 
 type NumberLiteral struct {
@@ -37,6 +57,7 @@ type NumberLiteral struct {
 }
 
 func (nl *NumberLiteral) expressionNode()      {}
+func (nl *NumberLiteral) Type() NodeType       { return NodeTypeNumberLiteral }
 func (nl *NumberLiteral) Position() (int, int) { return nl.Line, nl.Column }
 
 type StringLiteral struct {
@@ -49,6 +70,7 @@ type StringLiteral struct {
 }
 
 func (sl *StringLiteral) expressionNode()      {}
+func (sl *StringLiteral) Type() NodeType       { return NodeTypeStringLiteral }
 func (sl *StringLiteral) Position() (int, int) { return sl.Line, sl.Column }
 
 type BooleanLiteral struct {
@@ -58,6 +80,7 @@ type BooleanLiteral struct {
 }
 
 func (bl *BooleanLiteral) expressionNode()      {}
+func (bl *BooleanLiteral) Type() NodeType       { return NodeTypeBooleanLiteral }
 func (bl *BooleanLiteral) Position() (int, int) { return bl.Line, bl.Column }
 
 type NullLiteral struct {
@@ -66,6 +89,7 @@ type NullLiteral struct {
 }
 
 func (nl *NullLiteral) expressionNode()      {}
+func (nl *NullLiteral) Type() NodeType       { return NodeTypeNullLiteral }
 func (nl *NullLiteral) Position() (int, int) { return nl.Line, nl.Column }
 
 type Identifier struct {
@@ -75,6 +99,7 @@ type Identifier struct {
 }
 
 func (i *Identifier) expressionNode()      {}
+func (i *Identifier) Type() NodeType       { return NodeTypeIdentifier }
 func (i *Identifier) Position() (int, int) { return i.Line, i.Column }
 
 type ArrayLiteral struct {
@@ -84,6 +109,7 @@ type ArrayLiteral struct {
 }
 
 func (al *ArrayLiteral) expressionNode()      {}
+func (al *ArrayLiteral) Type() NodeType       { return NodeTypeArrayLiteral }
 func (al *ArrayLiteral) Position() (int, int) { return al.Line, al.Column }
 
 type ObjectLiteral struct {
@@ -93,6 +119,7 @@ type ObjectLiteral struct {
 }
 
 func (ol *ObjectLiteral) expressionNode()      {}
+func (ol *ObjectLiteral) Type() NodeType       { return NodeTypeObjectLiteral }
 func (ol *ObjectLiteral) Position() (int, int) { return ol.Line, ol.Column }
 
 type FunctionCall struct {
@@ -103,6 +130,7 @@ type FunctionCall struct {
 }
 
 func (fc *FunctionCall) expressionNode()      {}
+func (fc *FunctionCall) Type() NodeType       { return NodeTypeFunctionCall }
 func (fc *FunctionCall) Position() (int, int) { return fc.Line, fc.Column }
 
 type MemberAccess struct {
@@ -113,6 +141,7 @@ type MemberAccess struct {
 }
 
 func (ma *MemberAccess) expressionNode()      {}
+func (ma *MemberAccess) Type() NodeType       { return NodeTypeMemberAccess }
 func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
 
 type PipeExpression struct {
@@ -124,4 +153,5 @@ type PipeExpression struct {
 }
 
 func (pe *PipeExpression) expressionNode()      {}
+func (pe *PipeExpression) Type() NodeType       { return NodeTypePipeExpression }
 func (pe *PipeExpression) Position() (int, int) { return pe.Line, pe.Column }

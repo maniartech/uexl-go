@@ -33,6 +33,7 @@ type IndexAccess struct {
 
 func (ia *IndexAccess) expressionNode()      {}
 func (ia *IndexAccess) Position() (int, int) { return ia.Line, ia.Column }
+func (ia *IndexAccess) Type() NodeType       { return NodeType("IndexAccess") }
 
 // NewParser creates a new parser instance with the given input
 // This function maintains backward compatibility and does not return errors
