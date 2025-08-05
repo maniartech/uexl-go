@@ -89,6 +89,27 @@ func testExpectedObject(t *testing.T, expected any, actual parser.Node) error {
 		} else {
 			return fmt.Errorf("expected a boolean, got %T", expected)
 		}
+	case *parser.StringLiteral:
+		if expectedStr, ok := expected.(string); ok {
+			if actual.Value != expectedStr {
+				return fmt.Errorf("expected %q, got %q", expectedStr, actual.Value)
+			}
+		} else {
+			return fmt.Errorf("expected a string, got %T", expected)
+		}
+	case *parser.ArrayLiteral:
+		if expectedArray, ok := expected.([]any); ok {
+			if len(actual.Elements) != len(expectedArray) {
+				return fmt.Errorf("expected array of length %d, got %d", len(expectedArray), len(actual.Elements))
+			}
+			for i, elem := range actual.Elements {
+				if err := testExpectedObject(t, expectedArray[i], elem); err != nil {
+					return fmt.Errorf("error at index %d: %s", i, err)
+				}
+			}
+		} else {
+			return fmt.Errorf("expected an array, got %T", expected)
+		}
 	}
 	return nil
 }
@@ -156,7 +177,7 @@ func TestNumberComparison(t *testing.T) {
 		{"1.5 < 2.5", true},
 		{"(1 + 2) == 3", true},
 		{"(2 * 2) > (3 + 1)", false},
-		{"(5 - 2) < (2 * 2)", false},
+		{"(5 - 2) < (2 * 2)", true},
 		{"(10 / 2) >= 5", true},
 		{"(10 / 2) <= 5", true},
 	}
@@ -164,16 +185,16 @@ func TestNumberComparison(t *testing.T) {
 }
 func TestBitwiseOperations(t *testing.T) {
 	tests := []vmTestCase{
-		{"5 & 3", 1},      // 0101 & 0011 = 0001
-		{"5 | 3", 7},      // 0101 | 0011 = 0111
-		{"5 ^ 3", 6},      // 0101 ^ 0011 = 0110
-		{"8 << 2", 32},    // 1000 << 2 = 100000
-		{"32 >> 3", 4},    // 100000 >> 3 = 100
-		{"15 & 7", 7},     // 1111 & 0111 = 0111
-		{"15 | 7", 15},    // 1111 | 0111 = 1111
-		{"15 ^ 7", 8},     // 1111 ^ 0111 = 1000
-		{"1 << 4", 16},    // 0001 << 4 = 10000
-		{"16 >> 2", 4},    // 10000 >> 2 = 100
+		{"5 & 3", 1},             // 0101 & 0011 = 0001
+		{"5 | 3", 7},             // 0101 | 0011 = 0111
+		{"5 ^ 3", 6},             // 0101 ^ 0011 = 0110
+		{"8 << 2", 32},           // 1000 << 2 = 100000
+		{"32 >> 3", 4},           // 100000 >> 3 = 100
+		{"15 & 7", 7},            // 1111 & 0111 = 0111
+		{"15 | 7", 15},           // 1111 | 0111 = 1111
+		{"15 ^ 7", 8},            // 1111 ^ 0111 = 1000
+		{"1 << 4", 16},           // 0001 << 4 = 10000
+		{"16 >> 2", 4},           // 10000 >> 2 = 100
 		{"(5 & 3) | (2 ^ 1)", 3}, // (1) | (3) = 3
 	}
 	runVmTests(t, tests)
@@ -266,6 +287,36 @@ func TestStringContainsFunction(t *testing.T) {
 		{`contains("hello", "ll")`, true},
 		{`contains("hello", "z")`, false},
 		{`contains("foobar", "foo")`, true},
+	}
+	runVmTests(t, tests)
+}
+
+func TestArrayLiterals(t *testing.T) {
+	tests := []vmTestCase{
+		{"[]", []any{}},
+		{"[1]", []any{1}},
+		{"[1, 2, 3]", []any{1, 2, 3}},
+		{"[true, false, 1, \"hello\"]", []any{true, false, 1, "hello"}},
+		{"[1, 1 + 4, 3 * 4]", []any{1, 5, 12}},
+	}
+	runVmTests(t, tests)
+}
+func TestArrayIndexing(t *testing.T) {
+	tests := []vmTestCase{
+		{"[1, 2, 3][0]", 1},
+		{"[1, 2, 3][1]", 2},
+		{"[1, 2, 3][2]", 3},
+		{"[10, 20, 30, 40][3]", 40},
+		{"[true, false, true][1]", false},
+		{`["a", "b", "c"][2]`, "c"},
+		{"[1 + 2, 3 * 4, 5 - 1][1]", 12},
+		{"[1, 2, 3][0] == 1", true},
+		{"[1, 2, 3][1] + 5", 7},
+		{"[1, 2, 3][2] * 2", 6},
+		{"[1, 2, 3][0] + [4, 5, 6][2]", 7},
+		{"[[1,2],[3,4]][1][0]", 3},
+		{"[1, [2, 3+5], 4][1][1]", 8},
+
 	}
 	runVmTests(t, tests)
 }

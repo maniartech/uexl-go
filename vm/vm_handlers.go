@@ -183,3 +183,40 @@ func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right parse
 		return fmt.Errorf("unsupported comparison for type: %T", left)
 	}
 }
+
+func (vm *VM) buildArray(length int) []parser.Expression {
+	// Calculate the start index on the stack
+	startIndex := vm.sp - length
+
+	elements := make([]parser.Expression, length)
+	for i := range length {
+		elem, ok := vm.stack[startIndex+i].(parser.Expression)
+		if !ok {
+			panic(fmt.Sprintf("expected parser.Expression on stack, got %T", vm.stack[startIndex+i]))
+		}
+		elements[i] = elem
+	}
+
+	// Update the stack pointer to remove the elements
+	vm.sp = startIndex
+
+	return elements
+}
+
+func (vm *VM) executeArrayIndex(array, index parser.Node) error {
+	if _, ok := array.(*parser.ArrayLiteral); !ok {
+		return fmt.Errorf("expected array, got %T", array)
+	}
+	if _, ok := index.(*parser.NumberLiteral); !ok {
+		return fmt.Errorf("expected number index, got %T", index)
+	}
+
+	arrayLiteral := array.(*parser.ArrayLiteral)
+	indexValue := int(index.(*parser.NumberLiteral).Value)
+
+	if indexValue < 0 || indexValue >= len(arrayLiteral.Elements) {
+		return fmt.Errorf("array index out of bounds: %d", indexValue)
+	}
+
+	return vm.Push(arrayLiteral.Elements[indexValue])
+}

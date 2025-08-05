@@ -34,6 +34,8 @@ const (
 	OpBitwiseNot
 	OpShiftLeft
 	OpShiftRight
+	OpArray
+	OpArrayIndex
 )
 
 func (op Opcode) String() string {
@@ -73,6 +75,8 @@ var definations = map[Opcode]*Definition{
 	OpBitwiseNot:         {"OpBitwiseNot", []int{}},
 	OpShiftLeft:          {"OpShiftLeft", []int{}},
 	OpShiftRight:         {"OpShiftRight", []int{}},
+	OpArray:              {"OpArray", []int{2}},
+	OpArrayIndex:         {"OpArrayIndex", []int{2}},
 }
 
 func Lookup(op byte) (*Definition, error) {

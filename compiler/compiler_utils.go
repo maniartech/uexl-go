@@ -77,6 +77,20 @@ func (c *Compiler) addConstant(node parser.Node) int {
 }
 
 func (c *Compiler) addContextVar(node parser.Node) int {
+	ident, ok := node.(*parser.Identifier)
+	if !ok {
+		panic("addContextVar: node is not *parser.Identifier")
+	}
+	for i, existing := range c.contextVars {
+		if exIdent, ok := existing.(*parser.Identifier); ok && exIdent.Name == ident.Name {
+			return i // Return the index of the existing variable by name
+		}
+	}
 	c.contextVars = append(c.contextVars, node)
 	return len(c.contextVars) - 1
+}
+
+func (c *Compiler) addArray(node *parser.ArrayLiteral) int {
+	c.constants = append(c.constants, node)
+	return len(c.constants) - 1
 }
