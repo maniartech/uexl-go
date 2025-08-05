@@ -177,7 +177,7 @@ func TestNumberComparison(t *testing.T) {
 		{"1.5 < 2.5", true},
 		{"(1 + 2) == 3", true},
 		{"(2 * 2) > (3 + 1)", false},
-		{"(5 - 2) < (2 * 2)", false},
+		{"(5 - 2) < (2 * 2)", true},
 		{"(10 / 2) >= 5", true},
 		{"(10 / 2) <= 5", true},
 	}
