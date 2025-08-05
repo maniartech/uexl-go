@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/maniartech/uexl_go/code"
+	"github.com/maniartech/uexl_go/parser"
 )
 
 func (vm *VM) Run() error {
@@ -15,33 +16,37 @@ func (vm *VM) Run() error {
 		case code.OpConstant:
 			constIndex := code.ReadUint16(ins[ip+1 : ip+3])
 			vm.Push(vm.constants[constIndex])
-			ip += 2
+			ip += 3
 		case code.OpContextVar:
 			varIndex := code.ReadUint16(ins[ip+1 : ip+3])
 			vm.Push(vm.contextVars[varIndex])
-			ip += 2
-		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod:
-		case code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight:
-		case code.OpLogicalAnd, code.OpLogicalOr:
+			ip += 3
+		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod,
+			code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight,
+			code.OpLogicalAnd, code.OpLogicalOr:
 			right := vm.Pop()
 			left := vm.Pop()
 			vm.executeBinaryExpression(opcode, left, right)
+			ip += 1
 		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan, code.OpGreaterThanOrEqual:
 			right := vm.Pop()
 			left := vm.Pop()
 			vm.executeComparisonOperation(opcode, left, right)
-		case code.OpMinus:
-		case code.OpBang:
+			ip += 1
+		case code.OpMinus, code.OpBang:
 			operand := vm.Pop()
 			vm.executeUnaryExpression(opcode, operand)
-		case code.OpTrue:
-			vm.Push(&True)
-		case code.OpFalse:
-			vm.Push(&False)
+			ip += 1
+		case code.OpTrue, code.OpFalse:
+			ip += 1
+		case code.OpArray:
+			length := code.ReadUint16(ins[ip+1 : ip+3])
+			array := vm.buildArray(int(length))
+			vm.Push(&parser.ArrayLiteral{Elements: array})
+			ip += 3
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, ip)
 		}
-		ip += 1
 	}
 	return nil
 }

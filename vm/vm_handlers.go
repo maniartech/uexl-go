@@ -183,3 +183,22 @@ func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right parse
 		return fmt.Errorf("unsupported comparison for type: %T", left)
 	}
 }
+
+func (vm *VM) buildArray(length int) []parser.Expression {
+	// Calculate the start index on the stack
+	startIndex := vm.sp - length
+
+	elements := make([]parser.Expression, length)
+	for i := 0; i < length; i++ {
+		elem, ok := vm.stack[startIndex+i].(parser.Expression)
+		if !ok {
+			panic(fmt.Sprintf("expected parser.Expression on stack, got %T", vm.stack[startIndex+i]))
+		}
+		elements[i] = elem
+	}
+
+	// Update the stack pointer to remove the elements
+	vm.sp = startIndex
+
+	return elements
+}
