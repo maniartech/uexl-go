@@ -80,3 +80,8 @@ func (c *Compiler) addContextVar(node parser.Node) int {
 	c.contextVars = append(c.contextVars, node)
 	return len(c.contextVars) - 1
 }
+
+func (c *Compiler) addArray(node *parser.ArrayLiteral) int {
+	c.constants = append(c.constants, node)
+	return len(c.constants) - 1
+}

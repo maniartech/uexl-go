@@ -111,6 +111,14 @@ func (c *Compiler) Compile(node parser.Node) error {
 	case *parser.Identifier:
 		// Identifiers are variables passed via go's environment context. They are "Constant" in a sense that they are not computed at runtime.
 		c.emit(code.OpContextVar, c.addContextVar(node))
+	case *parser.ArrayLiteral:
+		// Compile each element in the array
+		for _, element := range node.Elements {
+			if err := c.Compile(element); err != nil {
+				return err
+			}
+		}
+		c.emit(code.OpArray, len(node.Elements))
 	}
 	return nil
 }
