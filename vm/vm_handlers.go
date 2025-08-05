@@ -202,3 +202,21 @@ func (vm *VM) buildArray(length int) []parser.Expression {
 
 	return elements
 }
+
+func (vm *VM) executeArrayIndex(array, index parser.Node) error {
+	if _, ok := array.(*parser.ArrayLiteral); !ok {
+		return fmt.Errorf("expected array, got %T", array)
+	}
+	if _, ok := index.(*parser.NumberLiteral); !ok {
+		return fmt.Errorf("expected number index, got %T", index)
+	}
+
+	arrayLiteral := array.(*parser.ArrayLiteral)
+	indexValue := int(index.(*parser.NumberLiteral).Value)
+
+	if indexValue < 0 || indexValue >= len(arrayLiteral.Elements) {
+		return fmt.Errorf("array index out of bounds: %d", indexValue)
+	}
+
+	return vm.Push(arrayLiteral.Elements[indexValue])
+}

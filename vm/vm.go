@@ -48,6 +48,14 @@ func (vm *VM) Run() error {
 			array := vm.buildArray(int(length))
 			vm.Push(&parser.ArrayLiteral{Elements: array})
 			ip += 3
+		case code.OpArrayIndex:
+			index := vm.Pop()
+			array := vm.Pop()
+			err := vm.executeArrayIndex(array, index)
+			if err != nil {
+				return err
+			}
+			ip += 3
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, ip)
 		}
