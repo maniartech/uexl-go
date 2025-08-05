@@ -293,10 +293,10 @@ func TestStringContainsFunction(t *testing.T) {
 
 func TestArrayLiterals(t *testing.T) {
 	tests := []vmTestCase{
-		// {"[]", []any{}},
-		// {"[1]", []any{1}},
-		// {"[1, 2, 3]", []any{1, 2, 3}},
-		// {"[true, false, 1, \"hello\"]", []any{true, false, 1, "hello"}},
+		{"[]", []any{}},
+		{"[1]", []any{1}},
+		{"[1, 2, 3]", []any{1, 2, 3}},
+		{"[true, false, 1, \"hello\"]", []any{true, false, 1, "hello"}},
 		{"[1, 1 + 4, 3 * 4]", []any{1, 5, 12}},
 	}
 	runVmTests(t, tests)

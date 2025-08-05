@@ -189,7 +189,7 @@ func (vm *VM) buildArray(length int) []parser.Expression {
 	startIndex := vm.sp - length
 
 	elements := make([]parser.Expression, length)
-	for i := 0; i < length; i++ {
+	for i := range length {
 		elem, ok := vm.stack[startIndex+i].(parser.Expression)
 		if !ok {
 			panic(fmt.Sprintf("expected parser.Expression on stack, got %T", vm.stack[startIndex+i]))

@@ -37,7 +37,11 @@ func (vm *VM) Run() error {
 			operand := vm.Pop()
 			vm.executeUnaryExpression(opcode, operand)
 			ip += 1
-		case code.OpTrue, code.OpFalse:
+		case code.OpTrue:
+			vm.Push(&parser.BooleanLiteral{Value: true})
+			ip += 1
+		case code.OpFalse:
+			vm.Push(&parser.BooleanLiteral{Value: false})
 			ip += 1
 		case code.OpArray:
 			length := code.ReadUint16(ins[ip+1 : ip+3])
@@ -47,6 +51,7 @@ func (vm *VM) Run() error {
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, ip)
 		}
+
 	}
 	return nil
 }
