@@ -94,6 +94,15 @@ func (c *Compiler) Compile(node parser.Node) error {
 		case "~":
 			c.emit(code.OpBitwiseNot)
 		}
+	case *parser.IndexAccess:
+		if err := c.Compile(node.Array); err != nil {
+			return err
+		}
+		if err := c.Compile(node.Index); err != nil {
+			return err
+		}
+		c.emit(code.OpArrayIndex)
+
 	case *parser.NumberLiteral:
 		// Add the number literal to constants
 		number := &parser.NumberLiteral{Value: node.Value}
