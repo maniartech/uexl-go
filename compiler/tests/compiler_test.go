@@ -311,3 +311,46 @@ func TestArrayLiterals(t *testing.T) {
 	}
 	runCompilerTestCases(t, cases)
 }
+
+func TestArrayBracketIndexAccess(t *testing.T) {
+	cases := []compilerTestCase{
+		{"[1, 2, 3][0]", []any{1.0, 2.0, 3.0, 0.0}, []code.Instructions{
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpConstant, 1),
+			code.Make(code.OpConstant, 2),
+			code.Make(code.OpArray, 3),
+			code.Make(code.OpConstant, 3),
+			code.Make(code.OpArrayIndex),
+		}},
+		{"arr[1]", []any{1.0}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpArrayIndex),
+		}},
+		{"[1, 2, 3][2]", []any{1.0, 2.0, 3.0, 2.0}, []code.Instructions{
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpConstant, 1),
+			code.Make(code.OpConstant, 2),
+			code.Make(code.OpArray, 3),
+			code.Make(code.OpConstant, 3),
+			code.Make(code.OpArrayIndex),
+		}},
+		{"arr[0] + arr[1]", []any{0.0, 1.0}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpArrayIndex),
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpConstant, 1),
+			code.Make(code.OpArrayIndex),
+			code.Make(code.OpAdd),
+		}},
+		{"[foo, bar][0]", []any{0.0}, []code.Instructions{
+			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpContextVar, 1),
+			code.Make(code.OpArray, 2),
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpArrayIndex),
+		}},
+	}
+	runCompilerTestCases(t, cases)
+}
