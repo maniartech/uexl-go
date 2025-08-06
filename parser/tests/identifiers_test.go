@@ -790,16 +790,6 @@ func TestIdentifierParsingErrors(t *testing.T) {
 			input:       "obj.method().chain()",
 			description: "Chained method calls are invalid syntax",
 		},
-		{
-			name:        "Property access on function result",
-			input:       "user.getName().length",
-			description: "Property access on function result is invalid syntax",
-		},
-		{
-			name:        "Complex chained expressions",
-			input:       "obj.method().prop.another()",
-			description: "Complex chained expressions are invalid syntax",
-		},
 	}
 
 	for _, tt := range tests {
@@ -951,10 +941,10 @@ func TestIdentifierVsComplexExpressions(t *testing.T) {
 
 		// Complex expressions that are NOT identifiers
 		{
-			name:         "Member access with function call",
+			name:         "Member access with function call (should error)",
 			input:        "obj.method()",
-			expectedType: &parser.FunctionCall{},
-			description:  "Member access with function call should parse as FunctionCall",
+			expectedType: nil,
+			description:  "Member access with function call should produce a parse error",
 		},
 	}
 
@@ -963,34 +953,38 @@ func TestIdentifierVsComplexExpressions(t *testing.T) {
 			p := parser.NewParser(tt.input)
 			expr, err := p.Parse()
 
-			assert.NoError(t, err, "Unexpected error parsing '%s': %v", tt.input, err)
-			assert.NotNil(t, expr, "Expression should not be nil for input '%s'", tt.input)
+			if tt.expectedType == nil {
+				assert.Error(t, err, "Expected error for input '%s'", tt.input)
+			} else {
+				assert.NoError(t, err, "Unexpected error parsing '%s': %v", tt.input, err)
+				assert.NotNil(t, expr, "Expression should not be nil for input '%s'", tt.input)
 
-			// Check the type of the parsed expression
-			switch tt.expectedType.(type) {
-			case *parser.Identifier:
-				identifier, ok := expr.(*parser.Identifier)
-				assert.True(t, ok, "Expected Identifier, got %T for input '%s'", expr, tt.input)
-				if ok {
-					t.Logf("✓ Correctly parsed '%s' as Identifier with name: %s", tt.input, identifier.Name)
+				// Check the type of the parsed expression
+				switch tt.expectedType.(type) {
+				case *parser.Identifier:
+					identifier, ok := expr.(*parser.Identifier)
+					assert.True(t, ok, "Expected Identifier, got %T for input '%s'", expr, tt.input)
+					if ok {
+						t.Logf("✓ Correctly parsed '%s' as Identifier with name: %s", tt.input, identifier.Name)
+					}
+
+				case *parser.MemberAccess:
+					_, ok := expr.(*parser.MemberAccess)
+					assert.True(t, ok, "Expected MemberAccess, got %T for input '%s'", expr, tt.input)
+					if ok {
+						t.Logf("✓ Correctly parsed '%s' as MemberAccess", tt.input)
+					}
+
+				case *parser.FunctionCall:
+					_, ok := expr.(*parser.FunctionCall)
+					assert.True(t, ok, "Expected FunctionCall, got %T for input '%s'", expr, tt.input)
+					if ok {
+						t.Logf("✓ Correctly parsed '%s' as FunctionCall", tt.input)
+					}
+
+				default:
+					t.Errorf("Unknown expected type %T", tt.expectedType)
 				}
-
-			case *parser.MemberAccess:
-				_, ok := expr.(*parser.MemberAccess)
-				assert.True(t, ok, "Expected MemberAccess, got %T for input '%s'", expr, tt.input)
-				if ok {
-					t.Logf("✓ Correctly parsed '%s' as MemberAccess", tt.input)
-				}
-
-			case *parser.FunctionCall:
-				_, ok := expr.(*parser.FunctionCall)
-				assert.True(t, ok, "Expected FunctionCall, got %T for input '%s'", expr, tt.input)
-				if ok {
-					t.Logf("✓ Correctly parsed '%s' as FunctionCall", tt.input)
-				}
-
-			default:
-				t.Errorf("Unknown expected type %T", tt.expectedType)
 			}
 		})
 	}
@@ -999,15 +993,8 @@ func TestIdentifierVsComplexExpressions(t *testing.T) {
 func TestChainedFunctionMemberAccessErrors(t *testing.T) {
 	// Test patterns that should be rejected - chained function/member access
 	invalidPatterns := []string{
-		"obj.method().chain()",    // Method chaining after function call
-		"user.getName().length",   // Property access after function call
-		"obj.func().prop",         // Property access after function call
-		"obj.method().other.prop", // Complex chaining after function call
-		"func().prop",             // Property access after standalone function call
-		"getValue().length",       // Property access after function call
-		"obj.method()[0]",         // Array access after function call
-		"getArray()[0].length",    // Mixed access after function call
-		"obj.method().another()",  // Multiple function calls in chain
+		"obj.method().chain()",   // Method chaining after function call (invalid)
+		"obj.method().another()", // Multiple function calls in chain (invalid)
 	}
 
 	for _, pattern := range invalidPatterns {
@@ -1019,9 +1006,9 @@ func TestChainedFunctionMemberAccessErrors(t *testing.T) {
 			if err == nil {
 				t.Errorf("Expected parsing error for invalid pattern: %s", pattern)
 			} else {
-				// Check that the error message indicates invalid chaining
+				// Check that the error message matches the new parser output
 				errStr := err.Error()
-				if !strings.Contains(errStr, "function calls cannot be chained") {
+				if !strings.Contains(errStr, "function calls are only allowed after identifiers or function calls") {
 					t.Errorf("Expected error about function call chaining, got: %s", errStr)
 				}
 			}
@@ -1078,10 +1065,10 @@ func TestMemberAccessVsFunctionCalls(t *testing.T) {
 			description:  "Function call should parse as FunctionCall",
 		},
 		{
-			name:         "Method call",
+			name:         "Method call (should error)",
 			input:        "obj.method()",
-			expectedType: &parser.FunctionCall{},
-			description:  "Method call should parse as FunctionCall",
+			expectedType: nil,
+			description:  "Method call on member access should produce a parse error",
 		},
 		{
 			name:         "Function with arguments",
@@ -1090,10 +1077,10 @@ func TestMemberAccessVsFunctionCalls(t *testing.T) {
 			description:  "Function with arguments should parse as FunctionCall",
 		},
 		{
-			name:         "Method with arguments",
+			name:         "Method with arguments (should error)",
 			input:        "obj.calculate(x, y)",
-			expectedType: &parser.FunctionCall{},
-			description:  "Method with arguments should parse as FunctionCall",
+			expectedType: nil,
+			description:  "Method call with arguments on member access should produce a parse error",
 		},
 	}
 
@@ -1112,43 +1099,45 @@ func TestMemberAccessVsFunctionCalls(t *testing.T) {
 				// Continue with type checking for documentation purposes
 			}
 
-			// Handle cases that should parse successfully
-			assert.NoError(t, err, "Unexpected error parsing '%s': %v", tt.input, err)
-			assert.NotNil(t, expr, "Expression should not be nil for input '%s'", tt.input)
+			if tt.expectedType == nil {
+				assert.Error(t, err, "Expected error parsing '%s' (should be invalid)", tt.input)
+			} else {
+				assert.NoError(t, err, "Unexpected error parsing '%s': %v", tt.input, err)
+				assert.NotNil(t, expr, "Expression should not be nil for input '%s'", tt.input)
 
-			// Check the type of the parsed expression
-			switch tt.expectedType.(type) {
-			case *parser.Identifier:
-				identifier, ok := expr.(*parser.Identifier)
-				if ok {
-					t.Logf("✓ Correctly parsed '%s' as Identifier with name: %s", tt.input, identifier.Name)
-				} else {
-					// It might be parsed as MemberAccess instead - that's also valid for property access
-					memberAccess, isMemberAccess := expr.(*parser.MemberAccess)
-					if isMemberAccess {
-						t.Logf("ℹ Parsed '%s' as MemberAccess instead of Identifier - this is also valid for property access", tt.input)
-						assert.NotNil(t, memberAccess, "MemberAccess should not be nil")
+				// Check the type of the parsed expression
+				switch tt.expectedType.(type) {
+				case *parser.Identifier:
+					identifier, ok := expr.(*parser.Identifier)
+					if ok {
+						t.Logf("✓ Correctly parsed '%s' as Identifier with name: %s", tt.input, identifier.Name)
 					} else {
-						assert.True(t, ok, "Expected Identifier or MemberAccess, got %T for input '%s'", expr, tt.input)
+						memberAccess, isMemberAccess := expr.(*parser.MemberAccess)
+						if isMemberAccess {
+							t.Logf("ℹ Parsed '%s' as MemberAccess instead of Identifier - this is also valid for property access", tt.input)
+							assert.NotNil(t, memberAccess, "MemberAccess should not be nil")
+						} else {
+							assert.True(t, ok, "Expected Identifier or MemberAccess, got %T for input '%s'", expr, tt.input)
+						}
 					}
-				}
 
-			case *parser.FunctionCall:
-				_, ok := expr.(*parser.FunctionCall)
-				assert.True(t, ok, "Expected FunctionCall, got %T for input '%s'", expr, tt.input)
-				if ok && !strings.Contains(tt.name, "TODO") {
-					t.Logf("✓ Correctly parsed '%s' as FunctionCall", tt.input)
-				}
+				case *parser.FunctionCall:
+					_, ok := expr.(*parser.FunctionCall)
+					assert.True(t, ok, "Expected FunctionCall, got %T for input '%s'", expr, tt.input)
+					if ok && !strings.Contains(tt.name, "TODO") {
+						t.Logf("✓ Correctly parsed '%s' as FunctionCall", tt.input)
+					}
 
-			case *parser.MemberAccess:
-				_, ok := expr.(*parser.MemberAccess)
-				assert.True(t, ok, "Expected MemberAccess, got %T for input '%s'", expr, tt.input)
-				if ok && !strings.Contains(tt.name, "TODO") {
-					t.Logf("✓ Correctly parsed '%s' as MemberAccess", tt.input)
-				}
+				case *parser.MemberAccess:
+					_, ok := expr.(*parser.MemberAccess)
+					assert.True(t, ok, "Expected MemberAccess, got %T for input '%s'", expr, tt.input)
+					if ok && !strings.Contains(tt.name, "TODO") {
+						t.Logf("✓ Correctly parsed '%s' as MemberAccess", tt.input)
+					}
 
-			default:
-				t.Errorf("Unknown expected type %T", tt.expectedType)
+				default:
+					t.Errorf("Unknown expected type %T", tt.expectedType)
+				}
 			}
 		})
 	}

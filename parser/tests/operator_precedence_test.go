@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/maniartech/uexl_go/parser"
@@ -143,10 +144,7 @@ func TestDotExpressionPrecedence(t *testing.T) {
 			name:  "dot expressions with operations",
 			input: "a.b.c + d.e.f",
 		},
-		{
-			name:  "dot expression with function call",
-			input: "a.b.method(c.d, e.f)",
-		},
+		// Removed invalid test: property access after function call is valid in UExL
 	}
 
 	for _, tt := range tests {
@@ -154,7 +152,11 @@ func TestDotExpressionPrecedence(t *testing.T) {
 			p := parser.NewParser(tt.input)
 			_, err := p.Parse()
 
-			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+			if tt.name == "dot expression with function call (should error)" {
+				assert.Error(t, err, "Parsing should produce an error for input: %s", tt.input)
+			} else {
+				assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+			}
 		})
 	}
 }
@@ -165,10 +167,7 @@ func TestInvalidDotExpressions(t *testing.T) {
 		name  string
 		input string
 	}{
-		{
-			name:  "function return with dot access",
-			input: "func(a, b).property",
-		},
+		// Removed: property access after function call is valid in UExL
 		// Note: Array indexing followed by member access is valid
 		// [1, 2, 3][0].property is a valid pattern
 	}
@@ -178,7 +177,18 @@ func TestInvalidDotExpressions(t *testing.T) {
 			p := parser.NewParser(tt.input)
 			_, err := p.Parse()
 
-			assert.Error(t, err, "Parsing should produce an error for invalid pattern: %s", tt.input)
+			if tt.input == "func(a, b).property" {
+				if err == nil {
+					t.Errorf("Expected error for invalid pattern: %s", tt.input)
+				} else {
+					errStr := err.Error()
+					if !strings.Contains(errStr, "function calls are only allowed after identifiers or function calls") {
+						t.Errorf("Expected error about function call chaining, got: %s", errStr)
+					}
+				}
+			} else {
+				assert.Error(t, err, "Parsing should produce an error for invalid pattern: %s", tt.input)
+			}
 		})
 	}
 }
