@@ -1,6 +1,8 @@
 package compiler
 
 import (
+	"sort"
+
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/parser"
 )
@@ -101,12 +103,28 @@ func (c *Compiler) Compile(node parser.Node) error {
 		if err := c.Compile(node.Index); err != nil {
 			return err
 		}
-		c.emit(code.OpArrayIndex)
+		c.emit(code.OpIndex)
+	case *parser.ObjectLiteral:
+		// Ensure deterministic order by sorting keys
+		keys := make([]string, 0, len(node.Properties))
+		for key := range node.Properties {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
 
+		for _, key := range keys {
+			stringLiteral := &parser.StringLiteral{Value: key}
+			keyIdx := c.addConstant(stringLiteral)
+			c.emit(code.OpConstant, keyIdx) // Push key onto stack
+
+			if err := c.Compile(node.Properties[key]); err != nil {
+				return err
+			}
+		}
+		c.emit(code.OpObject, len(node.Properties)*2) // Each key-value pair is two stack elements
 	case *parser.NumberLiteral:
 		// Add the number literal to constants
-		number := &parser.NumberLiteral{Value: node.Value}
-		c.emit(code.OpConstant, c.addConstant(number))
+		c.emit(code.OpConstant, c.addConstant(node))
 	case *parser.BooleanLiteral:
 		if node.Value {
 			c.emit(code.OpTrue)
@@ -115,8 +133,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 		}
 	case *parser.StringLiteral:
 		// Add the string literal to constants
-		stringLiteral := &parser.StringLiteral{Value: node.Value}
-		c.emit(code.OpConstant, c.addConstant(stringLiteral))
+		c.emit(code.OpConstant, c.addConstant(node))
 	case *parser.Identifier:
 		// Identifiers are variables passed via go's environment context. They are "Constant" in a sense that they are not computed at runtime.
 		c.emit(code.OpContextVar, c.addContextVar(node))
