@@ -297,19 +297,18 @@ func (p *Parser) parseMemberAccess() Expression {
 				Column:   dot.Column,
 			}
 			continue // check for more member access operations
-		} // Handle function call after member or index access
-		if p.current.Type == constants.TokenLeftParen {
-			expr = p.parseFunctionCall(expr)
+		}
 
-			// After a function call, check for invalid chaining
-			if p.current.Type == constants.TokenDot || p.current.Type == constants.TokenLeftBracket || p.current.Type == constants.TokenLeftParen {
-				// This is invalid - function calls cannot be chained
-				p.addErrorWithToken(errors.ErrInvalidSyntax, "function calls cannot be chained with member access or other function calls")
+		// Handle function call after member or index access
+		if p.current.Type == constants.TokenLeftParen {
+			switch expr.(type) {
+			case *Identifier, *FunctionCall:
+				expr = p.parseFunctionCall(expr)
+				continue // allow chaining after function call
+			default:
+				p.addErrorWithToken(errors.ErrInvalidSyntax, "function calls are only allowed after identifiers or function calls, not after member access or index access")
 				return expr
 			}
-
-			// Function calls end the chain - no more member access allowed
-			break
 		}
 
 		// No more member access operations
