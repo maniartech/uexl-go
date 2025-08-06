@@ -56,6 +56,10 @@ func testConstants(
 			if err := testNumerLiteral(constant, actual[i]); err != nil {
 				return fmt.Errorf("test case %d: %s", i, err)
 			}
+		case string:
+			if err := testStringLiteral(constant, actual[i]); err != nil {
+				return fmt.Errorf("test case %d: %s", i, err)
+			}
 		default:
 			return fmt.Errorf("unknown constant type %T", constant)
 		}
@@ -72,6 +76,17 @@ func testNumerLiteral(expected float64, actual parser.Node) error {
 		return nil
 	}
 	return fmt.Errorf("expected a number literal, got %T", actual)
+}
+
+func testStringLiteral(expected string, actual parser.Node) error {
+	if str, ok := actual.(*parser.StringLiteral); ok {
+		if str.Value != expected {
+			return fmt.Errorf("wrong string literal. got=%q, want=%q",
+				str.Value, expected)
+		}
+		return nil
+	}
+	return fmt.Errorf("expected a string literal, got %T", actual)
 }
 
 func runCompilerTestCases(t *testing.T, cases []compilerTestCase) {

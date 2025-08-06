@@ -110,6 +110,31 @@ func testExpectedObject(t *testing.T, expected any, actual parser.Node) error {
 		} else {
 			return fmt.Errorf("expected an array, got %T", expected)
 		}
+	case *parser.ObjectLiteral:
+		if expectedMap, ok := expected.(map[string]any); ok {
+			if len(actual.Properties) != len(expectedMap) {
+				return fmt.Errorf("expected object with %d properties, got %d", len(expectedMap), len(actual.Properties))
+			}
+			for key, value := range actual.Properties {
+				if expectedValue, exists := expectedMap[key]; exists {
+					if err := testExpectedObject(t, expectedValue, value); err != nil {
+						return fmt.Errorf("error for key %q: %s", key, err)
+					}
+				} else {
+					return fmt.Errorf("unexpected key %q in object", key)
+				}
+			}
+			// Also check that all expected keys are present
+			for expectedKey := range expectedMap {
+				if _, exists := actual.Properties[expectedKey]; !exists {
+					return fmt.Errorf("missing expected key %q in object", expectedKey)
+				}
+			}
+		} else {
+			return fmt.Errorf("expected an object, got %T", expected)
+		}
+	default:
+		return fmt.Errorf("unsupported type: %T (value: %v)", actual, actual)
 	}
 	return nil
 }
@@ -316,7 +341,32 @@ func TestArrayIndexing(t *testing.T) {
 		{"[1, 2, 3][0] + [4, 5, 6][2]", 7},
 		{"[[1,2],[3,4]][1][0]", 3},
 		{"[1, [2, 3+5], 4][1][1]", 8},
+	}
+	runVmTests(t, tests)
+}
+func TestObjectLiterals(t *testing.T) {
+	tests := []vmTestCase{
+		{`{}`, map[string]any{}},
+		{`{"a": 1}`, map[string]any{"a": 1}},
+		{`{"a": 1, "b": 2}`, map[string]any{"a": 1, "b": 2}},
+		{`{"x": true, "y": false, "z": "hello"}`, map[string]any{"x": true, "y": false, "z": "hello"}},
+		{`{"num": 42, "arr": [1,2,3], "obj": {"nested": "yes"}}`, map[string]any{
+			"num": 42,
+			"arr": []any{1, 2, 3},
+			"obj": map[string]any{"nested": "yes"},
+		}},
+	}
+	runVmTests(t, tests)
+}
 
+func TestObjectIndexing(t *testing.T) {
+	tests := []vmTestCase{
+		{`{"a": 1, "b": 2}["a"]`, 1},
+		{`{"a": 1, "b": 2}["b"]`, 2},
+		{`{"x": true, "y": false}["y"]`, false},
+		{`{"foo": "bar"}["foo"]`, "bar"},
+		{`{"arr": [1,2,3]}["arr"][1]`, 2},
+		{`{"obj": {"nested": 99}}["obj"]["nested"]`, 99},
 	}
 	runVmTests(t, tests)
 }
