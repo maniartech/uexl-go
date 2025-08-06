@@ -15,47 +15,82 @@ func (vm *VM) Run() error {
 		switch opcode {
 		case code.OpConstant:
 			constIndex := code.ReadUint16(ins[ip+1 : ip+3])
-			vm.Push(vm.constants[constIndex])
+			err := vm.Push(vm.constants[constIndex])
+			if err != nil {
+				return err
+			}
 			ip += 3
 		case code.OpContextVar:
 			varIndex := code.ReadUint16(ins[ip+1 : ip+3])
-			vm.Push(vm.contextVars[varIndex])
+			err := vm.Push(vm.contextVars[varIndex])
+			if err != nil {
+				return err
+			}
 			ip += 3
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod,
 			code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight,
 			code.OpLogicalAnd, code.OpLogicalOr:
 			right := vm.Pop()
 			left := vm.Pop()
-			vm.executeBinaryExpression(opcode, left, right)
+			err := vm.executeBinaryExpression(opcode, left, right)
+			if err != nil {
+				return err
+			}
 			ip += 1
 		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan, code.OpGreaterThanOrEqual:
 			right := vm.Pop()
 			left := vm.Pop()
-			vm.executeComparisonOperation(opcode, left, right)
+			err := vm.executeComparisonOperation(opcode, left, right)
+			if err != nil {
+				return err
+			}
 			ip += 1
 		case code.OpMinus, code.OpBang:
 			operand := vm.Pop()
-			vm.executeUnaryExpression(opcode, operand)
+			err := vm.executeUnaryExpression(opcode, operand)
+			if err != nil {
+				return err
+			}
 			ip += 1
 		case code.OpTrue:
-			vm.Push(&parser.BooleanLiteral{Value: true})
+			err := vm.Push(&parser.BooleanLiteral{Value: true})
+			if err != nil {
+				return err
+			}
 			ip += 1
 		case code.OpFalse:
-			vm.Push(&parser.BooleanLiteral{Value: false})
+			err := vm.Push(&parser.BooleanLiteral{Value: false})
+			if err != nil {
+				return err
+			}
 			ip += 1
 		case code.OpArray:
 			length := code.ReadUint16(ins[ip+1 : ip+3])
 			array := vm.buildArray(int(length))
-			vm.Push(&parser.ArrayLiteral{Elements: array})
-			ip += 3
-		case code.OpArrayIndex:
-			index := vm.Pop()
-			array := vm.Pop()
-			err := vm.executeArrayIndex(array, index)
+			err := vm.Push(&parser.ArrayLiteral{Elements: array})
 			if err != nil {
 				return err
 			}
 			ip += 3
+		case code.OpObject:
+			length := code.ReadUint16(ins[ip+1 : ip+3]) // length is already number of stack elements
+			object, err := vm.buildObject(vm.sp-int(length), vm.sp)
+			if err != nil {
+				return err
+			}
+			err = vm.Push(&parser.ObjectLiteral{Properties: object})
+			if err != nil {
+				return err
+			}
+			ip += 3
+		case code.OpIndex:
+			index := vm.Pop()
+			array := vm.Pop()
+			err := vm.executeIndex(array, index)
+			if err != nil {
+				return err
+			}
+			ip += 1
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, ip)
 		}
