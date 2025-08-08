@@ -91,6 +91,14 @@ func (vm *VM) Run() error {
 				return err
 			}
 			ip += 1
+		case code.OpCallFunction:
+			funcIndex := code.ReadUint16(ins[ip+1 : ip+3])
+			numArgs := code.ReadUint16(ins[ip+3 : ip+5])
+			err := vm.callFunction(funcIndex, numArgs)
+			if err != nil {
+				return err
+			}
+			ip += 5
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, ip)
 		}

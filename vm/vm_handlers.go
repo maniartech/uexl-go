@@ -221,7 +221,7 @@ func (vm *VM) buildObject(startIndex, endIndex int) (map[string]parser.Expressio
 }
 
 func (vm *VM) executeIndex(operand, index parser.Node) error {
-	// Check if the operand is an array 
+	// Check if the operand is an array
 	switch operand := operand.(type) {
 	case *parser.ArrayLiteral:
 		if index, ok := index.(*parser.NumberLiteral); ok {
@@ -254,4 +254,47 @@ func (vm *VM) executeArrayIndex(array, index parser.Node) error {
 	}
 
 	return vm.Push(arrayLiteral.Elements[indexValue])
+}
+
+func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
+
+	if int(funcIndex) < 0 || int(funcIndex) >= len(vm.constants) {
+		return fmt.Errorf("function index out of bounds: %d", funcIndex)
+	}
+
+	var functionName string
+
+	switch fn := vm.constants[funcIndex].(type) {
+	case *parser.Identifier:
+		functionName = fn.Name
+	case *parser.StringLiteral:
+		functionName = fn.Value
+	default:
+		return fmt.Errorf("function name at constant index %d is not an identifier or string, got %T", funcIndex, vm.constants[funcIndex])
+	}
+
+	function, exists := vm.functionContext[functionName]
+	if !exists {
+		return fmt.Errorf("function %s not found in context", functionName)
+	}
+
+	args := make([]parser.Node, numArgs)
+	for i := 0; i < int(numArgs); i++ {
+		if vm.sp == 0 {
+			return fmt.Errorf("not enough arguments on stack for function %s", functionName)
+		}
+		args[int(numArgs)-1-i] = vm.Pop()
+	}
+
+	functionResult, err := function(args...)
+	if err != nil {
+		return fmt.Errorf("error calling function %s: %w", functionName, err)
+	}
+
+	// If the function returns nil, we don't push anything onto the stack.
+	if functionResult == nil {
+		return nil
+	}
+
+	return vm.Push(functionResult)
 }
