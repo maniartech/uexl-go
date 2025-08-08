@@ -10,6 +10,7 @@ import (
 type Compiler struct {
 	constants   []parser.Node
 	contextVars []parser.Node
+	
 	scopes      []CompilationScope
 	scopeIndex  int
 }
@@ -96,6 +97,14 @@ func (c *Compiler) Compile(node parser.Node) error {
 		case "~":
 			c.emit(code.OpBitwiseNot)
 		}
+	case *parser.FunctionCall:
+		for _, arg := range node.Arguments {
+			if err := c.Compile(arg); err != nil {
+				return err
+			}
+		}
+		fnIdx := c.addConstant(&parser.StringLiteral{Value: node.Function.(*parser.Identifier).Name})
+		c.emit(code.OpCallFunction, fnIdx, len(node.Arguments))
 	case *parser.IndexAccess:
 		if err := c.Compile(node.Array); err != nil {
 			return err
