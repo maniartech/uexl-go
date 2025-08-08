@@ -35,7 +35,9 @@ const (
 	OpShiftLeft
 	OpShiftRight
 	OpArray
-	OpArrayIndex
+	OpIndex
+	OpObject
+	OpCallFunction
 )
 
 func (op Opcode) String() string {
@@ -76,7 +78,9 @@ var definations = map[Opcode]*Definition{
 	OpShiftLeft:          {"OpShiftLeft", []int{}},
 	OpShiftRight:         {"OpShiftRight", []int{}},
 	OpArray:              {"OpArray", []int{2}},
-	OpArrayIndex:         {"OpArrayIndex", []int{2}},
+	OpObject:             {"OpHash", []int{2}},
+	OpIndex:              {"OpIndex", []int{}},
+	OpCallFunction:       {"OpCallFunction", []int{2, 2}},
 }
 
 func Lookup(op byte) (*Definition, error) {

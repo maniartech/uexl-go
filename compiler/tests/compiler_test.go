@@ -320,12 +320,12 @@ func TestArrayBracketIndexAccess(t *testing.T) {
 			code.Make(code.OpConstant, 2),
 			code.Make(code.OpArray, 3),
 			code.Make(code.OpConstant, 3),
-			code.Make(code.OpArrayIndex),
+			code.Make(code.OpIndex),
 		}},
 		{"arr[1]", []any{1.0}, []code.Instructions{
 			code.Make(code.OpContextVar, 0),
 			code.Make(code.OpConstant, 0),
-			code.Make(code.OpArrayIndex),
+			code.Make(code.OpIndex),
 		}},
 		{"[1, 2, 3][2]", []any{1.0, 2.0, 3.0, 2.0}, []code.Instructions{
 			code.Make(code.OpConstant, 0),
@@ -333,15 +333,15 @@ func TestArrayBracketIndexAccess(t *testing.T) {
 			code.Make(code.OpConstant, 2),
 			code.Make(code.OpArray, 3),
 			code.Make(code.OpConstant, 3),
-			code.Make(code.OpArrayIndex),
+			code.Make(code.OpIndex),
 		}},
 		{"arr[0] + arr[1]", []any{0.0, 1.0}, []code.Instructions{
 			code.Make(code.OpContextVar, 0),
 			code.Make(code.OpConstant, 0),
-			code.Make(code.OpArrayIndex),
+			code.Make(code.OpIndex),
 			code.Make(code.OpContextVar, 0),
 			code.Make(code.OpConstant, 1),
-			code.Make(code.OpArrayIndex),
+			code.Make(code.OpIndex),
 			code.Make(code.OpAdd),
 		}},
 		{"[foo, bar][0]", []any{0.0}, []code.Instructions{
@@ -349,7 +349,151 @@ func TestArrayBracketIndexAccess(t *testing.T) {
 			code.Make(code.OpContextVar, 1),
 			code.Make(code.OpArray, 2),
 			code.Make(code.OpConstant, 0),
-			code.Make(code.OpArrayIndex),
+			code.Make(code.OpIndex),
+		}},
+	}
+	runCompilerTestCases(t, cases)
+}
+func TestObjectLiterals(t *testing.T) {
+	cases := []compilerTestCase{
+		// Empty object
+		{"{}", []any{}, []code.Instructions{
+			code.Make(code.OpObject, 0),
+		}},
+		// Single property with number value
+		{`{"a": 1}`, []any{"a", 1.0}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "a"
+			code.Make(code.OpConstant, 1), // 1.0
+			code.Make(code.OpObject, 2),
+		}},
+		// Multiple properties with number values
+		{`{"a": 1, "b": 2}`, []any{"a", 1.0, "b", 2.0}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "a"
+			code.Make(code.OpConstant, 1), // 1.0
+			code.Make(code.OpConstant, 2), // "b"
+			code.Make(code.OpConstant, 3), // 2.0
+			code.Make(code.OpObject, 4),
+		}},
+		// Property with boolean value
+		{`{"flag": true}`, []any{"flag"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "flag"
+			code.Make(code.OpTrue),
+			code.Make(code.OpObject, 2),
+		}},
+		// Property with string value
+		{`{"name": "bob"}`, []any{"name", "bob"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "name"
+			code.Make(code.OpConstant, 1), // "bob"
+			code.Make(code.OpObject, 2),
+		}},
+		// Nested object
+		{`{"outer": {"inner": 42}}`, []any{"outer", "inner", 42.0}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "outer"
+			code.Make(code.OpConstant, 1), // "inner"
+			code.Make(code.OpConstant, 2), // 42.0
+			code.Make(code.OpObject, 2),
+			code.Make(code.OpObject, 2),
+		}},
+		// Object with array property
+		{`{"arr": [1, 2]}`, []any{"arr", 1.0, 2.0}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "arr"
+			code.Make(code.OpConstant, 1), // 1.0
+			code.Make(code.OpConstant, 2), // 2.0
+			code.Make(code.OpArray, 2),
+			code.Make(code.OpObject, 2),
+		}},
+		// Object with context variable property
+		{`{"foo": bar}`, []any{"foo"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "foo"
+			code.Make(code.OpContextVar, 0), // bar
+			code.Make(code.OpObject, 2),
+		}},
+		// Multiple property types
+		{`{"x": 1, "y": true, "z": "hi"}`, []any{"x", 1.0, "y", "z", "hi"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "x"
+			code.Make(code.OpConstant, 1), // 1.0
+			code.Make(code.OpConstant, 2), // "y"
+			code.Make(code.OpTrue),
+			code.Make(code.OpConstant, 3), // "z"
+			code.Make(code.OpConstant, 4), // "hi"
+			code.Make(code.OpObject, 6),
+		}},
+		{ // Object with mixed types and nested structure
+			`{"a": 1, "b": {"c": 2}}`, []any{"a", 1.0, "b", "c", 2.0}, []code.Instructions{
+				code.Make(code.OpConstant, 0), // "a"
+				code.Make(code.OpConstant, 1), // 1.0
+				code.Make(code.OpConstant, 2), // "b"
+				code.Make(code.OpConstant, 3), // "c"
+				code.Make(code.OpConstant, 4), // 2.0
+				code.Make(code.OpObject, 2), // {"c": 2}
+				code.Make(code.OpObject, 4),
+			}},
+	}
+	runCompilerTestCases(t, cases)
+}
+
+func TestObjectBracketIndexAccess(t *testing.T) {
+	cases := []compilerTestCase{
+		// Access property by string literal
+		{`{"a": 1}["a"]`, []any{"a", 1.0, "a"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "a"
+			code.Make(code.OpConstant, 1), // 1.0
+			code.Make(code.OpObject, 2),
+			code.Make(code.OpConstant, 2), // "a"
+			code.Make(code.OpIndex),
+		}},
+		// Access property by context variable
+		{`obj["key"]`, []any{"key"}, []code.Instructions{
+			code.Make(code.OpContextVar, 0), // obj
+			code.Make(code.OpConstant, 0),   // "key"
+			code.Make(code.OpIndex),
+		}},
+		// Nested object property access
+		{`{"a": {"b": 2}}["a"]["b"]`, []any{"a", "b", 2.0, "a", "b"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "a"
+			code.Make(code.OpConstant, 1), // "b"
+			code.Make(code.OpConstant, 2), // 2.0
+			code.Make(code.OpObject, 2),
+			code.Make(code.OpObject, 2),
+			code.Make(code.OpConstant, 3), // "a"
+			code.Make(code.OpIndex),
+			code.Make(code.OpConstant, 4), // "b"
+			code.Make(code.OpIndex),
+		}},
+	}
+	runCompilerTestCases(t, cases)
+}
+func TestFunctionCalls(t *testing.T) {
+	cases := []compilerTestCase{
+		// Simple function call with no arguments
+		{`foo()`, []any{"foo"}, []code.Instructions{
+			code.Make(code.OpCallFunction, 0, 0),
+		}},
+		// Function call with one argument
+		{`bar(42)`, []any{42.0, "bar"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // 42.0
+			code.Make(code.OpCallFunction, 1, 1),
+		}},
+		// Function call with multiple arguments
+		{`baz(1, 2, 3)`, []any{1.0, 2.0, 3.0, "baz"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // 1.0
+			code.Make(code.OpConstant, 1), // 2.0
+			code.Make(code.OpConstant, 2), // 3.0
+			code.Make(code.OpCallFunction, 3, 3),
+		}},
+		// Function call with context variables
+		{`doSomething(foo, bar)`, []any{"doSomething"},
+			[]code.Instructions{
+				code.Make(code.OpContextVar, 0), // foo
+				code.Make(code.OpContextVar, 1), // bar
+				code.Make(code.OpCallFunction, 0, 2),
+			}},
+		// Function call with mixed arguments
+		{`calculate(1, bar, 3)`, []any{1.0, 3.0, "calculate"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // 1.0
+			code.Make(code.OpContextVar, 0), // bar
+			code.Make(code.OpConstant, 1), // 3.0
+			code.Make(code.OpCallFunction, 2, 3),
 		}},
 	}
 	runCompilerTestCases(t, cases)
