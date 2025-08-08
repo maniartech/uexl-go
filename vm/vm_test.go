@@ -31,7 +31,7 @@ type vmTestCases struct {
 }
 
 func TestVM(t *testing.T) {
-	vm := vm.New(&compiler.ByteCode{})
+	vm := vm.New(&compiler.ByteCode{}, vm.Builtins)
 	if vm == nil {
 		t.Fatal("failed to create VM")
 	}
@@ -51,7 +51,7 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 		if err != nil {
 			t.Fatalf("compiler error: %s", err)
 		}
-		vm := vm.New(comp.ByteCode())
+		vm := vm.New(comp.ByteCode(), vm.Builtins)
 		err = vm.Run()
 		if err != nil {
 			t.Fatalf("vm error: %s", err)

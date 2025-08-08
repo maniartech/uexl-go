@@ -463,3 +463,38 @@ func TestObjectBracketIndexAccess(t *testing.T) {
 	}
 	runCompilerTestCases(t, cases)
 }
+func TestFunctionCalls(t *testing.T) {
+	cases := []compilerTestCase{
+		// Simple function call with no arguments
+		{`foo()`, []any{"foo"}, []code.Instructions{
+			code.Make(code.OpCallFunction, 0, 0),
+		}},
+		// Function call with one argument
+		{`bar(42)`, []any{42.0, "bar"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // 42.0
+			code.Make(code.OpCallFunction, 1, 1),
+		}},
+		// Function call with multiple arguments
+		{`baz(1, 2, 3)`, []any{1.0, 2.0, 3.0, "baz"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // 1.0
+			code.Make(code.OpConstant, 1), // 2.0
+			code.Make(code.OpConstant, 2), // 3.0
+			code.Make(code.OpCallFunction, 3, 3),
+		}},
+		// Function call with context variables
+		{`doSomething(foo, bar)`, []any{"doSomething"},
+			[]code.Instructions{
+				code.Make(code.OpContextVar, 0), // foo
+				code.Make(code.OpContextVar, 1), // bar
+				code.Make(code.OpCallFunction, 0, 2),
+			}},
+		// Function call with mixed arguments
+		{`calculate(1, bar, 3)`, []any{1.0, 3.0, "calculate"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // 1.0
+			code.Make(code.OpContextVar, 0), // bar
+			code.Make(code.OpConstant, 1), // 3.0
+			code.Make(code.OpCallFunction, 2, 3),
+		}},
+	}
+	runCompilerTestCases(t, cases)
+}
