@@ -150,7 +150,11 @@ func (p *Parser) parsePipeExpression() Expression {
 		return nil
 	}
 
-	programNode := &ProgramNode{}
+	programNode := &ProgramNode{
+		PipeExpressions: make([]PipeExpression, 0, len(expressions)),
+		Line:            startLine,
+		Column:          startColumn,
+	}
 
 	for i, expr := range expressions {
 		if expr == nil {
