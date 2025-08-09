@@ -14,21 +14,25 @@ var True = parser.BooleanLiteral{Value: true}
 var False = parser.BooleanLiteral{Value: false}
 var Null = parser.NullLiteral{}
 
+type VMFunctions map[string]func(args ...parser.Node) (parser.Node, error)
+
 type VM struct {
-	constants    []parser.Node
-	contextVars  []parser.Node
-	instructions code.Instructions
-	stack        []parser.Node
-	sp           int
+	constants       []parser.Node
+	contextVars     []parser.Node
+	functionContext VMFunctions
+	instructions    code.Instructions
+	stack           []parser.Node
+	sp              int
 }
 
-func New(bytecode *compiler.ByteCode) *VM {
+func New(bytecode *compiler.ByteCode, functionContext VMFunctions) *VM {
 	return &VM{
-		constants:    bytecode.Constants,
-		contextVars:  bytecode.ContextVars,
-		instructions: bytecode.Instructions,
-		stack:        make([]parser.Node, StackSize),
-		sp:           0,
+		constants:       bytecode.Constants,
+		contextVars:     bytecode.ContextVars,
+		instructions:    bytecode.Instructions,
+		functionContext: functionContext,
+		stack:           make([]parser.Node, StackSize),
+		sp:              0,
 	}
 }
 func (vm *VM) Push(node parser.Node) error {

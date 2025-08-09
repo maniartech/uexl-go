@@ -203,6 +203,41 @@ func (vm *VM) buildArray(length int) []parser.Expression {
 	return elements
 }
 
+func (vm *VM) buildObject(startIndex, endIndex int) (map[string]parser.Expression, error) {
+	object := make(map[string]parser.Expression)
+	for i := startIndex; i < endIndex; i += 2 {
+		key, ok := vm.stack[i].(*parser.StringLiteral)
+		if !ok {
+			return nil, fmt.Errorf("expected string key, got %T", vm.stack[i])
+		}
+		value, ok := vm.stack[i+1].(parser.Expression)
+		if !ok {
+			return nil, fmt.Errorf("expected expression value, got %T", vm.stack[i+1])
+		}
+		object[key.Value] = value
+	}
+	vm.sp = startIndex
+	return object, nil
+}
+
+func (vm *VM) executeIndex(operand, index parser.Node) error {
+	// Check if the operand is an array
+	switch operand := operand.(type) {
+	case *parser.ArrayLiteral:
+		if index, ok := index.(*parser.NumberLiteral); ok {
+			return vm.executeArrayIndex(operand, index)
+		}
+	case *parser.ObjectLiteral:
+		if key, ok := index.(*parser.StringLiteral); ok {
+			if value, exists := operand.Properties[key.Value]; exists {
+				return vm.Push(value)
+			}
+			return fmt.Errorf("key %q not found in object", key.Value)
+		}
+	}
+	return fmt.Errorf("indexing not supported for %T", operand)
+}
+
 func (vm *VM) executeArrayIndex(array, index parser.Node) error {
 	if _, ok := array.(*parser.ArrayLiteral); !ok {
 		return fmt.Errorf("expected array, got %T", array)
@@ -219,4 +254,47 @@ func (vm *VM) executeArrayIndex(array, index parser.Node) error {
 	}
 
 	return vm.Push(arrayLiteral.Elements[indexValue])
+}
+
+func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
+
+	if int(funcIndex) < 0 || int(funcIndex) >= len(vm.constants) {
+		return fmt.Errorf("function index out of bounds: %d", funcIndex)
+	}
+
+	var functionName string
+
+	switch fn := vm.constants[funcIndex].(type) {
+	case *parser.Identifier:
+		functionName = fn.Name
+	case *parser.StringLiteral:
+		functionName = fn.Value
+	default:
+		return fmt.Errorf("function name at constant index %d is not an identifier or string, got %T", funcIndex, vm.constants[funcIndex])
+	}
+
+	function, exists := vm.functionContext[functionName]
+	if !exists {
+		return fmt.Errorf("function %s not found in context", functionName)
+	}
+
+	args := make([]parser.Node, numArgs)
+	for i := 0; i < int(numArgs); i++ {
+		if vm.sp == 0 {
+			return fmt.Errorf("not enough arguments on stack for function %s", functionName)
+		}
+		args[int(numArgs)-1-i] = vm.Pop()
+	}
+
+	functionResult, err := function(args...)
+	if err != nil {
+		return fmt.Errorf("error calling function %s: %w", functionName, err)
+	}
+
+	// If the function returns nil, we don't push anything onto the stack.
+	if functionResult == nil {
+		return nil
+	}
+
+	return vm.Push(functionResult)
 }
