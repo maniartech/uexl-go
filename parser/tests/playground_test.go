@@ -3,18 +3,17 @@ package parser_test
 import (
 	"testing"
 
-	_ "github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/internal/utils"
+	"github.com/maniartech/uexl_go/parser"
 )
 
 func TestPlayground(t *testing.T) {
-	// input := "obj.a.b.c + func('10')"
+	input := "x + 10 as $abc |: 2 * $abc + 5 |x: $abc / 2"
 
-	// parser := NewParser(input)
-	// expr, err := parser.Parse()
+	expr, err := parser.ParseString(input)
+	if err != nil {
+		t.Fatalf("Failed to parse expression: %v", err)
+	}
 
-	// if err != nil {
-	// 	t.Fatalf("Failed to parse expression: %v", err)
-	// }
-
-	// utils.PrintJSON(expr)
+	utils.PrintJSON(expr)
 }

@@ -15,6 +15,7 @@ const (
 	NodeTypeFunctionCall     NodeType = "FunctionCall"
 	NodeTypeMemberAccess     NodeType = "MemberAccess"
 	NodeTypePipeExpression   NodeType = "PipeExpression"
+	NodeTypeProgram          NodeType = "Program"
 )
 
 type Node interface {
@@ -145,13 +146,23 @@ func (ma *MemberAccess) Type() NodeType       { return NodeTypeMemberAccess }
 func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
 
 type PipeExpression struct {
-	Expressions []Expression
-	PipeTypes   []string
-	Aliases     []string // New field to store aliases
-	Line        int
-	Column      int
+	Expression Expression
+	PipeType   string
+	Aliase     string
+	Line       int
+	Column     int
 }
 
 func (pe *PipeExpression) expressionNode()      {}
 func (pe *PipeExpression) Type() NodeType       { return NodeTypePipeExpression }
 func (pe *PipeExpression) Position() (int, int) { return pe.Line, pe.Column }
+
+type ProgramNode struct {
+	PipeExpressions []PipeExpression
+	Line            int
+	Column          int
+}
+
+func (pn *ProgramNode) expressionNode()      {}
+func (pn *ProgramNode) Type() NodeType       { return NodeTypeProgram }
+func (pn *ProgramNode) Position() (int, int) { return pn.Line, pn.Column }

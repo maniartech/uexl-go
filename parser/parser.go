@@ -150,13 +150,23 @@ func (p *Parser) parsePipeExpression() Expression {
 		return nil
 	}
 
-	return &PipeExpression{
-		Expressions: expressions,
-		PipeTypes:   pipeTypes,
-		Aliases:     aliases,
-		Line:        startLine,
-		Column:      startColumn,
+	programNode := &ProgramNode{}
+
+	for i, expr := range expressions {
+		if expr == nil {
+			p.addError(errors.ErrInvalidExpression, fmt.Sprintf("nil expression at index %d", i))
+			continue
+		}
+		programNode.PipeExpressions = append(programNode.PipeExpressions, PipeExpression{
+			Expression: expr,
+			PipeType:   pipeTypes[i],
+			Aliase:     aliases[i],
+			Line:       startLine,
+			Column:     startColumn,
+		})
 	}
+
+	return programNode
 }
 
 func (p *Parser) parsePipeAlias() (string, error) {

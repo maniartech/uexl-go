@@ -59,9 +59,10 @@ func TestPipeExpressions(t *testing.T) {
 			ast, err := p.Parse()
 			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
 
-			// Verify it's a pipe expression
-			_, ok := ast.(*parser.PipeExpression)
-			assert.True(t, ok, "Expected a PipeExpression for input: %s", tt.input)
+			// Verify it's a ProgramNode containing PipeExpressions
+			program, ok := ast.(*parser.ProgramNode)
+			assert.True(t, ok, "Expected a ProgramNode for input: %s", tt.input)
+			assert.NotEmpty(t, program.PipeExpressions, "ProgramNode should contain PipeExpressions for input: %s", tt.input)
 		})
 	}
 }
@@ -187,11 +188,18 @@ func TestPipeExpressionWithAlias(t *testing.T) {
 			ast, err := p.Parse()
 			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
 
-			// Verify it's a pipe expression if it contains a pipe or alias
+			// Verify it's a ProgramNode containing PipeExpressions with aliases
 			if strings.Contains(tt.input, "|") || strings.Contains(tt.input, " as ") {
-				pipeExpr, ok := ast.(*parser.PipeExpression)
-				assert.True(t, ok, "Expected a PipeExpression for input: %s", tt.input)
-				assert.NotNil(t, pipeExpr.Aliases, "Aliases slice should not be nil")
+				program, ok := ast.(*parser.ProgramNode)
+				assert.True(t, ok, "Expected a ProgramNode for input: %s", tt.input)
+				foundAlias := false
+				for _, pipeExpr := range program.PipeExpressions {
+					if pipeExpr.Aliase != "" {
+						foundAlias = true
+						break
+					}
+				}
+				assert.True(t, foundAlias, "Expected at least one alias in PipeExpressions for input: %s", tt.input)
 			}
 		})
 	}
@@ -246,10 +254,17 @@ func TestPipeAliasInFunctionArgs(t *testing.T) {
 
 			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
 
-			// Verify it's a pipe expression
-			pipeExpr, ok := ast.(*parser.PipeExpression)
-			assert.True(t, ok, "Expected a PipeExpression for input: %s", tt.input)
-			assert.NotEmpty(t, pipeExpr.Aliases, "Should have at least one alias")
+			// Verify it's a ProgramNode containing PipeExpressions with aliases
+			program, ok := ast.(*parser.ProgramNode)
+			assert.True(t, ok, "Expected a ProgramNode for input: %s", tt.input)
+			foundAlias := false
+			for _, pipeExpr := range program.PipeExpressions {
+				if pipeExpr.Aliase != "" {
+					foundAlias = true
+					break
+				}
+			}
+			assert.True(t, foundAlias, "Should have at least one alias in PipeExpressions for input: %s", tt.input)
 		})
 	}
 }
