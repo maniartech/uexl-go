@@ -12,6 +12,7 @@ type Opcode byte
 const (
 	OpConstant Opcode = iota
 	OpContextVar
+	OpIdentifier
 	OpPop
 	OpAdd
 	OpSub
@@ -38,6 +39,7 @@ const (
 	OpIndex
 	OpObject
 	OpCallFunction
+	OpPipe
 )
 
 func (op Opcode) String() string {
@@ -56,6 +58,7 @@ type Definition struct {
 var definations = map[Opcode]*Definition{
 	OpConstant:           {"OpConstant", []int{2}},
 	OpContextVar:         {"OpContextVar", []int{2}},
+	OpIdentifier:        {"OpIdentifier", []int{2}},
 	OpPop:                {"OpPop", []int{}},
 	OpAdd:                {"OpAdd", []int{}},
 	OpSub:                {"OpSub", []int{}},
@@ -81,6 +84,7 @@ var definations = map[Opcode]*Definition{
 	OpObject:             {"OpHash", []int{2}},
 	OpIndex:              {"OpIndex", []int{}},
 	OpCallFunction:       {"OpCallFunction", []int{2, 2}},
+	OpPipe:               {"OpPipe", []int{2, 2}},
 }
 
 func Lookup(op byte) (*Definition, error) {

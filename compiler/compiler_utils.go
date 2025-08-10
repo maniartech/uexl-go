@@ -90,7 +90,28 @@ func (c *Compiler) addContextVar(node parser.Node) int {
 	return len(c.contextVars) - 1
 }
 
-func (c *Compiler) addArray(node *parser.ArrayLiteral) int {
-	c.constants = append(c.constants, node)
-	return len(c.constants) - 1
+func (c *Compiler) enterScope() {
+	c.scopes = append(c.scopes, CompilationScope{
+		instructions:        code.Instructions{},
+		lastInstruction:     EmmittedInstruction{},
+		previousInstruction: EmmittedInstruction{},
+	})
+	c.scopeIndex++
+}
+
+func (c *Compiler) exitScope() {
+	if c.scopeIndex == 0 {
+		panic("exitScope: already at the global scope")
+	}
+	c.scopes = c.scopes[:c.scopeIndex]
+	c.scopeIndex--
+}
+
+func (c *Compiler) addPipeLocalVar(name string) int {
+	c.SystemVars = append(c.SystemVars, &parser.Identifier{Name: name})
+	return len(c.SystemVars) - 1
+}
+
+func isPipeLocalVar(name string) bool {
+	return len(name) > 0 && name[0] == '$'
 }

@@ -10,7 +10,7 @@ import (
 type Compiler struct {
 	constants   []parser.Node
 	contextVars []parser.Node
-	
+	SystemVars  []parser.Node
 	scopes      []CompilationScope
 	scopeIndex  int
 }
@@ -113,6 +113,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 			return err
 		}
 		c.emit(code.OpIndex)
+
 	case *parser.ObjectLiteral:
 		// Ensure deterministic order by sorting keys
 		keys := make([]string, 0, len(node.Properties))
@@ -145,7 +146,12 @@ func (c *Compiler) Compile(node parser.Node) error {
 		c.emit(code.OpConstant, c.addConstant(node))
 	case *parser.Identifier:
 		// Identifiers are variables passed via go's environment context. They are "Constant" in a sense that they are not computed at runtime.
-		c.emit(code.OpContextVar, c.addContextVar(node))
+		// If identifer begins with a dollar sign, it is a local variable in the pipe context.
+		if isPipeLocalVar(node.Name) {
+			c.emit(code.OpIdentifier, c.addPipeLocalVar(node.Name))
+		} else {
+			c.emit(code.OpContextVar, c.addContextVar(node))
+		}
 	case *parser.ArrayLiteral:
 		// Compile each element in the array
 		for _, element := range node.Elements {
