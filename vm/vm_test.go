@@ -25,13 +25,8 @@ func parse(input string) parser.Node {
 	return node
 }
 
-type vmTestCases struct {
-	input    string
-	expected any
-}
-
 func TestVM(t *testing.T) {
-	vm := vm.New(&compiler.ByteCode{}, vm.Builtins)
+	vm := vm.New(&compiler.ByteCode{}, vm.Builtins, nil)
 	if vm == nil {
 		t.Fatal("failed to create VM")
 	}
@@ -39,7 +34,7 @@ func TestVM(t *testing.T) {
 
 type vmTestCase struct {
 	input    string
-	expected interface{}
+	expected any
 }
 
 func runVmTests(t *testing.T, tests []vmTestCase) {
@@ -51,7 +46,7 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 		if err != nil {
 			t.Fatalf("compiler error: %s", err)
 		}
-		vm := vm.New(comp.ByteCode(), vm.Builtins)
+		vm := vm.New(comp.ByteCode(), vm.Builtins, vm.DefaultPipeHandlers())
 		err = vm.Run()
 		if err != nil {
 			t.Fatalf("vm error: %s", err)
@@ -311,7 +306,7 @@ func TestStringContainsFunction(t *testing.T) {
 	tests := []vmTestCase{
 		{`contains("hello", "ll")`, true},
 		{`contains("hello", "z")`, false},
-		{`contains("foobar", "foo")`, true},
+		{`contains("f"+"oobar", "foo")`, true},
 	}
 	runVmTests(t, tests)
 }
@@ -367,6 +362,13 @@ func TestObjectIndexing(t *testing.T) {
 		{`{"foo": "bar"}["foo"]`, "bar"},
 		{`{"arr": [1,2,3]}["arr"][1]`, 2},
 		{`{"obj": {"nested": 99}}["obj"]["nested"]`, 99},
+	}
+	runVmTests(t, tests)
+}
+
+func TestPipeFunction(t *testing.T) {
+	tests := []vmTestCase{
+		{"[1,2] |map: $item * 2", []any{2, 4}},
 	}
 	runVmTests(t, tests)
 }
