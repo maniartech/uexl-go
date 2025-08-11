@@ -160,7 +160,8 @@ func (p *Parser) parsePipeExpression() Expression {
 		programNode.PipeExpressions = append(programNode.PipeExpressions, PipeExpression{
 			Expression: expr,
 			PipeType:   pipeTypes[i],
-			Aliase:     aliases[i],
+			Alias:      aliases[i],
+			Index:      i,
 			Line:       startLine,
 			Column:     startColumn,
 		})
