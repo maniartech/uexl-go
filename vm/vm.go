@@ -26,6 +26,23 @@ func (vm *VM) Run() error {
 				return err
 			}
 			frame.ip += 3
+		case code.OpStore:
+			varIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			value := vm.Pop()
+			aliasName := vm.systemVars[varIndex].(*parser.Identifier).Name
+			vm.aliasVars[aliasName] = value
+			frame.ip += 3
+		case code.OpIdentifier:
+			identIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			ident := vm.systemVars[identIndex].(*parser.Identifier).Name
+			val, ok := vm.getPipeVar(ident)
+			if !ok {
+				return fmt.Errorf("undefined pipe variable: %s", ident)
+			}
+			if err := vm.Push(val); err != nil {
+				return err
+			}
+			frame.ip += 3
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod,
 			code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight,
 			code.OpLogicalAnd, code.OpLogicalOr:
@@ -98,17 +115,6 @@ func (vm *VM) Run() error {
 				return err
 			}
 			frame.ip += 5
-		case code.OpIdentifier:
-			identIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			ident := vm.systemVars[identIndex].(*parser.Identifier).Name
-			val, ok := vm.getPipeVar(ident)
-			if !ok {
-				return fmt.Errorf("undefined pipe variable: %s", ident)
-			}
-			if err := vm.Push(val); err != nil {
-				return err
-			}
-			frame.ip += 3
 
 		case code.OpPipe:
 			pipeTypeIdx := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
@@ -116,7 +122,7 @@ func (vm *VM) Run() error {
 			blockIdx := code.ReadUint16(frame.instructions[frame.ip+5 : frame.ip+7])
 
 			pipeType := vm.constants[pipeTypeIdx].(*parser.StringLiteral).Value
-			alias := vm.constants[aliasIdx].(*parser.StringLiteral).Value
+			alias := vm.systemVars[aliasIdx].(*parser.Identifier).Name
 			block := vm.constants[blockIdx] // Should be *compiler.InstructionBlock or nil
 
 			input := vm.Pop()

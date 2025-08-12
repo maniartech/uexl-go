@@ -34,6 +34,7 @@ type VM struct {
 	constants       []parser.Node
 	contextVars     []parser.Node
 	systemVars      []parser.Node
+	aliasVars       map[string]parser.Node
 	functionContext VMFunctions
 	pipeHandlers    PipeHandlers             // Add pipe handlers registry
 	pipeScopes      []map[string]parser.Node // Add scope stack for pipe variables
@@ -58,6 +59,7 @@ func New(bytecode *compiler.ByteCode, functionContext VMFunctions, pipeHandlers 
 		contextVars:     bytecode.ContextVars,
 		systemVars:      bytecode.SystemVars,
 		instructions:    bytecode.Instructions,
+		aliasVars:       make(map[string]parser.Node),
 		functionContext: functionContext,
 		pipeHandlers:    pipeHandlers,
 		pipeScopes:      make([]map[string]parser.Node, 0),
