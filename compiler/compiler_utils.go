@@ -23,26 +23,6 @@ func (c *Compiler) setLastInstruction(opcode code.Opcode, position int) {
 	c.scopes[c.scopeIndex].lastInstruction = last
 }
 
-func (c *Compiler) removeLastPop() {
-	last := c.scopes[c.scopeIndex].lastInstruction
-	previous := c.scopes[c.scopeIndex].previousInstruction
-	old := c.currentInstructions()
-	new := old[:last.Position]
-	c.scopes[c.scopeIndex].instructions = new
-	c.scopes[c.scopeIndex].lastInstruction = previous
-}
-func (c *Compiler) replaceInstruction(pos int, newInstruction []byte) {
-	ins := c.currentInstructions()
-	for i := 0; i < len(newInstruction); i++ {
-		ins[pos+i] = newInstruction[i]
-	}
-}
-
-func (c *Compiler) changeOperand(opPos int, operand int) {
-	op := code.Opcode(c.currentInstructions()[opPos])
-	newInstruction := code.Make(op, operand)
-	c.replaceInstruction(opPos, newInstruction)
-}
 
 func (c *Compiler) emit(op code.Opcode, operands ...int) int {
 	instruction := code.Make(op, operands...)
@@ -105,6 +85,21 @@ func (c *Compiler) exitScope() {
 	}
 	c.scopes = c.scopes[:c.scopeIndex]
 	c.scopeIndex--
+}
+
+func (c *Compiler) compilePredicateBlock(expr parser.Node) (int, error) {
+	if expr == nil {
+		return c.addConstant(&InstructionBlock{Instructions: nil}), nil
+	}
+	c.enterScope()
+	err := c.Compile(expr)
+	if err != nil {
+		return 0, err
+	}
+	blockIns := c.ByteCode().Instructions
+
+	c.exitScope()
+	return c.addConstant(&InstructionBlock{Instructions: blockIns}), nil
 }
 
 func (c *Compiler) addPipeLocalVar(name string) int {

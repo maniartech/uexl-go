@@ -84,7 +84,7 @@ var definations = map[Opcode]*Definition{
 	OpObject:             {"OpHash", []int{2}},
 	OpIndex:              {"OpIndex", []int{}},
 	OpCallFunction:       {"OpCallFunction", []int{2, 2}},
-	OpPipe:               {"OpPipe", []int{2, 2}},
+	OpPipe:               {"OpPipe", []int{2, 2, 2}}, // pipeTypeIdx, aliasIdx, blockIdx
 }
 
 func Lookup(op byte) (*Definition, error) {
