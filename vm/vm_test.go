@@ -372,6 +372,8 @@ func TestPipeFunction(t *testing.T) {
 		{"[1,2] |map: $item * 2", []any{2, 4}},
 		{"[1,2] |map: $item * $index", []any{0, 2}},
 		{"[1,2] |map: $item * 2 |map: $item + 1", []any{3, 5}},
+		{"[1,2,3,4,5,6] |filter: $item > 2", []any{3, 4, 5, 6}},
+
 	}
 	runVmTests(t, tests)
 }
