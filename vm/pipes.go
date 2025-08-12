@@ -23,6 +23,10 @@ func DefaultPipeHandler(input parser.Node, block any, alias string, vm *VM) (par
 	}
 	vm.pushPipeScope()
 	vm.setPipeVar("$last", input)
+	// setting all the system variables as pipe variables
+	for i, v := range vm.aliasVars {
+		vm.setPipeVar(i, v)
+	}
 	frame := NewFrame(blk.Instructions, 0)
 	vm.pushFrame(frame)
 	err := vm.Run()

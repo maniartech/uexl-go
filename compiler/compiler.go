@@ -117,12 +117,17 @@ func (c *Compiler) Compile(node parser.Node) error {
 			if err := c.Compile(node.PipeExpressions[0].Expression); err != nil {
 				return err
 			}
+			if node.PipeExpressions[0].Alias != "" {
+				// If the first pipe has an alias, store it in the context
+				aliasVarIdx := c.addPipeLocalVar(node.PipeExpressions[0].Alias)
+				c.emit(code.OpStore, aliasVarIdx)
+			}
 		}
 		// Compile each pipe expression
-		for _, pipeExpr := range node.PipeExpressions {
+		for _, pipeExpr := range node.PipeExpressions[1:] {
 			// Compile the pipe's predicate expression block
 			pipeTypeIdx := c.addConstant(&parser.StringLiteral{Value: pipeExpr.PipeType})
-			aliasIdx := c.addConstant(&parser.StringLiteral{Value: pipeExpr.Alias})
+			aliasIdx := c.addPipeLocalVar(pipeExpr.Alias)
 			blockIdx, err := c.compilePredicateBlock(pipeExpr.Expression)
 			if err != nil {
 				return err

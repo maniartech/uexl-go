@@ -13,6 +13,7 @@ const (
 	OpConstant Opcode = iota
 	OpContextVar
 	OpIdentifier
+	OpStore
 	OpPop
 	OpAdd
 	OpSub
@@ -58,7 +59,8 @@ type Definition struct {
 var definations = map[Opcode]*Definition{
 	OpConstant:           {"OpConstant", []int{2}},
 	OpContextVar:         {"OpContextVar", []int{2}},
-	OpIdentifier:        {"OpIdentifier", []int{2}},
+	OpIdentifier:         {"OpIdentifier", []int{2}},
+	OpStore:              {"OpStore", []int{2}},
 	OpPop:                {"OpPop", []int{}},
 	OpAdd:                {"OpAdd", []int{}},
 	OpSub:                {"OpSub", []int{}},
