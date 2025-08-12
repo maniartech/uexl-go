@@ -368,7 +368,10 @@ func TestObjectIndexing(t *testing.T) {
 
 func TestPipeFunction(t *testing.T) {
 	tests := []vmTestCase{
+		{`"foo" as $foo as $arr |map: $foo + "bar"`, "foobar"},
 		{"[1,2] |map: $item * 2", []any{2, 4}},
+		{"[1,2] |map: $item * $index", []any{0, 2}},
+		{"[1,2] |map: $item * 2 |map: $item + 1", []any{3, 5}},
 	}
 	runVmTests(t, tests)
 }
