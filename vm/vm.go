@@ -113,25 +113,26 @@ func (vm *VM) Run() error {
 		case code.OpPipe:
 			pipeTypeIdx := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			aliasIdx := code.ReadUint16(frame.instructions[frame.ip+3 : frame.ip+5])
+			blockIdx := code.ReadUint16(frame.instructions[frame.ip+5 : frame.ip+7])
+
 			pipeType := vm.constants[pipeTypeIdx].(*parser.StringLiteral).Value
 			alias := vm.constants[aliasIdx].(*parser.StringLiteral).Value
+			block := vm.constants[blockIdx] // Should be *compiler.InstructionBlock or nil
 
-			// Pop lambda/body and input value from the stack
-			lambda := vm.Pop()
 			input := vm.Pop()
 
 			handler, ok := vm.pipeHandlers[pipeType]
 			if !ok {
 				return fmt.Errorf("unknown pipe type: %s", pipeType)
 			}
-			result, err := handler(input, lambda, alias, vm)
+			result, err := handler(input, block, alias, vm)
 			if err != nil {
 				return err
 			}
 			if err := vm.Push(result); err != nil {
 				return err
 			}
-			frame.ip += 5
+			frame.ip += 7
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, frame.ip)
 		}

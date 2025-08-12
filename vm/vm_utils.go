@@ -18,7 +18,7 @@ var Null = parser.NullLiteral{}
 type VMFunctions map[string]func(args ...parser.Node) (parser.Node, error)
 type PipeHandler func(
 	input parser.Node,
-	lambda parser.Node,
+	block any,
 	alias string,
 	vm *VM) (parser.Node, error)
 

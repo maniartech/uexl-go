@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 
+	"github.com/maniartech/uexl_go/compiler"
 	"github.com/maniartech/uexl_go/parser"
 )
 
@@ -14,21 +15,36 @@ func DefaultPipeHandlers() PipeHandlers {
 	}
 }
 
-func DefaultPipeHandler(input parser.Node, lambda parser.Node, alias string, vm *VM) (parser.Node, error) {
-	// in the default pipe type the lambda is the input itself, but we will check if the input is nil if yes then we return the lambda
-	if input == nil {
-		if lambda == nil {
-			return nil, fmt.Errorf("default pipe requires input or lambda")
-		}
-		return lambda, nil
+func DefaultPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.Node, error) {
+	blk, ok := block.(*compiler.InstructionBlock)
+	if !ok || blk == nil || blk.Instructions == nil {
+		// Pass-through if no block
+		return input, nil
 	}
-	return input, nil
+	vm.pushPipeScope()
+	vm.setPipeVar("$last", input)
+	frame := NewFrame(blk.Instructions, 0)
+	vm.pushFrame(frame)
+	err := vm.Run()
+	if err != nil {
+		vm.popPipeScope()
+		vm.popFrame()
+		return nil, err
+	}
+	res := vm.Pop()
+	vm.popFrame()
+	vm.popPipeScope()
+	return res, nil
 }
 
-func MapPipeHandler(input parser.Node, lambda parser.Node, alias string, vm *VM) (parser.Node, error) {
+func MapPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.Node, error) {
 	arr, ok := input.(*parser.ArrayLiteral)
 	if !ok {
 		return nil, fmt.Errorf("map pipe expects array input")
+	}
+	blk, ok := block.(*compiler.InstructionBlock)
+	if !ok || blk == nil || blk.Instructions == nil {
+		return nil, fmt.Errorf("map pipe expects a predicate block")
 	}
 
 	result := make([]parser.Node, len(arr.Elements))
@@ -40,10 +56,16 @@ func MapPipeHandler(input parser.Node, lambda parser.Node, alias string, vm *VM)
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 
-		// Execute the lambda bytecode (already on stack or in instruction stream)
-		// The lambda instructions will run and leave result on stack
-		res := vm.Pop() // Get the result that lambda instructions produced
-
+		frame := NewFrame(blk.Instructions, 0)
+		vm.pushFrame(frame)
+		err := vm.Run()
+		if err != nil {
+			vm.popPipeScope()
+			vm.popFrame()
+			return nil, err
+		}
+		res := vm.Pop()
+		vm.popFrame()
 		vm.popPipeScope()
 		result[i] = res
 	}
