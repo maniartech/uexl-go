@@ -9,9 +9,14 @@ import (
 
 func DefaultPipeHandlers() PipeHandlers {
 	return PipeHandlers{
-		"map":  MapPipeHandler,
-		"pipe": DefaultPipeHandler, // Default pipe handler
+		"map":    MapPipeHandler,
+		"pipe":   DefaultPipeHandler,
 		"filter": FilterPipeHandler,
+		"reduce": ReducePipeHandler,
+		"find":   FindPipeHandler,
+		"some":   SomePipeHandler,
+		"every":  EveryPipeHandler,
+		"unique": UniquePipeHandler,
 	}
 }
 
@@ -128,5 +133,168 @@ func FilterPipeHandler(input parser.Node, block any, alias string, vm *VM) (pars
 		exprs[i] = n.(parser.Expression)
 	}
 
+	return &parser.ArrayLiteral{Elements: exprs}, nil
+}
+
+func ReducePipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.Node, error) {
+	arr, ok := input.(*parser.ArrayLiteral)
+	if !ok {
+		return nil, fmt.Errorf("reduce pipe expects array input")
+	}
+	blk, ok := block.(*compiler.InstructionBlock)
+	if !ok || blk == nil || blk.Instructions == nil {
+		return nil, fmt.Errorf("reduce pipe expects a predicate block")
+	}
+	if len(arr.Elements) == 0 {
+		return nil, fmt.Errorf("reduce pipe cannot operate on empty array")
+	}
+
+	acc := arr.Elements[0]
+	for i := 1; i < len(arr.Elements); i++ {
+		vm.pushPipeScope()
+		vm.setPipeVar("$acc", acc)
+		vm.setPipeVar("$item", arr.Elements[i])
+		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
+		for j, v := range vm.aliasVars {
+			vm.setPipeVar(j, v)
+		}
+		frame := NewFrame(blk.Instructions, 0)
+		vm.pushFrame(frame)
+		err := vm.Run()
+		if err != nil {
+			vm.popPipeScope()
+			vm.popFrame()
+			return nil, err
+		}
+		acc = vm.Pop().(parser.Expression)
+		vm.popFrame()
+		vm.popPipeScope()
+	}
+	return acc, nil
+}
+
+func FindPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.Node, error) {
+	arr, ok := input.(*parser.ArrayLiteral)
+	if !ok {
+		return nil, fmt.Errorf("find pipe expects array input")
+	}
+	blk, ok := block.(*compiler.InstructionBlock)
+	if !ok || blk == nil || blk.Instructions == nil {
+		return nil, fmt.Errorf("find pipe expects a predicate block")
+	}
+
+	for i, elem := range arr.Elements {
+		vm.pushPipeScope()
+		vm.setPipeVar("$item", elem)
+		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
+		for j, v := range vm.aliasVars {
+			vm.setPipeVar(j, v)
+		}
+		frame := NewFrame(blk.Instructions, 0)
+		vm.pushFrame(frame)
+		err := vm.Run()
+		if err != nil {
+			vm.popPipeScope()
+			vm.popFrame()
+			return nil, err
+		}
+		res := vm.Pop()
+		vm.popFrame()
+		vm.popPipeScope()
+		if boolLit, ok := res.(*parser.BooleanLiteral); ok && boolLit.Value {
+			return elem, nil
+		}
+	}
+	return &parser.NullLiteral{}, nil
+}
+
+func SomePipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.Node, error) {
+	arr, ok := input.(*parser.ArrayLiteral)
+	if !ok {
+		return nil, fmt.Errorf("some pipe expects array input")
+	}
+	blk, ok := block.(*compiler.InstructionBlock)
+	if !ok || blk == nil || blk.Instructions == nil {
+		return nil, fmt.Errorf("some pipe expects a predicate block")
+	}
+
+	for i, elem := range arr.Elements {
+		vm.pushPipeScope()
+		vm.setPipeVar("$item", elem)
+		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
+		for j, v := range vm.aliasVars {
+			vm.setPipeVar(j, v)
+		}
+		frame := NewFrame(blk.Instructions, 0)
+		vm.pushFrame(frame)
+		err := vm.Run()
+		if err != nil {
+			vm.popPipeScope()
+			vm.popFrame()
+			return nil, err
+		}
+		res := vm.Pop()
+		vm.popFrame()
+		vm.popPipeScope()
+		if boolLit, ok := res.(*parser.BooleanLiteral); ok && boolLit.Value {
+			return &parser.BooleanLiteral{Value: true}, nil
+		}
+	}
+	return &parser.BooleanLiteral{Value: false}, nil
+}
+
+func EveryPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.Node, error) {
+	arr, ok := input.(*parser.ArrayLiteral)
+	if !ok {
+		return nil, fmt.Errorf("every pipe expects array input")
+	}
+	blk, ok := block.(*compiler.InstructionBlock)
+	if !ok || blk == nil || blk.Instructions == nil {
+		return nil, fmt.Errorf("every pipe expects a predicate block")
+	}
+
+	for i, elem := range arr.Elements {
+		vm.pushPipeScope()
+		vm.setPipeVar("$item", elem)
+		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
+		for j, v := range vm.aliasVars {
+			vm.setPipeVar(j, v)
+		}
+		frame := NewFrame(blk.Instructions, 0)
+		vm.pushFrame(frame)
+		err := vm.Run()
+		if err != nil {
+			vm.popPipeScope()
+			vm.popFrame()
+			return nil, err
+		}
+		res := vm.Pop()
+		vm.popFrame()
+		vm.popPipeScope()
+		if boolLit, ok := res.(*parser.BooleanLiteral); !ok || !boolLit.Value {
+			return &parser.BooleanLiteral{Value: false}, nil
+		}
+	}
+	return &parser.BooleanLiteral{Value: true}, nil
+}
+
+func UniquePipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.Node, error) {
+	arr, ok := input.(*parser.ArrayLiteral)
+	if !ok {
+		return nil, fmt.Errorf("unique pipe expects array input")
+	}
+	seen := make(map[string]bool)
+	var result []parser.Node
+	for _, elem := range arr.Elements {
+		key := fmt.Sprintf("%v", elem)
+		if !seen[key] {
+			seen[key] = true
+			result = append(result, elem)
+		}
+	}
+	exprs := make([]parser.Expression, len(result))
+	for i, n := range result {
+		exprs[i] = n.(parser.Expression)
+	}
 	return &parser.ArrayLiteral{Elements: exprs}, nil
 }
