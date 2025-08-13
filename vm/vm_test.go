@@ -368,7 +368,7 @@ func TestObjectIndexing(t *testing.T) {
 
 func TestPipeFunction(t *testing.T) {
 	tests := []vmTestCase{
-		{`"foo" as $foo |: $foo + "bar"`, "foobar"},
+		{`"foo" as $foo |pipe: $foo + "bar"`, "foobar"},
 		{"[1,2] |map: $item * 2", []any{2, 4}},
 		{"[1,2] |map: $item * $index", []any{0, 2}},
 		{"[1,2] |map: $item * 2 |map: $item + 1", []any{3, 5}},
@@ -388,9 +388,25 @@ func TestPipeFunction(t *testing.T) {
 		{"[1,2,3,4] |every: $item > 0", true},
 		{"[1,2,3,0] |every: $item > 0", false},
 
-		// // Unique: remove duplicates
-		// TODO: Look into the unique pipe function
-		// {"[1,2,2,3,1,4] |unique: $item", []any{1, 2, 3, 4}},
+		// Unique: remove duplicates
+		// {"[1,2,2,3,1,4] |unique:", []any{1, 2, 3, 4}},
+
+		// Sort: sort by value
+		{"[3,1,2] |sort: $item", []any{1, 2, 3}},
+		// Sort: sort by computed value
+		{"[3,1,2] |sort: $item * -1", []any{3, 2, 1}},
+
+		// GroupBy: group by even/odd
+		// {`[1,2,3,4] |groupBy: $item % 2`, map[string]any{
+		// 	"1": []any{1, 3},
+		// 	"0": []any{2, 4},
+		// }},
+
+		// Window: window size 2, sum each window
+		{"[1,2,3,4] |window: $window[0] + $window[1]", []any{3, 5, 7}},
+
+		// Chunk: chunk size 2, sum each chunk
+		// {"[1,2,3,4,5] |chunk: $chunk[0] + ($chunk[1] ?? 0)", []any{3, 7, 5}},
 	}
 	runVmTests(t, tests)
 }
