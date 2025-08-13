@@ -30,7 +30,13 @@ func (vm *VM) Run() error {
 			varIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			value := vm.Pop()
 			aliasName := vm.systemVars[varIndex].(*parser.Identifier).Name
-			vm.aliasVars[aliasName] = value
+			if len(vm.pipeScopes) > 0 {
+				vm.pipeScopes[0][aliasName] = value // Set in outermost scope
+			} else {
+				// creating a new pipe scope if none exists
+				vm.pipeScopes = append(vm.pipeScopes, make(map[string]parser.Node))
+				vm.pipeScopes[0][aliasName] = value
+			}
 			frame.ip += 3
 		case code.OpIdentifier:
 			identIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])

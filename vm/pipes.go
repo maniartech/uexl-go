@@ -28,10 +28,7 @@ func DefaultPipeHandler(input parser.Node, block any, alias string, vm *VM) (par
 	}
 	vm.pushPipeScope()
 	vm.setPipeVar("$last", input)
-	// setting all the system variables as pipe variables
-	for i, v := range vm.aliasVars {
-		vm.setPipeVar(i, v)
-	}
+
 	frame := NewFrame(blk.Instructions, 0)
 	vm.pushFrame(frame)
 	err := vm.Run()
@@ -64,9 +61,6 @@ func MapPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.
 		}
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
-		for i, v := range vm.aliasVars {
-			vm.setPipeVar(i, v)
-		}
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
 		err := vm.Run()
@@ -107,9 +101,6 @@ func FilterPipeHandler(input parser.Node, block any, alias string, vm *VM) (pars
 		}
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
-		for j, v := range vm.aliasVars {
-			vm.setPipeVar(j, v)
-		}
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
 		err := vm.Run()
@@ -155,9 +146,6 @@ func ReducePipeHandler(input parser.Node, block any, alias string, vm *VM) (pars
 		vm.setPipeVar("$acc", acc)
 		vm.setPipeVar("$item", arr.Elements[i])
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
-		for j, v := range vm.aliasVars {
-			vm.setPipeVar(j, v)
-		}
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
 		err := vm.Run()
@@ -187,9 +175,6 @@ func FindPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser
 		vm.pushPipeScope()
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
-		for j, v := range vm.aliasVars {
-			vm.setPipeVar(j, v)
-		}
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
 		err := vm.Run()
@@ -222,9 +207,6 @@ func SomePipeHandler(input parser.Node, block any, alias string, vm *VM) (parser
 		vm.pushPipeScope()
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
-		for j, v := range vm.aliasVars {
-			vm.setPipeVar(j, v)
-		}
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
 		err := vm.Run()
@@ -257,9 +239,6 @@ func EveryPipeHandler(input parser.Node, block any, alias string, vm *VM) (parse
 		vm.pushPipeScope()
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
-		for j, v := range vm.aliasVars {
-			vm.setPipeVar(j, v)
-		}
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
 		err := vm.Run()

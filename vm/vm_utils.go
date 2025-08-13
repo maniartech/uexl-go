@@ -130,7 +130,6 @@ func (vm *VM) setPipeVar(name string, value parser.Node) {
 }
 
 func (vm *VM) getPipeVar(name string) (parser.Node, bool) {
-	// Search from top to bottom of scope stack
 	for i := len(vm.pipeScopes) - 1; i >= 0; i-- {
 		if val, ok := vm.pipeScopes[i][name]; ok {
 			return val, true
