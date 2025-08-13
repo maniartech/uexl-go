@@ -374,6 +374,23 @@ func TestPipeFunction(t *testing.T) {
 		{"[1,2] |map: $item * 2 |map: $item + 1", []any{3, 5}},
 		{"[1,2,3,4,5,6] |filter: $item > 2", []any{3, 4, 5, 6}},
 
+		// Reduce: sum all items
+		{"[1,2,3,4] |reduce: $acc + $item", 10},
+
+		// Find: first item greater than 2
+		{"[1,2,3,4] |find: $item > 2", 3},
+
+		// Some: any item is even
+		{"[1,2,3,4] |some: $item % 2 == 0", true},
+		{"[1,3,5] |some: $item % 2 == 0", false},
+
+		// Every: all items are positive
+		{"[1,2,3,4] |every: $item > 0", true},
+		{"[1,2,3,0] |every: $item > 0", false},
+
+		// // Unique: remove duplicates
+		// TODO: Look into the unique pipe function
+		// {"[1,2,2,3,1,4] |unique: $item", []any{1, 2, 3, 4}},
 	}
 	runVmTests(t, tests)
 }
