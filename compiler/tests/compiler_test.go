@@ -502,7 +502,7 @@ func TestFunctionCalls(t *testing.T) {
 func TestPipeExpression(t *testing.T) {
 	cases := []compilerTestCase{
 		// Access property by string literal
-		{`[1,2] |map: $item * 2`, []any{1, 2, "pipe", "", 2, "map", ""}, []code.Instructions{
+		{`[1,2] |map: $item * 2`, []any{1, 2, "pipe", 2, "map"}, []code.Instructions{
 			code.Make(code.OpConstant, 0), // "a"
 			code.Make(code.OpConstant, 1), // 1.0
 			code.Make(code.OpArray, 2),

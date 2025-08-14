@@ -377,6 +377,14 @@ func TestPipeFunction(t *testing.T) {
 		// Reduce: sum all items
 		{"[1,2,3,4] |reduce: $acc + $item", 10},
 
+		// TODO: Reduce to an object
+		// {"[1,2,3,4] |reduce: set($acc || {}, $index, $item)", map[string]any{
+		// 	"0": 1,
+		// 	"1": 2,
+		// 	"2": 3,
+		// 	"3": 4,
+		// }},
+
 		// Find: first item greater than 2
 		{"[1,2,3,4] |find: $item > 2", 3},
 
@@ -406,7 +414,7 @@ func TestPipeFunction(t *testing.T) {
 		{"[1,2,3,4] |window: $window[0] + $window[1]", []any{3, 5, 7}},
 
 		// Chunk: chunk size 2, sum each chunk
-		// {"[1,2,3,4,5] |chunk: $chunk[0] + ($chunk[1] ?? 0)", []any{3, 7, 5}},
+		{"[1,2,3,4,5] |chunk: $chunk[0] + ($chunk[1] ?? 0)", []any{3, 7, 5}},
 	}
 	runVmTests(t, tests)
 }
