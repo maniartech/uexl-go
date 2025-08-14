@@ -257,7 +257,7 @@ func (t *Tokenizer) readString() (Token, error) {
 }
 
 // Ref: https://regex101.com/r/w6qtHq/1
-var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-z]+)?:`)
+var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-zA-Z]+)?:`)
 
 func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
 	start := t.pos
