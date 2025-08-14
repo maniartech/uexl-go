@@ -12,6 +12,7 @@ var Builtins = VMFunctions{
 	"len":      builtinLen,
 	"substr":   builtinSubstr,
 	"contains": builtinContains,
+	"set":      builtinSet,
 }
 
 // len("abc") or len([1,2,3])
@@ -65,4 +66,26 @@ func builtinContains(args ...parser.Node) (parser.Node, error) {
 		return nil, fmt.Errorf("contains: both arguments must be strings")
 	}
 	return &parser.BooleanLiteral{Value: strings.Contains(str.Value, sub.Value)}, nil
+}
+
+// set(obj, key, value) => obj with key set to value
+func builtinSet(args ...parser.Node) (parser.Node, error) {
+	if len(args) != 3 {
+		return nil, fmt.Errorf("set expects 3 arguments")
+	}
+	obj, ok1 := args[0].(*parser.ObjectLiteral)
+	key, ok2 := args[1].(*parser.StringLiteral)
+	value := args[2]
+	if !ok1 || !ok2 {
+		return nil, fmt.Errorf("set: first argument must be an object and second must be a string")
+	}
+	if obj.Properties == nil {
+		obj.Properties = make(map[string]parser.Expression)
+	}
+	exprValue, ok := value.(parser.Expression)
+	if !ok {
+		return nil, fmt.Errorf("set: value must be an Expression")
+	}
+	obj.Properties[key.Value] = exprValue
+	return obj, nil
 }
