@@ -26,6 +26,11 @@ type CompilationScope struct {
 	previousInstruction EmmittedInstruction
 }
 
+type InstructionBlock struct {
+	parser.Node
+	Instructions code.Instructions
+}
+
 func (c *Compiler) Compile(node parser.Node) error {
 	switch node := node.(type) {
 	case *parser.BinaryExpression:
@@ -105,6 +110,32 @@ func (c *Compiler) Compile(node parser.Node) error {
 		}
 		fnIdx := c.addConstant(&parser.StringLiteral{Value: node.Function.(*parser.Identifier).Name})
 		c.emit(code.OpCallFunction, fnIdx, len(node.Arguments))
+	case *parser.ProgramNode:
+		// First expression is the entry point will just be normal expression from which we get the result
+		// We will just compile it like a normal expression
+		if len(node.PipeExpressions) > 0 {
+			if err := c.Compile(node.PipeExpressions[0].Expression); err != nil {
+				return err
+			}
+			if node.PipeExpressions[0].Alias != "" {
+				// If the first pipe has an alias, store it in the context
+				aliasVarIdx := c.addPipeLocalVar(node.PipeExpressions[0].Alias)
+				c.emit(code.OpStore, aliasVarIdx)
+			}
+		}
+		// Compile each pipe expression
+		for _, pipeExpr := range node.PipeExpressions[1:] {
+			// Compile the pipe's predicate expression block
+			pipeTypeIdx := c.addConstant(&parser.StringLiteral{Value: pipeExpr.PipeType})
+			aliasIdx := c.addPipeLocalVar(pipeExpr.Alias)
+			blockIdx, err := c.compilePredicateBlock(pipeExpr.Expression)
+			if err != nil {
+				return err
+			}
+			c.emit(code.OpPipe, pipeTypeIdx, aliasIdx, blockIdx)
+
+		}
+
 	case *parser.IndexAccess:
 		if err := c.Compile(node.Array); err != nil {
 			return err
