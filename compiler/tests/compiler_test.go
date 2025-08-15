@@ -226,6 +226,119 @@ func TestBitwiseOperators(t *testing.T) {
 	}
 	runCompilerTestCases(t, cases)
 }
+
+func TestLogicalShortCircuitCompilation(t *testing.T) {
+	cases := []compilerTestCase{
+		// false || 0 || ""
+		{
+			`false || 0 || ""`,
+			[]any{0.0, ""}, // constants: 0, ""
+			[]code.Instructions{
+				// 0000 F
+				// 0001 JIT [17]
+				// 0004 Const 0
+				// 0007 JIT [17]
+				// 0010 Const ""
+				// 0013 JIT [17]
+				// 0016 F
+				code.Make(code.OpFalse),
+				code.Make(code.OpJumpIfTruthy, 17),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJumpIfTruthy, 17),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpJumpIfTruthy, 17),
+				code.Make(code.OpFalse),
+			},
+		},
+		// true || 0 || ""
+		{
+			`true || 0 || ""`,
+			[]any{0.0, ""}, // constants: 0, ""
+			[]code.Instructions{
+				// 0000 T
+				// 0001 JIT [17]
+				// 0004 Const 0
+				// 0007 JIT [17]
+				// 0010 Const ""
+				// 0013 JIT [17]
+				// 0016 F
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpIfTruthy, 17),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJumpIfTruthy, 17),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpJumpIfTruthy, 17),
+				code.Make(code.OpFalse),
+			},
+		},
+		// false && 0 && ""
+		{
+			`false && 0 && ""`,
+			[]any{0.0, ""}, // constants: 0, ""
+			[]code.Instructions{
+				// 0000 F
+				// 0001 JIF [13]
+				// 0004 Const 0
+				// 0007 JIF [13]
+				// 0010 Const ""
+				code.Make(code.OpFalse),
+				code.Make(code.OpJumpIfFalsy, 13),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJumpIfFalsy, 13),
+				code.Make(code.OpConstant, 1),
+			},
+		},
+		// true && 1 && "hello"
+		{
+			`true && 1 && "hello"`,
+			[]any{1.0, "hello"},
+			[]code.Instructions{
+				// 0000 T
+				// 0001 JIF [13]
+				// 0004 Const 1
+				// 0007 JIF [13]
+				// 0010 Const "hello"
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpIfFalsy, 13),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJumpIfFalsy, 13),
+				code.Make(code.OpConstant, 1),
+			},
+		},
+		// false || true
+		{
+			`false || true`,
+			[]any{},
+			[]code.Instructions{
+				// 0000 F
+				// 0001 JIT [9]
+				// 0004 T
+				// 0005 JIT [9]
+				// 0008 F
+				code.Make(code.OpFalse),
+				code.Make(code.OpJumpIfTruthy, 9),
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpIfTruthy, 9),
+				code.Make(code.OpFalse),
+			},
+		},
+		// true && false
+		{
+			`true && false`,
+			[]any{},
+			[]code.Instructions{
+				// 0000 T
+				// 0001 JIF [5]
+				// 0004 F
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpIfFalsy, 5),
+				code.Make(code.OpFalse),
+			},
+		},
+	}
+	runCompilerTestCases(t, cases)
+}
+
 func TestContextVariables(t *testing.T) {
 	cases := []compilerTestCase{
 		{"foo", []any{}, []code.Instructions{
