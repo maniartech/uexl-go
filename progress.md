@@ -15,7 +15,7 @@
 
 - **Arithmetic**: `+`, `-`, `*`, `/`, `%` for numbers.
 - **Comparison**: `==`, `!=`, `<`, `>`, `<=`, `>=` for numbers and strings.
-- **Logical**: `&&`, `||` for booleans.
+- **Logical**: `&&`, `||` for booleans, with JavaScript-like short-circuiting and normalization (first truthy for `||`, last truthy for `&&`, normalization to boolean `false` for all-falsy `||` chains).
 - **String Concatenation**: `+` for strings.
 
 ### 1.3. Unary Expressions
@@ -42,13 +42,13 @@
 
 - **Chaining**:
 
-expr | pipe1: block1 | pipe2: block2 ...
+  expr | pipe1: block1 | pipe2: block2 ...
 
 - **Alias Support**:
 
-|map\:item: block
+  |map\:item: block
 
-(binds `$item` to each element)
+  (binds `$item` to each element)
 
 ### 2.2. Pipe Handlers _(see `pipes.go`)_
 
@@ -114,7 +114,7 @@ expr | pipe1: block1 | pipe2: block2 ...
 
 ### 5.1. Unit Tests
 
-- **Comprehensive Coverage**: Arithmetic, boolean, string, array, object, and all pipe operations.
+- **Comprehensive Coverage**: Arithmetic, boolean, string, array, object, logical short-circuiting, and all pipe operations.
 - **Edge Cases**: Empty arrays, invalid types, error propagation.
 
 ### 5.2. Documentation
@@ -138,7 +138,7 @@ expr | pipe1: block1 | pipe2: block2 ...
 | Feature        | Status   | Details                                      |
 | -------------- | -------- | -------------------------------------------- |
 | Literals       | Complete | Number, String, Boolean, Null, Array, Object |
-| Binary Expr    | Complete | Arithmetic, Comparison, Logical, String      |
+| Binary Expr    | Complete | Arithmetic, Comparison, Logical (JS-like)    |
 | Unary Expr     | Complete | Negation, Logical NOT                        |
 | Member Access  | Complete | Object/Array/Nested                          |
 | Function Calls | Complete | Built-in, extensible                         |
@@ -163,6 +163,4 @@ expr | pipe1: block1 | pipe2: block2 ...
 ---
 
 **Conclusion**  
-Your implementation provides a robust, extensible, and production-ready expression language and pipe system for data transformation and querying.
-
-If you want, I can also create a **visually rich version** with collapsible sections, diagrams for the VM architecture, and syntax examples. That would make it more developer-friendly.
+Your implementation now includes robust, JavaScript-like logical short-circuiting, normalization, and comprehensive tests. The system is production-ready, extensible, and well

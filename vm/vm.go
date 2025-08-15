@@ -74,6 +74,45 @@ func (vm *VM) Run() error {
 				return err
 			}
 			frame.ip += 1
+		case code.OpJump:
+			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			frame.ip = int(pos)
+		case code.OpJumpIfTruthy:
+			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			value := vm.Pop()
+			if isTruthy(value) {
+				// Short-circuit: push left value as result
+				err := vm.Push(value)
+				if err != nil {
+					return err
+				}
+				frame.ip = int(pos)
+			} else {
+				// pushing normalized value
+				err := vm.Push(normalizeFalsyToFalse(value))
+				if err != nil {
+					return err
+				}
+				frame.ip += 3
+			}
+		case code.OpJumpIfFalsy:
+			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			value := vm.Pop()
+			if !isTruthy(value) {
+				// Short-circuit: push left value as result
+				err := vm.Push(value)
+				if err != nil {
+					return err
+				}
+				frame.ip = int(pos)
+			} else {
+				// pushing normalized value
+				err := vm.Push(normalizeFalsyToFalse(value))
+				if err != nil {
+					return err
+				}
+				frame.ip += 3
+			}
 		case code.OpTrue:
 			err := vm.Push(&parser.BooleanLiteral{Value: true})
 			if err != nil {

@@ -298,3 +298,44 @@ func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
 
 	return vm.Push(functionResult)
 }
+
+func isTruthy(val parser.Node) bool {
+	switch v := val.(type) {
+	case *parser.BooleanLiteral:
+		return v.Value
+	case *parser.NumberLiteral:
+		return v.Value != 0
+	case *parser.StringLiteral:
+		return v.Value != ""
+	case *parser.ArrayLiteral:
+		return len(v.Elements) > 0
+	case *parser.ObjectLiteral:
+		return len(v.Properties) > 0
+	default:
+		return val != nil
+	}
+}
+
+func normalizeFalsyToFalse(val parser.Node) parser.Node {
+	switch v := val.(type) {
+	case *parser.BooleanLiteral:
+		return v
+	case *parser.NumberLiteral:
+		if v.Value == 0 {
+			return &parser.BooleanLiteral{Value: false}
+		}
+	case *parser.StringLiteral:
+		if v.Value == "" {
+			return &parser.BooleanLiteral{Value: false}
+		}
+	case *parser.ArrayLiteral:
+		if len(v.Elements) == 0 {
+			return &parser.BooleanLiteral{Value: false}
+		}
+	case *parser.ObjectLiteral:
+		if len(v.Properties) == 0 {
+			return &parser.BooleanLiteral{Value: false}
+		}
+	}
+	return val
+}
