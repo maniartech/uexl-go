@@ -1,6 +1,8 @@
 package compiler
 
 import (
+	"encoding/binary"
+
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/parser"
 )
@@ -22,7 +24,6 @@ func (c *Compiler) setLastInstruction(opcode code.Opcode, position int) {
 	c.scopes[c.scopeIndex].previousInstruction = previous
 	c.scopes[c.scopeIndex].lastInstruction = last
 }
-
 
 func (c *Compiler) emit(op code.Opcode, operands ...int) int {
 	instruction := code.Make(op, operands...)
@@ -109,4 +110,20 @@ func (c *Compiler) addPipeLocalVar(name string) int {
 
 func isPipeLocalVar(name string) bool {
 	return len(name) > 0 && name[0] == '$'
+}
+
+func (c *Compiler) replaceOperand(pos int, value int) {
+	binary.BigEndian.PutUint16(c.currentInstructions()[pos:], uint16(value))
+}
+
+// flattenLogicalChain collects a left-associative chain of the same logical operator into terms.
+// Example: a || b || c  => [a, b, c]
+func flattenLogicalChain(n parser.Node, op string, out *[]parser.Node) {
+	be, ok := n.(*parser.BinaryExpression)
+	if !ok || be.Operator != op {
+		*out = append(*out, n)
+		return
+	}
+	flattenLogicalChain(be.Left, op, out)
+	flattenLogicalChain(be.Right, op, out)
 }

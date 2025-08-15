@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/maniartech/uexl_go/code"
@@ -38,22 +39,67 @@ func (c *Compiler) Compile(node parser.Node) error {
 		operator := node.Operator
 		right := node.Right
 
-		if node.Operator == "<" || node.Operator == "<=" {
-			// swap operand sides for less than comparisons because they are right associative
+		// Handle right-associative operators and operand swapping
+		switch operator {
+		case "<", "<=":
 			left, right = right, left
 		}
 
-		// Compile the left operand
+		// Short-circuit logical operators (flattened chains + single backpatch)
+		if operator == "||" || operator == "&&" {
+			terms := make([]parser.Node, 0, 4)
+			flattenLogicalChain(node, operator, &terms)
+
+			jumpPositions := make([]int, 0, len(terms))
+			switch operator {
+			case "||":
+				// For each term: compile and emit JumpIfTruthy to END
+				for _, term := range terms {
+					if err := c.Compile(term); err != nil {
+						return err
+					}
+					pos := len(c.currentInstructions())
+					c.emit(code.OpJumpIfTruthy, 0) // placeholder to END
+					jumpPositions = append(jumpPositions, pos)
+				}
+				// If none were truthy, push boolean false
+				c.emit(code.OpFalse)
+				end := len(c.currentInstructions())
+				for _, p := range jumpPositions {
+					// operand starts at p+1
+					c.replaceOperand(p+1, end)
+				}
+				return nil
+
+			case "&&":
+				// For all but last term: JumpIfFalsy to END
+				for i, term := range terms {
+					if err := c.Compile(term); err != nil {
+						return err
+					}
+					if i < len(terms)-1 {
+						pos := len(c.currentInstructions())
+						c.emit(code.OpJumpIfFalsy, 0) // placeholder to END
+						jumpPositions = append(jumpPositions, pos)
+					}
+				}
+				end := len(c.currentInstructions())
+				for _, p := range jumpPositions {
+					c.replaceOperand(p+1, end)
+				}
+				return nil
+			}
+		}
+
+		// Compile operands for other operators
 		if err := c.Compile(left); err != nil {
 			return err
 		}
-
-		// Compile the right operand
 		if err := c.Compile(right); err != nil {
 			return err
 		}
 
-		// Emit the appropriate instruction for the operator
+		// Emit instruction based on operator
 		switch operator {
 		case "+":
 			c.emit(code.OpAdd)
@@ -73,10 +119,6 @@ func (c *Compiler) Compile(node parser.Node) error {
 			c.emit(code.OpGreaterThan)
 		case ">=", "<=":
 			c.emit(code.OpGreaterThanOrEqual)
-		case "&&":
-			c.emit(code.OpLogicalAnd)
-		case "||":
-			c.emit(code.OpLogicalOr)
 		case "&":
 			c.emit(code.OpBitwiseAnd)
 		case "|":
@@ -87,7 +129,8 @@ func (c *Compiler) Compile(node parser.Node) error {
 			c.emit(code.OpShiftLeft)
 		case ">>":
 			c.emit(code.OpShiftRight)
-
+		default:
+			return fmt.Errorf("unsupported binary operator: %s", operator)
 		}
 	case *parser.UnaryExpression:
 		err := c.Compile(node.Operand)
@@ -194,3 +237,4 @@ func (c *Compiler) Compile(node parser.Node) error {
 	}
 	return nil
 }
+

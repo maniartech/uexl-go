@@ -36,6 +36,9 @@ const (
 	OpBitwiseNot
 	OpShiftLeft
 	OpShiftRight
+	OpJump
+	OpJumpIfTruthy
+	OpJumpIfFalsy
 	OpArray
 	OpIndex
 	OpObject
@@ -83,6 +86,9 @@ var definations = map[Opcode]*Definition{
 	OpBitwiseNot:         {"OpBitwiseNot", []int{}},
 	OpShiftLeft:          {"OpShiftLeft", []int{}},
 	OpShiftRight:         {"OpShiftRight", []int{}},
+	OpJump:               {"OpJump", []int{2}},
+	OpJumpIfTruthy:       {"OpJumpIfTruthy", []int{2}},
+	OpJumpIfFalsy:        {"OpJumpIfFalsy", []int{2}},
 	OpArray:              {"OpArray", []int{2}},
 	OpObject:             {"OpHash", []int{2}},
 	OpIndex:              {"OpIndex", []int{}},
