@@ -73,19 +73,26 @@ func builtinSet(args ...parser.Node) (parser.Node, error) {
 	if len(args) != 3 {
 		return nil, fmt.Errorf("set expects 3 arguments")
 	}
-	obj, ok1 := args[0].(*parser.ObjectLiteral)
-	key, ok2 := args[1].(*parser.StringLiteral)
-	value := args[2]
-	if !ok1 || !ok2 {
-		return nil, fmt.Errorf("set: first argument must be an object and second must be a string")
-	}
-	if obj.Properties == nil {
-		obj.Properties = make(map[string]parser.Expression)
-	}
-	exprValue, ok := value.(parser.Expression)
+	obj, ok := args[0].(*parser.ObjectLiteral)
 	if !ok {
-		return nil, fmt.Errorf("set: value must be an Expression")
+		return nil, fmt.Errorf("set: first argument must be an object")
 	}
-	obj.Properties[key.Value] = exprValue
+
+	// key := args[1]
+	// Key should either be a string or a number. If it is an identifier, it should be evaluated
+	// to see if it can be used as a key. The evaluated value must be a string or a number.
+	// Finally, the key must be normalized to a string.
+	// TODO: Incomplete.
+	// if id, ok := key.(*parser.Identifier); ok {
+
+	// value := args[2]
+	// if obj.Properties == nil {
+	// 	obj.Properties = make(map[string]parser.Expression)
+	// }
+	// exprValue, ok := value.(parser.Expression)
+	// if !ok {
+	// 	return nil, fmt.Errorf("set: value must be an Expression")
+	// }
+	// obj.Properties[key.Value] = exprValue
 	return obj, nil
 }
