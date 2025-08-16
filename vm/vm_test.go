@@ -53,8 +53,7 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 			Functions:    vm.Builtins,
 			PipeHandlers: vm.DefaultPipeHandlers,
 		})
-		vm.SetBaseInstructions(comp.ByteCode())
-		err = vm.Run()
+		err = vm.Run(comp.ByteCode())
 		if err != nil {
 			t.Fatalf("[case %d] vm error: %s", i+1, err)
 		}

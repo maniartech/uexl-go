@@ -8,7 +8,7 @@ import (
 	"github.com/maniartech/uexl_go/parser"
 )
 
-func (vm *VM) SetBaseInstructions(bytecode *compiler.ByteCode) {
+func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode) {
 	vm.constants = bytecode.Constants
 	vm.contextVars = bytecode.ContextVars
 	vm.systemVars = bytecode.SystemVars
@@ -27,7 +27,7 @@ func (vm *VM) SetBaseInstructions(bytecode *compiler.ByteCode) {
 	vm.aliasVars = aliasVars
 }
 
-func (vm *VM) Run() error {
+func (vm *VM) run() error {
 	frame := vm.currentFrame()
 	for frame.ip < len(frame.instructions) {
 		opcode := code.Opcode(frame.instructions[frame.ip])
@@ -210,4 +210,9 @@ func (vm *VM) Run() error {
 
 	}
 	return nil
+}
+
+func (vm *VM) Run(bytecode *compiler.ByteCode) error {
+	vm.setBaseInstructions(bytecode)
+	return vm.run()
 }

@@ -34,7 +34,7 @@ func DefaultPipeHandler(input parser.Node, block any, alias string, vm *VM) (par
 
 	frame := NewFrame(blk.Instructions, 0)
 	vm.pushFrame(frame)
-	err := vm.Run()
+	err := vm.run()
 	if err != nil {
 		vm.popPipeScope()
 		vm.popFrame()
@@ -66,7 +66,7 @@ func MapPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -106,7 +106,7 @@ func FilterPipeHandler(input parser.Node, block any, alias string, vm *VM) (pars
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -151,7 +151,7 @@ func ReducePipeHandler(input parser.Node, block any, alias string, vm *VM) (pars
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -180,7 +180,7 @@ func FindPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -212,7 +212,7 @@ func SomePipeHandler(input parser.Node, block any, alias string, vm *VM) (parser
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -244,7 +244,7 @@ func EveryPipeHandler(input parser.Node, block any, alias string, vm *VM) (parse
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -303,7 +303,7 @@ func SortPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -351,7 +351,7 @@ func GroupByPipeHandler(input parser.Node, block any, alias string, vm *VM) (par
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -391,7 +391,7 @@ func WindowPipeHandler(input parser.Node, block any, alias string, vm *VM) (pars
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
@@ -433,7 +433,7 @@ func ChunkPipeHandler(input parser.Node, block any, alias string, vm *VM) (parse
 		vm.setPipeVar("$index", &parser.NumberLiteral{Value: float64(i / chunkSize)})
 		frame := NewFrame(blk.Instructions, 0)
 		vm.pushFrame(frame)
-		err := vm.Run()
+		err := vm.run()
 		if err != nil {
 			vm.popPipeScope()
 			vm.popFrame()
