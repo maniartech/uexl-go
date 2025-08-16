@@ -107,6 +107,8 @@ func (c *Compiler) Compile(node parser.Node) error {
 			c.emit(code.OpSub)
 		case "*":
 			c.emit(code.OpMul)
+		case "**":
+			c.emit(code.OpPow)
 		case "/":
 			c.emit(code.OpDiv)
 		case "%":
