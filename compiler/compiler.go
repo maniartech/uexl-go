@@ -53,33 +53,13 @@ func (c *Compiler) Compile(node parser.Node) error {
 			jumpPositions := make([]int, 0, len(terms))
 			switch operator {
 			case "||":
-				// For each term: compile and emit JumpIfTruthy to END
-				for _, term := range terms {
-					if err := c.Compile(term); err != nil {
-						return err
-					}
-					pos := len(c.currentInstructions())
-					c.emit(code.OpJumpIfTruthy, 0) // placeholder to END
-					jumpPositions = append(jumpPositions, pos)
-				}
-				// If none were truthy, push boolean false
-				c.emit(code.OpFalse)
-				end := len(c.currentInstructions())
-				for _, p := range jumpPositions {
-					// operand starts at p+1
-					c.replaceOperand(p+1, end)
-				}
-				return nil
-
-			case "&&":
-				// For all but last term: JumpIfFalsy to END
 				for i, term := range terms {
 					if err := c.Compile(term); err != nil {
 						return err
 					}
 					if i < len(terms)-1 {
 						pos := len(c.currentInstructions())
-						c.emit(code.OpJumpIfFalsy, 0) // placeholder to END
+						c.emit(code.OpJumpIfTruthy, 0) // placeholder to END
 						jumpPositions = append(jumpPositions, pos)
 					}
 				}
@@ -87,8 +67,28 @@ func (c *Compiler) Compile(node parser.Node) error {
 				for _, p := range jumpPositions {
 					c.replaceOperand(p+1, end)
 				}
-				return nil
+			case "&&":
+				if len(terms) == 0 {
+					return nil
+				}
+				for i := 0; i < len(terms)-1; i++ {
+					if err := c.Compile(terms[i]); err != nil {
+						return err
+					}
+					pos := len(c.currentInstructions())
+					c.emit(code.OpJumpIfFalsy, 0) // placeholder to END
+					jumpPositions = append(jumpPositions, pos)
+				}
+				// Compile last term
+				if err := c.Compile(terms[len(terms)-1]); err != nil {
+					return err
+				}
+				end := len(c.currentInstructions())
+				for _, p := range jumpPositions {
+					c.replaceOperand(p+1, end)
+				}
 			}
+			return nil
 		}
 
 		// Compile operands for other operators
@@ -237,4 +237,3 @@ func (c *Compiler) Compile(node parser.Node) error {
 	}
 	return nil
 }
-
