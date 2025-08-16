@@ -53,12 +53,11 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 			Functions:    vm.Builtins,
 			PipeHandlers: vm.DefaultPipeHandlers,
 		})
-		err = vm.Run(comp.ByteCode())
+		output, err := vm.Run(comp.ByteCode())
 		if err != nil {
 			t.Fatalf("[case %d] vm error: %s", i+1, err)
 		}
-		stackElem := vm.LastPoppedStackElem()
-		err = testExpectedObject(t, tt.expected, stackElem)
+		err = testExpectedObject(t, tt.expected, output.(parser.Node))
 		if err != nil {
 			t.Fatalf("[case %d] testExpectedObject error: %s", i+1, err)
 		}

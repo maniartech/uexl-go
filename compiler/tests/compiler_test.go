@@ -34,6 +34,11 @@ func TestNumberArithmetic(t *testing.T) {
 			code.Make(code.OpConstant, 1),
 			code.Make(code.OpDiv),
 		}},
+		{"1 ** 2", []any{1.0, 2.0}, []code.Instructions{
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpConstant, 1),
+			code.Make(code.OpPow),
+		}},
 		{"1 + 2 * 3", []any{1.0, 2.0, 3.0}, []code.Instructions{
 			code.Make(code.OpConstant, 0),
 			code.Make(code.OpConstant, 1),
