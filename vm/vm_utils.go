@@ -14,12 +14,12 @@ var True = parser.BooleanLiteral{Value: true}
 var False = parser.BooleanLiteral{Value: false}
 var Null = parser.NullLiteral{}
 
-type VMFunctions map[string]func(args ...parser.Node) (parser.Node, error)
+type VMFunctions map[string]func(args ...any) (any, error)
 type PipeHandler func(
-	input parser.Node,
+	input any,
 	block any,
 	alias string,
-	vm *VM) (parser.Node, error)
+	vm *VM) (any, error)
 
 type PipeHandlers map[string]PipeHandler
 
@@ -35,16 +35,16 @@ type Frame struct {
 }
 
 type VM struct {
-	constants       []parser.Node
-	contextVars     []parser.Node
-	systemVars      []parser.Node
-	aliasVars       map[string]parser.Node
+	constants       []any
+	contextVars     []any
+	systemVars      []any
+	aliasVars       map[string]any
 	functionContext VMFunctions
-	pipeHandlers    PipeHandlers             // Add pipe handlers registry
-	pipeScopes      []map[string]parser.Node // Add scope stack for pipe variables
+	pipeHandlers    PipeHandlers     // Add pipe handlers registry
+	pipeScopes      []map[string]any // Add scope stack for pipe variables
 
 	instructions code.Instructions
-	stack        []parser.Node
+	stack        []any
 	sp           int
 	frames       []*Frame
 	framesIdx    int
@@ -62,36 +62,12 @@ func New(libCtx LibContext) *VM {
 		functionContext: libCtx.Functions,
 		pipeHandlers:    libCtx.PipeHandlers,
 		frames:          make([]*Frame, MaxFrames),
-		pipeScopes:      make([]map[string]parser.Node, 0),
-		stack:           make([]parser.Node, StackSize),
-		aliasVars:       make(map[string]parser.Node),
+		pipeScopes:      make([]map[string]any, 0),
+		stack:           make([]any, StackSize),
+		aliasVars:       make(map[string]any),
 	}
 
 }
-
-// func New(bytecode *compiler.ByteCode, functionContext VMFunctions, pipeHandlers PipeHandlers) *VM {
-// 	mainFrame := NewFrame(bytecode.Instructions, 0)
-// 	frames := make([]*Frame, MaxFrames)
-// 	frames[0] = mainFrame
-// 	if pipeHandlers == nil {
-// 		pipeHandlers = make(PipeHandlers)
-// 	}
-
-// 	return &VM{
-// 		constants:       bytecode.Constants,
-// 		contextVars:     bytecode.ContextVars,
-// 		systemVars:      bytecode.SystemVars,
-// 		instructions:    bytecode.Instructions,
-// 		aliasVars:       make(map[string]parser.Node),
-// 		functionContext: functionContext,
-// 		pipeHandlers:    pipeHandlers,
-// 		pipeScopes:      make([]map[string]parser.Node, 0),
-// 		stack:           make([]parser.Node, StackSize),
-// 		sp:              0,
-// 		frames:          frames,
-// 		framesIdx:       1, // Start with the main frame at index 0
-// 	}
-// }
 
 func NewFrame(instructions code.Instructions, basePointer int) *Frame {
 	return &Frame{
@@ -101,7 +77,7 @@ func NewFrame(instructions code.Instructions, basePointer int) *Frame {
 	}
 }
 
-func (vm *VM) Push(node parser.Node) error {
+func (vm *VM) Push(node any) error {
 	if vm.sp >= StackSize {
 		return fmt.Errorf("stack overflow")
 	}
@@ -110,7 +86,7 @@ func (vm *VM) Push(node parser.Node) error {
 	return nil
 }
 
-func (vm *VM) Pop() parser.Node {
+func (vm *VM) Pop() any {
 	if vm.sp == 0 {
 		return nil
 	}
@@ -120,14 +96,14 @@ func (vm *VM) Pop() parser.Node {
 	return node
 }
 
-func (vm *VM) LastPoppedStackElem() parser.Node {
+func (vm *VM) LastPoppedStackElem() any {
 	if vm.sp == 0 {
 		return nil
 	}
 	return vm.stack[vm.sp-1]
 }
 
-func (vm *VM) Top() parser.Node {
+func (vm *VM) Top() any {
 	// Check if the stack is empty
 	if vm.sp == 0 {
 		return nil
@@ -137,7 +113,7 @@ func (vm *VM) Top() parser.Node {
 }
 
 func (vm *VM) pushPipeScope() {
-	vm.pipeScopes = append(vm.pipeScopes, make(map[string]parser.Node))
+	vm.pipeScopes = append(vm.pipeScopes, make(map[string]any))
 }
 
 func (vm *VM) popPipeScope() {
@@ -146,13 +122,13 @@ func (vm *VM) popPipeScope() {
 	}
 }
 
-func (vm *VM) setPipeVar(name string, value parser.Node) {
+func (vm *VM) setPipeVar(name string, value any) {
 	if len(vm.pipeScopes) > 0 {
 		vm.pipeScopes[len(vm.pipeScopes)-1][name] = value
 	}
 }
 
-func (vm *VM) getPipeVar(name string) (parser.Node, bool) {
+func (vm *VM) getPipeVar(name string) (any, bool) {
 	for i := len(vm.pipeScopes) - 1; i >= 0; i-- {
 		if val, ok := vm.pipeScopes[i][name]; ok {
 			return val, true

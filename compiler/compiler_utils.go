@@ -39,25 +39,25 @@ func New() *Compiler {
 		previousInstruction: EmmittedInstruction{},
 	}
 	return &Compiler{
-		constants:   []parser.Node{},
+		constants:   []any{},
 		scopes:      []CompilationScope{mainScope},
 		scopeIndex:  0,
-		contextVars: []parser.Node{},
+		contextVars: []any{},
 	}
 }
 
-func NewWithState(constants []parser.Node) *Compiler {
+func NewWithState(constants []any) *Compiler {
 	compiler := New()
 	compiler.constants = constants
 	return compiler
 }
 
-func (c *Compiler) addConstant(node parser.Node) int {
+func (c *Compiler) addConstant(node any) int {
 	c.constants = append(c.constants, node)
 	return len(c.constants) - 1
 }
 
-func (c *Compiler) addContextVar(node parser.Node) int {
+func (c *Compiler) addContextVar(node any) int {
 	ident, ok := node.(*parser.Identifier)
 	if !ok {
 		panic("addContextVar: node is not *parser.Identifier")
@@ -104,7 +104,7 @@ func (c *Compiler) compilePredicateBlock(expr parser.Node) (int, error) {
 }
 
 func (c *Compiler) addPipeLocalVar(name string) int {
-	c.SystemVars = append(c.SystemVars, &parser.Identifier{Name: name})
+	c.SystemVars = append(c.SystemVars, name)
 	return len(c.SystemVars) - 1
 }
 

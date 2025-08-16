@@ -5,257 +5,278 @@ import (
 	"math"
 
 	"github.com/maniartech/uexl_go/code"
-	"github.com/maniartech/uexl_go/parser"
 )
 
 // executeBinaryExpression evaluates the binary expression by popping the top two elements from the stack, applying the operator, and pushing the result back onto the stack.
-func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right parser.Node) error {
-	if left.Type() != right.Type() {
-		return fmt.Errorf("type mismatch: cannot apply %s to %T and %T",
-			operator.String(), left, right)
-	}
-	switch left.(type) {
-	case *parser.NumberLiteral:
-		return vm.executeBinaryArithmeticOperation(operator, left, right)
-	case *parser.StringLiteral:
-		return vm.executeStringBinaryOperation(operator, left, right)
-	case *parser.BooleanLiteral:
-		return vm.executeBooleanBinaryOperation(operator, left, right)
+func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) error {
+	switch leftVal := left.(type) {
+	case float64, int:
+		var l, r float64
+		// Convert left operand to float64
+		switch v := left.(type) {
+		case float64:
+			l = v
+		case int:
+			l = float64(v)
+		default:
+			return fmt.Errorf("expected number, got %T", left)
+		}
+		// Convert right operand to float64
+		switch v := right.(type) {
+		case float64:
+			r = v
+		case int:
+			r = float64(v)
+		default:
+			return fmt.Errorf("expected number, got %T", right)
+		}
+		return vm.executeBinaryArithmeticOperation(operator, l, r)
+	case string:
+		r, ok := right.(string)
+		if !ok {
+			return fmt.Errorf("expected string, got %T", right)
+		}
+		return vm.executeStringBinaryOperation(operator, leftVal, r)
+	case bool:
+		r, ok := right.(bool)
+		if !ok {
+			return fmt.Errorf("expected bool, got %T", right)
+		}
+		return vm.executeBooleanBinaryOperation(operator, leftVal, r)
 	default:
 		return fmt.Errorf("unsupported binary operation for type: %T", left)
 	}
 }
 
 // executeBinaryArithmeticOperation evaluates the binary arithmetic expression by popping the top two elements from the stack, applying the operator, and pushing the result back onto the stack.
-func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right parser.Node) error {
-	leftValue := left.(*parser.NumberLiteral).Value
-	rightValue := right.(*parser.NumberLiteral).Value
+func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right any) error {
+	leftValue := left.(float64)
+	rightValue := right.(float64)
 
 	switch operator {
 	case code.OpAdd:
-		vm.Push(&parser.NumberLiteral{Value: leftValue + rightValue})
+		vm.Push(leftValue + rightValue)
 	case code.OpSub:
-		vm.Push(&parser.NumberLiteral{Value: leftValue - rightValue})
+		vm.Push(leftValue - rightValue)
 	case code.OpMul:
-		vm.Push(&parser.NumberLiteral{Value: leftValue * rightValue})
+		vm.Push(leftValue * rightValue)
 	case code.OpDiv:
 		if rightValue == 0 {
 			return fmt.Errorf("division by zero")
 		}
-		vm.Push(&parser.NumberLiteral{Value: leftValue / rightValue})
+		vm.Push(leftValue / rightValue)
 	case code.OpPow:
-		vm.Push(&parser.NumberLiteral{Value: math.Pow(leftValue, rightValue)})
+		vm.Push(math.Pow(leftValue, rightValue))
 	case code.OpMod:
-		vm.Push(&parser.NumberLiteral{Value: math.Mod(leftValue, rightValue)})
+		vm.Push(math.Mod(leftValue, rightValue))
 	// Bitwise operations
 	case code.OpBitwiseAnd:
-		vm.Push(&parser.NumberLiteral{Value: float64(int(leftValue) & int(rightValue))})
+		vm.Push(float64(int(leftValue) & int(rightValue)))
 	case code.OpBitwiseOr:
-		vm.Push(&parser.NumberLiteral{Value: float64(int(leftValue) | int(rightValue))})
+		vm.Push(float64(int(leftValue) | int(rightValue)))
 	case code.OpBitwiseXor:
-		vm.Push(&parser.NumberLiteral{Value: float64(int(leftValue) ^ int(rightValue))})
+		vm.Push(float64(int(leftValue) ^ int(rightValue)))
 	case code.OpShiftLeft:
-		vm.Push(&parser.NumberLiteral{Value: float64(int(leftValue) << int(rightValue))})
+		vm.Push(float64(int(leftValue) << int(rightValue)))
 	case code.OpShiftRight:
-		vm.Push(&parser.NumberLiteral{Value: float64(int(leftValue) >> int(rightValue))})
+		vm.Push(float64(int(leftValue) >> int(rightValue)))
 	default:
 		return fmt.Errorf("unknown operator: %v", operator)
 	}
 	return nil
 }
 
-func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right parser.Node) error {
+func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right any) error {
 	switch operator {
 	case code.OpAdd:
-		return vm.Push(&parser.StringLiteral{
-			Value: left.(*parser.StringLiteral).Value + right.(*parser.StringLiteral).Value})
+		l, lok := left.(string)
+		r, rok := right.(string)
+		if !lok || !rok {
+			return fmt.Errorf("string addition requires string operands, got %T and %T", left, right)
+		}
+		return vm.Push(l + r)
 	default:
 		return fmt.Errorf("unsupported string operation: %s", operator.String())
 	}
 }
 
-func (vm *VM) executeBooleanBinaryOperation(operator code.Opcode, left, right parser.Node) error {
+func (vm *VM) executeBooleanBinaryOperation(operator code.Opcode, left, right bool) error {
 	switch operator {
 	case code.OpLogicalAnd:
-		leftValue := left.(*parser.BooleanLiteral).Value
-		rightValue := right.(*parser.BooleanLiteral).Value
-		vm.Push(&parser.BooleanLiteral{Value: leftValue && rightValue})
+		vm.Push(left && right)
 	case code.OpLogicalOr:
-		leftValue := left.(*parser.BooleanLiteral).Value
-		rightValue := right.(*parser.BooleanLiteral).Value
-		vm.Push(&parser.BooleanLiteral{Value: leftValue || rightValue})
+		vm.Push(left || right)
 	default:
 		return fmt.Errorf("unsupported boolean operation: %s", operator.String())
 	}
 	return nil
 }
 
-func (vm *VM) executeNumberComparisonOperation(operator code.Opcode, left, right parser.Node) error {
-	leftValue := left.(*parser.NumberLiteral).Value
-	rightValue := right.(*parser.NumberLiteral).Value
+func (vm *VM) executeNumberComparisonOperation(operator code.Opcode, left, right any) error {
+	leftValue, lok := left.(float64)
+	rightValue, rok := right.(float64)
+	if !lok || !rok {
+		return fmt.Errorf("number comparison requires float64 operands, got %T and %T", left, right)
+	}
 	switch operator {
 	case code.OpEqual:
-		vm.Push(&parser.BooleanLiteral{Value: leftValue == rightValue})
+		vm.Push(leftValue == rightValue)
 	case code.OpNotEqual:
-		vm.Push(&parser.BooleanLiteral{Value: leftValue != rightValue})
+		vm.Push(leftValue != rightValue)
 	case code.OpGreaterThan:
-		vm.Push(&parser.BooleanLiteral{Value: leftValue > rightValue})
+		vm.Push(leftValue > rightValue)
 	case code.OpGreaterThanOrEqual:
-		vm.Push(&parser.BooleanLiteral{Value: leftValue >= rightValue})
+		vm.Push(leftValue >= rightValue)
 	default:
 		return fmt.Errorf("unknown comparison operator: %v", operator)
 	}
 	return nil
 }
-func (vm *VM) executeStringComparisonOperation(operator code.Opcode, left, right parser.Node) error {
-	leftValue := left.(*parser.StringLiteral).Value
-	rightValue := right.(*parser.StringLiteral).Value
+func (vm *VM) executeStringComparisonOperation(operator code.Opcode, left, right any) error {
+	leftValue, lok := left.(string)
+	rightValue, rok := right.(string)
+	if !lok || !rok {
+		return fmt.Errorf("string comparison requires string operands, got %T and %T", left, right)
+	}
 	switch operator {
 	case code.OpEqual:
-		vm.Push(&parser.BooleanLiteral{Value: leftValue == rightValue})
+		vm.Push(leftValue == rightValue)
 	case code.OpNotEqual:
-		vm.Push(&parser.BooleanLiteral{Value: leftValue != rightValue})
+		vm.Push(leftValue != rightValue)
 	default:
 		return fmt.Errorf("unknown string comparison operator: %v", operator)
 	}
 	return nil
 }
-func (vm *VM) executeBooleanComparisonOperation(operator code.Opcode, left, right parser.Node) error {
-	// Check if both left and right are NumberLiteral nodes
-	leftValue := left.(*parser.BooleanLiteral).Value
-	rightValue := right.(*parser.BooleanLiteral).Value
+func (vm *VM) executeBooleanComparisonOperation(operator code.Opcode, left, right any) error {
+	leftValue, lok := left.(bool)
+	rightValue, rok := right.(bool)
+	if !lok || !rok {
+		return fmt.Errorf("boolean comparison requires bool operands, got %T and %T", left, right)
+	}
 	switch operator {
 	case code.OpEqual:
-		vm.Push(&parser.BooleanLiteral{Value: leftValue == rightValue})
+		vm.Push(leftValue == rightValue)
 	case code.OpNotEqual:
-		vm.Push(&parser.BooleanLiteral{Value: leftValue != rightValue})
+		vm.Push(leftValue != rightValue)
 	default:
 		return fmt.Errorf("unknown boolean comparison operator: %v", operator)
 	}
 	return nil
 }
 
-func (vm *VM) executeUnaryExpression(operator code.Opcode, operand parser.Node) error {
-	switch operand := operand.(type) {
-	case *parser.NumberLiteral:
-		return vm.executeUnaryNumericOperation(operator, operand)
-	case *parser.StringLiteral:
+func (vm *VM) executeUnaryExpression(operator code.Opcode, operand any) error {
+	switch v := operand.(type) {
+	case float64:
+		return vm.executeUnaryNumericOperation(operator, v)
+	case string:
 		return fmt.Errorf("unary operations not supported for strings")
-	case *parser.BooleanLiteral:
-		return vm.executeUnaryBooleanOperation(operator, operand)
+	case bool:
+		return vm.executeUnaryBooleanOperation(operator, v)
 	default:
 		return fmt.Errorf("unknown operand type: %T", operand)
 	}
 }
 
-func (vm *VM) executeUnaryNumericOperation(operator code.Opcode, operand parser.Node) error {
-	operandValue := operand.(*parser.NumberLiteral).Value
+func (vm *VM) executeUnaryNumericOperation(operator code.Opcode, operand any) error {
+	operandValue, ok := operand.(float64)
+	if !ok {
+		return fmt.Errorf("unary numeric operation requires float64 operand, got %T", operand)
+	}
 	switch operator {
 	case code.OpMinus:
-		vm.Push(&parser.NumberLiteral{Value: -operandValue})
+		vm.Push(-operandValue)
 	default:
 		return fmt.Errorf("unknown unary operator: %v", operator)
 	}
 	return nil
 }
 
-func (vm *VM) executeUnaryBooleanOperation(operator code.Opcode, operand parser.Node) error {
-	operandValue := operand.(*parser.BooleanLiteral).Value
+func (vm *VM) executeUnaryBooleanOperation(operator code.Opcode, operand any) error {
+	operandValue, ok := operand.(bool)
+	if !ok {
+		return fmt.Errorf("unary boolean operation requires bool operand, got %T", operand)
+	}
 	switch operator {
 	case code.OpBang:
-		vm.Push(&parser.BooleanLiteral{Value: !operandValue})
+		vm.Push(!operandValue)
 	default:
 		return fmt.Errorf("unknown unary operator: %v", operator)
 	}
 	return nil
 }
 
-func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right parser.Node) error {
-	if left.Type() != right.Type() {
-		return fmt.Errorf("type mismatch: cannot compare %T with %T", left, right)
-	}
+func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right any) error {
 	switch left.(type) {
-	case *parser.NumberLiteral:
+	case float64:
 		return vm.executeNumberComparisonOperation(operator, left, right)
-	case *parser.StringLiteral:
+	case string:
 		return vm.executeStringComparisonOperation(operator, left, right)
-	case *parser.BooleanLiteral:
+	case bool:
 		return vm.executeBooleanComparisonOperation(operator, left, right)
 	default:
 		return fmt.Errorf("unsupported comparison for type: %T", left)
 	}
 }
 
-func (vm *VM) buildArray(length int) []parser.Expression {
-	// Calculate the start index on the stack
+func (vm *VM) buildArray(length int) []any {
 	startIndex := vm.sp - length
-
-	elements := make([]parser.Expression, length)
-	for i := range length {
-		elem, ok := vm.stack[startIndex+i].(parser.Expression)
-		if !ok {
-			panic(fmt.Sprintf("expected parser.Expression on stack, got %T", vm.stack[startIndex+i]))
-		}
-		elements[i] = elem
+	elements := make([]any, length)
+	for i := 0; i < length; i++ {
+		elements[i] = vm.stack[startIndex+i]
 	}
-
-	// Update the stack pointer to remove the elements
 	vm.sp = startIndex
-
 	return elements
 }
 
-func (vm *VM) buildObject(startIndex, endIndex int) (map[string]parser.Expression, error) {
-	object := make(map[string]parser.Expression)
+func (vm *VM) buildObject(startIndex, endIndex int) (map[string]any, error) {
+	object := make(map[string]any)
 	for i := startIndex; i < endIndex; i += 2 {
-		key, ok := vm.stack[i].(*parser.StringLiteral)
+		key, ok := vm.stack[i].(string)
 		if !ok {
 			return nil, fmt.Errorf("expected string key, got %T", vm.stack[i])
 		}
-		value, ok := vm.stack[i+1].(parser.Expression)
-		if !ok {
-			return nil, fmt.Errorf("expected expression value, got %T", vm.stack[i+1])
-		}
-		object[key.Value] = value
+		object[key] = vm.stack[i+1]
 	}
 	vm.sp = startIndex
 	return object, nil
 }
 
-func (vm *VM) executeIndex(operand, index parser.Node) error {
-	// Check if the operand is an array
-	switch operand := operand.(type) {
-	case *parser.ArrayLiteral:
-		if index, ok := index.(*parser.NumberLiteral); ok {
-			return vm.executeArrayIndex(operand, index)
+func (vm *VM) executeIndex(operand, index any) error {
+	switch arr := operand.(type) {
+	case []any:
+		idx, ok := index.(float64)
+		if !ok {
+			return fmt.Errorf("array index must be int, got %T", index)
 		}
-	case *parser.ObjectLiteral:
-		if key, ok := index.(*parser.StringLiteral); ok {
-			if value, exists := operand.Properties[key.Value]; exists {
-				return vm.Push(value)
-			}
-			return fmt.Errorf("key %q not found in object", key.Value)
+		return vm.executeArrayIndex(arr, idx)
+	case map[string]any:
+		key, ok := index.(string)
+		if !ok {
+			return fmt.Errorf("object key must be string, got %T", index)
 		}
+		value, exists := arr[key]
+		if !exists {
+			return fmt.Errorf("key %q not found in object", key)
+		}
+		return vm.Push(value)
 	}
 	return fmt.Errorf("indexing not supported for %T", operand)
 }
 
-func (vm *VM) executeArrayIndex(array, index parser.Node) error {
-	if _, ok := array.(*parser.ArrayLiteral); !ok {
+func (vm *VM) executeArrayIndex(array, index any) error {
+	arr, ok := array.([]any)
+	if !ok {
 		return fmt.Errorf("expected array, got %T", array)
 	}
-	if _, ok := index.(*parser.NumberLiteral); !ok {
-		return fmt.Errorf("expected number index, got %T", index)
+	idx, ok := index.(float64)
+	if !ok {
+		return fmt.Errorf("expected int index, got %T", index)
 	}
-
-	arrayLiteral := array.(*parser.ArrayLiteral)
-	indexValue := int(index.(*parser.NumberLiteral).Value)
-
-	if indexValue < 0 || indexValue >= len(arrayLiteral.Elements) {
-		return fmt.Errorf("array index out of bounds: %d", indexValue)
+	if idx < 0 || idx >= float64(len(arr)) {
+		return fmt.Errorf("array index out of bounds: %f", idx)
 	}
-
-	return vm.Push(arrayLiteral.Elements[indexValue])
+	return vm.Push(arr[int(idx)])
 }
 
 func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
@@ -264,79 +285,73 @@ func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
 		return fmt.Errorf("function index out of bounds: %d", funcIndex)
 	}
 
-	var functionName string
-
-	switch fn := vm.constants[funcIndex].(type) {
-	case *parser.Identifier:
-		functionName = fn.Name
-	case *parser.StringLiteral:
-		functionName = fn.Value
-	default:
-		return fmt.Errorf("function name at constant index %d is not an identifier or string, got %T", funcIndex, vm.constants[funcIndex])
+	functionName, ok := vm.constants[funcIndex].(string)
+	if !ok {
+		return fmt.Errorf("function name at constant index %d is not a string, got %T", funcIndex, vm.constants[funcIndex])
 	}
-
 	function, exists := vm.functionContext[functionName]
 	if !exists {
 		return fmt.Errorf("function %s not found in context", functionName)
 	}
-
-	args := make([]parser.Node, numArgs)
+	args := make([]any, numArgs)
 	for i := 0; i < int(numArgs); i++ {
 		if vm.sp == 0 {
 			return fmt.Errorf("not enough arguments on stack for function %s", functionName)
 		}
 		args[int(numArgs)-1-i] = vm.Pop()
 	}
-
 	functionResult, err := function(args...)
 	if err != nil {
 		return fmt.Errorf("error calling function %s: %w", functionName, err)
 	}
-
-	// If the function returns nil, we don't push anything onto the stack.
 	if functionResult == nil {
 		return nil
 	}
-
 	return vm.Push(functionResult)
 }
 
-func isTruthy(val parser.Node) bool {
+func isTruthy(val any) bool {
 	switch v := val.(type) {
-	case *parser.BooleanLiteral:
-		return v.Value
-	case *parser.NumberLiteral:
-		return v.Value != 0
-	case *parser.StringLiteral:
-		return v.Value != ""
-	case *parser.ArrayLiteral:
-		return len(v.Elements) > 0
-	case *parser.ObjectLiteral:
-		return len(v.Properties) > 0
+	case bool:
+		return v
+	case float64:
+		return v != 0
+	case int:
+		return v != 0
+	case string:
+		return v != ""
+	case []any:
+		return len(v) > 0
+	case map[string]any:
+		return len(v) > 0
 	default:
 		return val != nil
 	}
 }
 
-func normalizeFalsyToFalse(val parser.Node) parser.Node {
+func normalizeFalsyToFalse(val any) any {
 	switch v := val.(type) {
-	case *parser.BooleanLiteral:
+	case bool:
 		return v
-	case *parser.NumberLiteral:
-		if v.Value == 0 {
-			return &parser.BooleanLiteral{Value: false}
+	case float64:
+		if v == 0 {
+			return false
 		}
-	case *parser.StringLiteral:
-		if v.Value == "" {
-			return &parser.BooleanLiteral{Value: false}
+	case int:
+		if v == 0 {
+			return false
 		}
-	case *parser.ArrayLiteral:
-		if len(v.Elements) == 0 {
-			return &parser.BooleanLiteral{Value: false}
+	case string:
+		if v == "" {
+			return false
 		}
-	case *parser.ObjectLiteral:
-		if len(v.Properties) == 0 {
-			return &parser.BooleanLiteral{Value: false}
+	case []any:
+		if len(v) == 0 {
+			return false
+		}
+	case map[string]any:
+		if len(v) == 0 {
+			return false
 		}
 	}
 	return val
