@@ -9,9 +9,9 @@ import (
 )
 
 type Compiler struct {
-	constants   []parser.Node
-	contextVars []parser.Node
-	SystemVars  []parser.Node
+	constants   []any
+	contextVars []any
+	SystemVars  []any
 	scopes      []CompilationScope
 	scopeIndex  int
 }
@@ -28,7 +28,6 @@ type CompilationScope struct {
 }
 
 type InstructionBlock struct {
-	parser.Node
 	Instructions code.Instructions
 }
 
@@ -153,7 +152,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 				return err
 			}
 		}
-		fnIdx := c.addConstant(&parser.StringLiteral{Value: node.Function.(*parser.Identifier).Name})
+		fnIdx := c.addConstant(node.Function.(*parser.Identifier).Name)
 		c.emit(code.OpCallFunction, fnIdx, len(node.Arguments))
 	case *parser.ProgramNode:
 		// First expression is the entry point will just be normal expression from which we get the result
@@ -171,7 +170,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 		// Compile each pipe expression
 		for _, pipeExpr := range node.PipeExpressions[1:] {
 			// Compile the pipe's predicate expression block
-			pipeTypeIdx := c.addConstant(&parser.StringLiteral{Value: pipeExpr.PipeType})
+			pipeTypeIdx := c.addConstant(pipeExpr.PipeType)
 			aliasIdx := c.addPipeLocalVar(pipeExpr.Alias)
 			blockIdx, err := c.compilePredicateBlock(pipeExpr.Expression)
 			if err != nil {
@@ -199,8 +198,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 		sort.Strings(keys)
 
 		for _, key := range keys {
-			stringLiteral := &parser.StringLiteral{Value: key}
-			keyIdx := c.addConstant(stringLiteral)
+			keyIdx := c.addConstant(key)
 			c.emit(code.OpConstant, keyIdx) // Push key onto stack
 
 			if err := c.Compile(node.Properties[key]); err != nil {
@@ -210,7 +208,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 		c.emit(code.OpObject, len(node.Properties)*2) // Each key-value pair is two stack elements
 	case *parser.NumberLiteral:
 		// Add the number literal to constants
-		c.emit(code.OpConstant, c.addConstant(node))
+		c.emit(code.OpConstant, c.addConstant(node.Value))
 	case *parser.BooleanLiteral:
 		if node.Value {
 			c.emit(code.OpTrue)
@@ -219,14 +217,14 @@ func (c *Compiler) Compile(node parser.Node) error {
 		}
 	case *parser.StringLiteral:
 		// Add the string literal to constants
-		c.emit(code.OpConstant, c.addConstant(node))
+		c.emit(code.OpConstant, c.addConstant(node.Value))
 	case *parser.Identifier:
 		// Identifiers are variables passed via go's environment context. They are "Constant" in a sense that they are not computed at runtime.
 		// If identifer begins with a dollar sign, it is a local variable in the pipe context.
 		if isPipeLocalVar(node.Name) {
 			c.emit(code.OpIdentifier, c.addPipeLocalVar(node.Name))
 		} else {
-			c.emit(code.OpContextVar, c.addContextVar(node))
+			c.emit(code.OpContextVar, c.addContextVar(node.Name))
 		}
 	case *parser.ArrayLiteral:
 		// Compile each element in the array

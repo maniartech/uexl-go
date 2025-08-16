@@ -5,7 +5,6 @@ import (
 
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/compiler"
-	"github.com/maniartech/uexl_go/parser"
 )
 
 func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode) {
@@ -15,9 +14,9 @@ func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode) {
 
 	mainFrame := NewFrame(bytecode.Instructions, 0)
 	frames := make([]*Frame, MaxFrames)
-	pipeScopes := make([]map[string]parser.Node, 0)
-	stack := make([]parser.Node, StackSize)
-	aliasVars := make(map[string]parser.Node)
+	pipeScopes := make([]map[string]any, 0)
+	stack := make([]any, StackSize)
+	aliasVars := make(map[string]any)
 
 	frames[0] = mainFrame
 	vm.frames = frames
@@ -49,18 +48,18 @@ func (vm *VM) run() error {
 		case code.OpStore:
 			varIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			value := vm.Pop()
-			aliasName := vm.systemVars[varIndex].(*parser.Identifier).Name
+			aliasName := vm.systemVars[varIndex].(string)
 			if len(vm.pipeScopes) > 0 {
 				vm.pipeScopes[0][aliasName] = value // Set in outermost scope
 			} else {
 				// creating a new pipe scope if none exists
-				vm.pipeScopes = append(vm.pipeScopes, make(map[string]parser.Node))
+				vm.pipeScopes = append(vm.pipeScopes, make(map[string]any))
 				vm.pipeScopes[0][aliasName] = value
 			}
 			frame.ip += 3
 		case code.OpIdentifier:
 			identIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			ident := vm.systemVars[identIndex].(*parser.Identifier).Name
+			ident := vm.systemVars[identIndex].(string)
 			val, ok := vm.getPipeVar(ident)
 			if !ok {
 				return fmt.Errorf("undefined pipe variable: %s", ident)
@@ -121,13 +120,13 @@ func (vm *VM) run() error {
 				frame.ip += 3
 			}
 		case code.OpTrue:
-			err := vm.Push(&parser.BooleanLiteral{Value: true})
+			err := vm.Push(true)
 			if err != nil {
 				return err
 			}
 			frame.ip += 1
 		case code.OpFalse:
-			err := vm.Push(&parser.BooleanLiteral{Value: false})
+			err := vm.Push(false)
 			if err != nil {
 				return err
 			}
@@ -135,7 +134,7 @@ func (vm *VM) run() error {
 		case code.OpArray:
 			length := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			array := vm.buildArray(int(length))
-			err := vm.Push(&parser.ArrayLiteral{Elements: array})
+			err := vm.Push(array)
 			if err != nil {
 				return err
 			}
@@ -146,7 +145,7 @@ func (vm *VM) run() error {
 			if err != nil {
 				return err
 			}
-			err = vm.Push(&parser.ObjectLiteral{Properties: object})
+			err = vm.Push(object)
 			if err != nil {
 				return err
 			}
@@ -173,8 +172,8 @@ func (vm *VM) run() error {
 			aliasIdx := code.ReadUint16(frame.instructions[frame.ip+3 : frame.ip+5])
 			blockIdx := code.ReadUint16(frame.instructions[frame.ip+5 : frame.ip+7])
 
-			pipeType := vm.constants[pipeTypeIdx].(*parser.StringLiteral).Value
-			alias := vm.systemVars[aliasIdx].(*parser.Identifier).Name
+			pipeType := vm.constants[pipeTypeIdx].(string)
+			alias := vm.systemVars[aliasIdx].(string)
 			block := vm.constants[blockIdx] // Should be *compiler.InstructionBlock or nil
 
 			input := vm.Pop()

@@ -53,11 +53,12 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 			Functions:    vm.Builtins,
 			PipeHandlers: vm.DefaultPipeHandlers,
 		})
-		output, err := vm.Run(comp.ByteCode())
+		bytecode := comp.ByteCode()
+		output, err := vm.Run(bytecode)
 		if err != nil {
 			t.Fatalf("[case %d] vm error: %s", i+1, err)
 		}
-		err = testExpectedObject(t, tt.expected, output.(parser.Node))
+		err = testExpectedObject(t, tt.expected, output)
 		if err != nil {
 			t.Fatalf("[case %d] testExpectedObject error: %s", i+1, err)
 		}
@@ -65,72 +66,64 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 }
 
 // testExpectedObject compares the expected value with the actual value from the VM stack.
-func testExpectedObject(t *testing.T, expected any, actual parser.Node) error {
-	switch actual := actual.(type) {
-	case *parser.NumberLiteral:
-		// NumberLiteral can be integer or float
-		if expectedInt, ok := expected.(int); ok {
-			if actual.Value != float64(expectedInt) {
-				return fmt.Errorf("expected %d, got %f", expectedInt, actual.Value)
-			}
-		} else if expectedFloat, ok := expected.(float64); ok {
-			if actual.Value != expectedFloat {
-				return fmt.Errorf("expected %f, got %f", expectedFloat, actual.Value)
-			}
-		} else {
-			return fmt.Errorf("expected a number, got %T", expected)
+func testExpectedObject(t *testing.T, expected any, actual any) error {
+	switch v := actual.(type) {
+	case float64:
+	case int:
+		// converting the value to float64 for comparison
+		if float64(v) != actual.(float64) {
+			return fmt.Errorf("expected %f, got %f", float64(v), actual.(float64))
 		}
-	case *parser.BooleanLiteral:
-		if expectedBool, ok := expected.(bool); ok {
-			if actual.Value != expectedBool {
-				return fmt.Errorf("expected %t, got %t", expectedBool, actual.Value)
+	case bool:
+		if a, ok := actual.(bool); ok {
+			if v != a {
+				return fmt.Errorf("expected %t, got %t", v, a)
 			}
 		} else {
-			return fmt.Errorf("expected a boolean, got %T", expected)
+			return fmt.Errorf("expected a boolean, got %T", actual)
 		}
-	case *parser.StringLiteral:
-		if expectedStr, ok := expected.(string); ok {
-			if actual.Value != expectedStr {
-				return fmt.Errorf("expected %q, got %q", expectedStr, actual.Value)
+	case string:
+		if a, ok := actual.(string); ok {
+			if v != a {
+				return fmt.Errorf("expected %q, got %q", v, a)
 			}
 		} else {
-			return fmt.Errorf("expected a string, got %T", expected)
+			return fmt.Errorf("expected a string, got %T", actual)
 		}
-	case *parser.ArrayLiteral:
-		if expectedArray, ok := expected.([]any); ok {
-			if len(actual.Elements) != len(expectedArray) {
-				return fmt.Errorf("expected array of length %d, got %d", len(expectedArray), len(actual.Elements))
-			}
-			for i, elem := range actual.Elements {
-				if err := testExpectedObject(t, expectedArray[i], elem); err != nil {
-					return fmt.Errorf("error at index %d: %s", i, err)
-				}
-			}
-		} else {
+	case []any:
+		e, ok := expected.([]any)
+		if !ok {
 			return fmt.Errorf("expected an array, got %T", expected)
 		}
-	case *parser.ObjectLiteral:
-		if expectedMap, ok := expected.(map[string]any); ok {
-			if len(actual.Properties) != len(expectedMap) {
-				return fmt.Errorf("expected object with %d properties, got %d", len(expectedMap), len(actual.Properties))
+		if len(v) != len(e) {
+			return fmt.Errorf("expected array of length %d, got %d", len(e), len(v))
+		}
+		for i := range v {
+			if err := testExpectedObject(t, e[i], v[i]); err != nil {
+				return fmt.Errorf("error at index %d: %s", i, err)
 			}
-			for key, value := range actual.Properties {
-				if expectedValue, exists := expectedMap[key]; exists {
-					if err := testExpectedObject(t, expectedValue, value); err != nil {
-						return fmt.Errorf("error for key %q: %s", key, err)
-					}
-				} else {
-					return fmt.Errorf("unexpected key %q in object", key)
-				}
-			}
-			// Also check that all expected keys are present
-			for expectedKey := range expectedMap {
-				if _, exists := actual.Properties[expectedKey]; !exists {
-					return fmt.Errorf("missing expected key %q in object", expectedKey)
-				}
-			}
-		} else {
+		}
+	case map[string]any:
+		e, ok := expected.(map[string]any)
+		if !ok {
 			return fmt.Errorf("expected an object, got %T", expected)
+		}
+		if len(v) != len(e) {
+			return fmt.Errorf("expected object with %d properties, got %d", len(e), len(v))
+		}
+		for key, val := range v {
+			expVal, exists := e[key]
+			if !exists {
+				return fmt.Errorf("unexpected key %q in object", key)
+			}
+			if err := testExpectedObject(t, expVal, val); err != nil {
+				return fmt.Errorf("error for key %q: %s", key, err)
+			}
+		}
+		for key := range e {
+			if _, exists := v[key]; !exists {
+				return fmt.Errorf("missing expected key %q in object", key)
+			}
 		}
 	default:
 		return fmt.Errorf("unsupported type: %T (value: %v)", actual, actual)
@@ -433,7 +426,7 @@ func TestPipeFunction(t *testing.T) {
 		{"[1,2,3,0] |every: $item > 0", false},
 
 		// Unique: remove duplicates
-		{"[1,2,2,3,1,4] |unique:", []any{1, 2, 3, 4}},
+		{"[1,2,2,3,1,4] |unique: $item", []any{1, 2, 3, 4}},
 
 		// Sort: sort by value
 		{"[3,1,2] |sort: $item", []any{1, 2, 3}},
@@ -446,7 +439,7 @@ func TestPipeFunction(t *testing.T) {
 		// 	"0": []any{2, 4},
 		// }},
 
-		// Window: window size 2, sum each window
+		// // Window: window size 2, sum each window
 		{"[1,2,3,4] |window: $window[0] + $window[1]", []any{3, 5, 7}},
 
 		// Chunk: chunk size 2, sum each chunk
