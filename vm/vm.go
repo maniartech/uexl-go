@@ -69,8 +69,7 @@ func (vm *VM) run() error {
 				return err
 			}
 			frame.ip += 3
-		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod,
-			code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight,
+		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod, code.OpPow, code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight,
 			code.OpLogicalAnd, code.OpLogicalOr:
 			right := vm.Pop()
 			left := vm.Pop()

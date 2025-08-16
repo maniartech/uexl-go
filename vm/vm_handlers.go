@@ -43,6 +43,8 @@ func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right
 			return fmt.Errorf("division by zero")
 		}
 		vm.Push(&parser.NumberLiteral{Value: leftValue / rightValue})
+	case code.OpPow:
+		vm.Push(&parser.NumberLiteral{Value: math.Pow(leftValue, rightValue)})
 	case code.OpMod:
 		vm.Push(&parser.NumberLiteral{Value: math.Mod(leftValue, rightValue)})
 	// Bitwise operations
