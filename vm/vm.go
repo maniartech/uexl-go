@@ -4,8 +4,28 @@ import (
 	"fmt"
 
 	"github.com/maniartech/uexl_go/code"
+	"github.com/maniartech/uexl_go/compiler"
 	"github.com/maniartech/uexl_go/parser"
 )
+
+func (vm *VM) SetBaseInstructions(bytecode *compiler.ByteCode) {
+	vm.constants = bytecode.Constants
+	vm.contextVars = bytecode.ContextVars
+	vm.systemVars = bytecode.SystemVars
+
+	mainFrame := NewFrame(bytecode.Instructions, 0)
+	frames := make([]*Frame, MaxFrames)
+	pipeScopes := make([]map[string]parser.Node, 0)
+	stack := make([]parser.Node, StackSize)
+	aliasVars := make(map[string]parser.Node)
+
+	frames[0] = mainFrame
+	vm.frames = frames
+	vm.framesIdx = 1
+	vm.pipeScopes = pipeScopes
+	vm.stack = stack
+	vm.aliasVars = aliasVars
+}
 
 func (vm *VM) Run() error {
 	frame := vm.currentFrame()

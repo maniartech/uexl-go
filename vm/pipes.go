@@ -8,21 +8,19 @@ import (
 	"github.com/maniartech/uexl_go/parser"
 )
 
-func DefaultPipeHandlers() PipeHandlers {
-	return PipeHandlers{
-		"map":     MapPipeHandler,
-		"pipe":    DefaultPipeHandler,
-		"filter":  FilterPipeHandler,
-		"reduce":  ReducePipeHandler,
-		"find":    FindPipeHandler,
-		"some":    SomePipeHandler,
-		"every":   EveryPipeHandler,
-		"unique":  UniquePipeHandler,
-		"sort":    SortPipeHandler,
-		"groupBy": GroupByPipeHandler,
-		"window":  WindowPipeHandler,
-		"chunk":   ChunkPipeHandler,
-	}
+var DefaultPipeHandlers = PipeHandlers{
+	"map":     MapPipeHandler,
+	"pipe":    DefaultPipeHandler,
+	"filter":  FilterPipeHandler,
+	"reduce":  ReducePipeHandler,
+	"find":    FindPipeHandler,
+	"some":    SomePipeHandler,
+	"every":   EveryPipeHandler,
+	"unique":  UniquePipeHandler,
+	"sort":    SortPipeHandler,
+	"groupBy": GroupByPipeHandler,
+	"window":  WindowPipeHandler,
+	"chunk":   ChunkPipeHandler,
 }
 
 func DefaultPipeHandler(input parser.Node, block any, alias string, vm *VM) (parser.Node, error) {

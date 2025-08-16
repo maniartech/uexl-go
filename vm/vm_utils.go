@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/maniartech/uexl_go/code"
-	"github.com/maniartech/uexl_go/compiler"
 	"github.com/maniartech/uexl_go/parser"
 )
 
@@ -23,6 +22,11 @@ type PipeHandler func(
 	vm *VM) (parser.Node, error)
 
 type PipeHandlers map[string]PipeHandler
+
+type LibContext struct {
+	Functions    VMFunctions
+	PipeHandlers PipeHandlers
+}
 
 type Frame struct {
 	instructions code.Instructions
@@ -46,29 +50,48 @@ type VM struct {
 	framesIdx    int
 }
 
-func New(bytecode *compiler.ByteCode, functionContext VMFunctions, pipeHandlers PipeHandlers) *VM {
-	mainFrame := NewFrame(bytecode.Instructions, 0)
-	frames := make([]*Frame, MaxFrames)
-	frames[0] = mainFrame
-	if pipeHandlers == nil {
-		pipeHandlers = make(PipeHandlers)
+func New(libCtx LibContext) *VM {
+	if libCtx.PipeHandlers == nil {
+		libCtx.PipeHandlers = make(PipeHandlers)
+	}
+	if libCtx.Functions == nil {
+		libCtx.Functions = make(VMFunctions)
 	}
 
 	return &VM{
-		constants:       bytecode.Constants,
-		contextVars:     bytecode.ContextVars,
-		systemVars:      bytecode.SystemVars,
-		instructions:    bytecode.Instructions,
-		aliasVars:       make(map[string]parser.Node),
-		functionContext: functionContext,
-		pipeHandlers:    pipeHandlers,
+		functionContext: libCtx.Functions,
+		pipeHandlers:    libCtx.PipeHandlers,
+		frames:          make([]*Frame, MaxFrames),
 		pipeScopes:      make([]map[string]parser.Node, 0),
 		stack:           make([]parser.Node, StackSize),
-		sp:              0,
-		frames:          frames,
-		framesIdx:       1, // Start with the main frame at index 0
+		aliasVars:       make(map[string]parser.Node),
 	}
+
 }
+
+// func New(bytecode *compiler.ByteCode, functionContext VMFunctions, pipeHandlers PipeHandlers) *VM {
+// 	mainFrame := NewFrame(bytecode.Instructions, 0)
+// 	frames := make([]*Frame, MaxFrames)
+// 	frames[0] = mainFrame
+// 	if pipeHandlers == nil {
+// 		pipeHandlers = make(PipeHandlers)
+// 	}
+
+// 	return &VM{
+// 		constants:       bytecode.Constants,
+// 		contextVars:     bytecode.ContextVars,
+// 		systemVars:      bytecode.SystemVars,
+// 		instructions:    bytecode.Instructions,
+// 		aliasVars:       make(map[string]parser.Node),
+// 		functionContext: functionContext,
+// 		pipeHandlers:    pipeHandlers,
+// 		pipeScopes:      make([]map[string]parser.Node, 0),
+// 		stack:           make([]parser.Node, StackSize),
+// 		sp:              0,
+// 		frames:          frames,
+// 		framesIdx:       1, // Start with the main frame at index 0
+// 	}
+// }
 
 func NewFrame(instructions code.Instructions, basePointer int) *Frame {
 	return &Frame{

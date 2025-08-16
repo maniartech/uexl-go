@@ -26,7 +26,10 @@ func parse(input string) parser.Node {
 }
 
 func TestVM(t *testing.T) {
-	vm := vm.New(&compiler.ByteCode{}, vm.Builtins, nil)
+	vm := vm.New(vm.LibContext{
+		Functions:    nil,
+		PipeHandlers: nil,
+	})
 	if vm == nil {
 		t.Fatal("failed to create VM")
 	}
@@ -46,7 +49,11 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 		if err != nil {
 			t.Fatalf("[case %d] compiler error: %s", i+1, err)
 		}
-		vm := vm.New(comp.ByteCode(), vm.Builtins, vm.DefaultPipeHandlers())
+		vm := vm.New(vm.LibContext{
+			Functions:    vm.Builtins,
+			PipeHandlers: vm.DefaultPipeHandlers,
+		})
+		vm.SetBaseInstructions(comp.ByteCode())
 		err = vm.Run()
 		if err != nil {
 			t.Fatalf("[case %d] vm error: %s", i+1, err)
@@ -426,7 +433,7 @@ func TestPipeFunction(t *testing.T) {
 		{"[1,2,3,0] |every: $item > 0", false},
 
 		// Unique: remove duplicates
-		// {"[1,2,2,3,1,4] |unique:", []any{1, 2, 3, 4}},
+		{"[1,2,2,3,1,4] |unique:", []any{1, 2, 3, 4}},
 
 		// Sort: sort by value
 		{"[3,1,2] |sort: $item", []any{1, 2, 3}},
