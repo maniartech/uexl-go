@@ -146,9 +146,10 @@ func (ma *MemberAccess) Type() NodeType       { return NodeTypeMemberAccess }
 func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
 
 type PipeExpression struct {
-	Expression Expression
+	Expression Expression // The pipe's predicate expression block
 	PipeType   string
-	Aliase     string
+	Alias      string
+	Index      int // Index of the predicate block
 	Line       int
 	Column     int
 }

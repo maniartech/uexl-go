@@ -25,13 +25,11 @@ func parse(input string) parser.Node {
 	return node
 }
 
-type vmTestCases struct {
-	input    string
-	expected any
-}
-
 func TestVM(t *testing.T) {
-	vm := vm.New(&compiler.ByteCode{}, vm.Builtins)
+	vm := vm.New(vm.LibContext{
+		Functions:    nil,
+		PipeHandlers: nil,
+	})
 	if vm == nil {
 		t.Fatal("failed to create VM")
 	}
@@ -39,29 +37,30 @@ func TestVM(t *testing.T) {
 
 type vmTestCase struct {
 	input    string
-	expected interface{}
+	expected any
 }
 
 func runVmTests(t *testing.T, tests []vmTestCase) {
 	t.Helper()
-	for _, tt := range tests {
+	for i, tt := range tests {
 		program := parse(tt.input)
 		comp := compiler.New()
 		err := comp.Compile(program)
 		if err != nil {
-			t.Fatalf("compiler error: %s", err)
+			t.Fatalf("[case %d] compiler error: %s", i+1, err)
 		}
-		vm := vm.New(comp.ByteCode(), vm.Builtins)
-		err = vm.Run()
+		vm := vm.New(vm.LibContext{
+			Functions:    vm.Builtins,
+			PipeHandlers: vm.DefaultPipeHandlers,
+		})
+		output, err := vm.Run(comp.ByteCode())
 		if err != nil {
-			t.Fatalf("vm error: %s", err)
+			t.Fatalf("[case %d] vm error: %s", i+1, err)
 		}
-		stackElem := vm.LastPoppedStackElem()
-		err = testExpectedObject(t, tt.expected, stackElem)
+		err = testExpectedObject(t, tt.expected, output.(parser.Node))
 		if err != nil {
-			t.Fatalf("testExpectedObject error: %s", err)
+			t.Fatalf("[case %d] testExpectedObject error: %s", i+1, err)
 		}
-
 	}
 }
 
@@ -159,6 +158,7 @@ func TestNumberArithmetic(t *testing.T) {
 		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50},
 		{"-(-20 + 10)", 10},
 		{"--10", 10},
+		{"2 ** 3", 8}, // Power operator test
 
 		// Floating point tests
 		{"1.5", 1.5},
@@ -261,6 +261,37 @@ func TestBooleanLogic(t *testing.T) {
 	}
 	runVmTests(t, tests)
 }
+
+func TestLogicalShortCircuit(t *testing.T) {
+	tests := []vmTestCase{
+		// || returns first truthy value
+		{`false || true`, true},
+		{`false || false || true`, true},
+		{`false || 0 || "hello"`, "hello"},
+		{`false || 0 || ""`, ""}, // all falsy, returns last
+
+		// && returns first falsy value, otherwise last value
+		{`true && false`, false},
+		{`true && true && false`, false},
+		{`true && 1 && "hello"`, "hello"},
+		{`true && 1 && ""`, ""},     // "" is falsy
+		{`false && 0 && ""`, false}, // all falsy, returns false
+
+		// Chained with numbers and strings
+		{`0 || 42`, 42},
+		{`"foo" || "bar"`, "foo"},
+		{`"" || "bar"`, "bar"},
+		{`1 && 2 && 3`, 3},
+		{`1 && 0 && 3`, 0},
+		{`0 && 1`, 0},
+
+		// Nested expressions
+		{`(false || 0) && (true || "baz")`, 0},
+		{`(true && 1) || (false && "baz")`, 1},
+	}
+	runVmTests(t, tests)
+}
+
 func TestStringLiterals(t *testing.T) {
 	tests := []vmTestCase{
 		{`"hello"`, "hello"},
@@ -311,7 +342,7 @@ func TestStringContainsFunction(t *testing.T) {
 	tests := []vmTestCase{
 		{`contains("hello", "ll")`, true},
 		{`contains("hello", "z")`, false},
-		{`contains("foobar", "foo")`, true},
+		{`contains("f"+"oobar", "foo")`, true},
 	}
 	runVmTests(t, tests)
 }
@@ -367,6 +398,59 @@ func TestObjectIndexing(t *testing.T) {
 		{`{"foo": "bar"}["foo"]`, "bar"},
 		{`{"arr": [1,2,3]}["arr"][1]`, 2},
 		{`{"obj": {"nested": 99}}["obj"]["nested"]`, 99},
+	}
+	runVmTests(t, tests)
+}
+
+func TestPipeFunction(t *testing.T) {
+	tests := []vmTestCase{
+		{`"foo" as $foo |pipe: $foo + "bar"`, "foobar"},
+		{"[1,2] |map: $item * 2", []any{2, 4}},
+		{"[1,2] |map: $item * $index", []any{0, 2}},
+		{"[1,2] |map: $item * 2 |map: $item + 1", []any{3, 5}},
+		{"[1,2,3,4,5,6] |filter: $item > 2", []any{3, 4, 5, 6}},
+
+		// Reduce: sum all items
+		{"[1,2,3,4] |reduce: $acc + $item", 10},
+
+		// TODO: Reduce to an object
+		// {"[1,2,3,4] |reduce: set($acc || {}, $index, $item)", map[string]any{
+		// 	"0": 1,
+		// 	"1": 2,
+		// 	"2": 3,
+		// 	"3": 4,
+		// }},
+
+		// Find: first item greater than 2
+		{"[1,2,3,4] |find: $item > 2", 3},
+
+		// Some: any item is even
+		{"[1,2,3,4] |some: $item % 2 == 0", true},
+		{"[1,3,5] |some: $item % 2 == 0", false},
+
+		// Every: all items are positive
+		{"[1,2,3,4] |every: $item > 0", true},
+		{"[1,2,3,0] |every: $item > 0", false},
+
+		// Unique: remove duplicates
+		{"[1,2,2,3,1,4] |unique:", []any{1, 2, 3, 4}},
+
+		// Sort: sort by value
+		{"[3,1,2] |sort: $item", []any{1, 2, 3}},
+		// Sort: sort by computed value
+		{"[3,1,2] |sort: $item * -1", []any{3, 2, 1}},
+
+		// GroupBy: group by even/odd
+		// {`[1,2,3,4] |groupBy: $item % 2`, map[string]any{
+		// 	"1": []any{1, 3},
+		// 	"0": []any{2, 4},
+		// }},
+
+		// Window: window size 2, sum each window
+		{"[1,2,3,4] |window: $window[0] + $window[1]", []any{3, 5, 7}},
+
+		// Chunk: chunk size 2, sum each chunk
+		// {"[1,2,3,4,5] |chunk: $chunk[0] + ($chunk[1] ?? 0)", []any{3, 7, 5}},
 	}
 	runVmTests(t, tests)
 }

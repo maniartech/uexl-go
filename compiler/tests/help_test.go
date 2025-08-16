@@ -53,7 +53,8 @@ func testConstants(
 	for i, constant := range expected {
 		switch constant := constant.(type) {
 		case float64:
-			if err := testNumerLiteral(constant, actual[i]); err != nil {
+		case int:
+			if err := testNumerLiteral(float64(constant), actual[i]); err != nil {
 				return fmt.Errorf("test case %d: %s", i, err)
 			}
 		case string:
