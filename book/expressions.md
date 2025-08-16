@@ -13,7 +13,7 @@ An expression is any combination of values, variables, operators, and functions 
 - **Binary expressions:** Operations involving two operands and an operator.
   - Example: `a + b`, `x && y`, `price > 100`
 - **Unary expressions:** Operations involving a single operand and an operator.
-  - Example: `-x`, `!flag`
+  - Example: `-x`, `!flag`, `--number` (double negation), `!!value` (boolean conversion)
 - **Function calls:** Invoking built-in or user-defined functions with arguments.
   - Example: `sum(1, 2, 3)`, `max([1, 2, 3])`, `toString(value)`
 - **Pipe expressions:** Chaining operations where the output of one stage is passed as input to the next.
@@ -47,6 +47,9 @@ Try writing your own expressions using different types and combinations:
 user.isActive && user.score > 80
 [1, 2, 3] |map: $1 * $1
 min(3, 7, 2)
+--42         // Double negation
+!!user.name  // Boolean conversion
+!!!flag      // Triple NOT
 ```
 
 Mastering expressions is key to writing powerful UExL logic. In the next chapter, we'll explore operators and how they shape your expressions.

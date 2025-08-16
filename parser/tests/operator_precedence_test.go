@@ -234,3 +234,145 @@ func TestPipeExpressionPrecedence(t *testing.T) {
 		})
 	}
 }
+
+// TestConsecutiveOperators tests parsing of consecutive unary operators like -- and !!
+func TestConsecutiveOperators(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectError bool
+		description string
+	}{
+		{
+			name:        "double_negation_number",
+			input:       "--10",
+			expectError: false,
+			description: "Double negation with number should parse as -(-(10))",
+		},
+		{
+			name:        "double_negation_variable",
+			input:       "--x",
+			expectError: false,
+			description: "Double negation with variable should parse as -(-(x))",
+		},
+		{
+			name:        "triple_negation",
+			input:       "---5",
+			expectError: false,
+			description: "Triple negation should parse as -(-(-(5)))",
+		},
+		{
+			name:        "double_not_true",
+			input:       "!!true",
+			expectError: false,
+			description: "Double NOT with boolean should parse as !(!(true))",
+		},
+		{
+			name:        "double_not_false",
+			input:       "!!false",
+			expectError: false,
+			description: "Double NOT with boolean should parse as !(!(false))",
+		},
+		{
+			name:        "triple_not",
+			input:       "!!!true",
+			expectError: false,
+			description: "Triple NOT should parse as !(!(!(true)))",
+		},
+		{
+			name:        "double_not_variable",
+			input:       "!!x",
+			expectError: false,
+			description: "Double NOT with variable should parse as !(!(x))",
+		},
+		{
+			name:        "mixed_consecutive_operators",
+			input:       "!-5",
+			expectError: false,
+			description: "Mixed unary operators should parse as !(-(5))",
+		},
+		{
+			name:        "mixed_consecutive_operators_reverse",
+			input:       "-!true",
+			expectError: false,
+			description: "Mixed unary operators should parse as -(!(true))",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			expr, err := p.Parse()
+
+			if tt.expectError {
+				assert.Error(t, err, "Expected error for input: %s", tt.input)
+			} else {
+				assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+				assert.NotNil(t, expr, "Expression should not be nil for input: %s", tt.input)
+
+				// Verify that we get a UnaryExpression for consecutive operators
+				unaryExpr, ok := expr.(*parser.UnaryExpression)
+				assert.True(t, ok, "Expected UnaryExpression for input: %s", tt.input)
+				assert.NotNil(t, unaryExpr.Operand, "Operand should not be nil for input: %s", tt.input)
+			}
+		})
+	}
+}
+
+// TestConsecutiveOperatorsParsing tests the AST structure of consecutive operators
+func TestConsecutiveOperatorsParsing(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          string
+		expectedOp     string
+		expectedNested int // How many nested unary expressions we expect
+	}{
+		{
+			name:           "double_minus",
+			input:          "--10",
+			expectedOp:     "-",
+			expectedNested: 2,
+		},
+		{
+			name:           "triple_minus",
+			input:          "---10",
+			expectedOp:     "-",
+			expectedNested: 3,
+		},
+		{
+			name:           "double_not",
+			input:          "!!true",
+			expectedOp:     "!",
+			expectedNested: 2,
+		},
+		{
+			name:           "triple_not",
+			input:          "!!!true",
+			expectedOp:     "!",
+			expectedNested: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			expr, err := p.Parse()
+			assert.NoError(t, err)
+
+			// Check nesting depth
+			current := expr
+			depth := 0
+			for {
+				unaryExpr, ok := current.(*parser.UnaryExpression)
+				if !ok {
+					break
+				}
+				depth++
+				assert.Equal(t, tt.expectedOp, unaryExpr.Operator, "Expected operator %s at depth %d", tt.expectedOp, depth)
+				current = unaryExpr.Operand
+			}
+
+			assert.Equal(t, tt.expectedNested, depth, "Expected nesting depth %d for input %s", tt.expectedNested, tt.input)
+		})
+	}
+}

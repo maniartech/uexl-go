@@ -2,6 +2,32 @@
 
 This chapter covers advanced features and patterns in UExL.
 
+## Consecutive Unary Operators
+UExL supports chaining multiple unary operators for advanced logic patterns:
+
+### Double Negation Patterns
+```
+--value           // Mathematical double negation: -(-(value))
+---x              // Triple negation: -(-(-(x)))
+```
+
+### Boolean Conversion Idioms
+```
+!!value           // Convert any value to boolean: !(!(value))
+!!!flag           // Triple NOT for complex boolean logic
+```
+
+### Mixed Unary Operators
+```
+!-x               // NOT of negative: !(-(x))
+-!condition       // Negative of NOT: -(!(condition))
+```
+
+These patterns are particularly useful for:
+- Type conversions (`!!value` for boolean conversion)
+- Mathematical transformations (`--x` for ensuring positive values)
+- Complex logical operations (`!!!flag` for triple negation)
+
 ## Nested Pipes
 Pipes can be nested for complex data flows:
 ```

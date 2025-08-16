@@ -316,8 +316,8 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
-	// Handle -- operator, but only in postfix contexts or when followed by non-digit
-	// For expressions like "--10", we want to treat as two separate "-" tokens
+	// Handle -- operator, but be smart about unary vs postfix contexts
+	// For expressions like "--10", "---5", we want to treat as separate "-" tokens
 	if t.current() == '-' && t.peek() == '-' {
 		// Look ahead to see what comes after the second '-'
 		nextChar := rune(0)
@@ -325,14 +325,15 @@ func (t *Tokenizer) readOperator() (Token, error) {
 			nextChar, _ = utf8.DecodeRuneInString(t.input[t.pos+2:])
 		}
 
-		// If followed by a digit or letter (identifier), treat as two separate minus tokens
-		if isDigit(nextChar) || isLetter(nextChar) {
+		// If followed by a digit, letter (identifier), or another operator (like another -),
+		// treat as separate minus tokens for unary contexts
+		if isDigit(nextChar) || isLetter(nextChar) || isOperatorChar(nextChar) {
 			// Return single '-' token
 			t.advance()
 			operator := "-"
 			return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 		} else {
-			// Treat as decrement operator
+			// Treat as decrement operator (for cases like "i--" in postfix contexts)
 			t.advance()
 			t.advance()
 			operator := "--"

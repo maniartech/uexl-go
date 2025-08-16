@@ -25,6 +25,36 @@ Understanding operator precedence is crucial for writing correct and predictable
 - **Left-to-right**: Operators are evaluated from left to right (e.g., `a - b - c` is `(a - b) - c`).
 - **Right-to-left**: Operators are evaluated from right to left (e.g., `-x` is evaluated before applying to the next operator).
 
+## Consecutive Unary Operators
+UExL supports consecutive unary operators, which are particularly useful for:
+
+### Double Negation (`--`)
+Double negation can be used to convert a number to its positive form or for mathematical operations:
+```
+--10      // Results in 10: -(-(10))
+--x       // Results in x: -(-(x))
+---5      // Results in -5: -(-(-(5)))
+```
+
+### Boolean Conversion (`!!`)
+Double NOT is a common pattern for converting any value to a boolean:
+```
+!!1       // Results in true: !(!(1))
+!!0       // Results in false: !(!(0))
+!!"text"  // Results in true: !(!(true))
+!!null    // Results in false: !(!(null))
+```
+
+### Multiple Consecutive Operators
+You can chain any number of unary operators:
+```
+!!!value  // Triple NOT: !(!(!(value)))
+!-x       // NOT of negation: !(-(x))
+-!flag    // Negation of NOT: -(!(flag))
+```
+
+All consecutive unary operators are evaluated right-to-left, meaning the rightmost operator is applied first.
+
 ## Practical Tips
 - Use parentheses to make complex expressions clear and to override default precedence.
 - When in doubt, add parentheses for readability and correctness.
@@ -35,6 +65,9 @@ Understanding operator precedence is crucial for writing correct and predictable
 (a + b) * c      // Parentheses override precedence
 x > 10 && y < 20 // Comparison before logical AND
 [1, 2, 3] |map: $1 * 2 |filter: $1 > 2 // Pipes are evaluated last
+--10             // -10: double negation -(-(10))
+!!value          // Boolean conversion !(!(value))
+!-x              // NOT of negation: !(-(x))
 ```
 
 Refer to this table when constructing complex expressions to ensure correct evaluation order.
