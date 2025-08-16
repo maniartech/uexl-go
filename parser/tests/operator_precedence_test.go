@@ -376,3 +376,140 @@ func TestConsecutiveOperatorsParsing(t *testing.T) {
 		})
 	}
 }
+
+// TestPowerOperator tests the ** power operator
+func TestPowerOperator(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectError bool
+		description string
+	}{
+		{
+			name:        "simple_power",
+			input:       "2**3",
+			expectError: false,
+			description: "Simple power operation: 2**3",
+		},
+		{
+			name:        "power_with_spaces",
+			input:       "2 ** 3",
+			expectError: false,
+			description: "Power operation with spaces: 2 ** 3",
+		},
+		{
+			name:        "right_associative_power",
+			input:       "2**3**2",
+			expectError: false,
+			description: "Right-associative power: 2**(3**2) = 2**9",
+		},
+		{
+			name:        "power_with_parentheses",
+			input:       "(2**3)**2",
+			expectError: false,
+			description: "Power with parentheses: (2**3)**2 = 8**2",
+		},
+		{
+			name:        "power_with_negative",
+			input:       "(-2)**3",
+			expectError: false,
+			description: "Power with negative base: (-2)**3",
+		},
+		{
+			name:        "power_with_decimal",
+			input:       "2.5**2",
+			expectError: false,
+			description: "Power with decimal: 2.5**2",
+		},
+		{
+			name:        "zero_power",
+			input:       "5**0",
+			expectError: false,
+			description: "Zero exponent: 5**0",
+		},
+		{
+			name:        "power_vs_multiplication",
+			input:       "2*3**2",
+			expectError: false,
+			description: "Power has higher precedence than multiplication: 2*(3**2)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			expr, err := p.Parse()
+
+			if tt.expectError {
+				assert.Error(t, err, "Expected error for input: %s", tt.input)
+			} else {
+				assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+				assert.NotNil(t, expr, "Expression should not be nil for input: %s", tt.input)
+			}
+		})
+	}
+}
+
+// TestPowerOperatorPrecedence tests that power operator has correct precedence
+func TestPowerOperatorPrecedence(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		expectedType string
+		description  string
+	}{
+		{
+			name:         "power_vs_multiplication",
+			input:        "2*3**2",
+			expectedType: "BinaryExpression",
+			description:  "Should be parsed as 2*(3**2), not (2*3)**2",
+		},
+		{
+			name:         "power_vs_addition",
+			input:        "1+2**3",
+			expectedType: "BinaryExpression",
+			description:  "Should be parsed as 1+(2**3), not (1+2)**3",
+		},
+		{
+			name:         "right_associative",
+			input:        "2**3**4",
+			expectedType: "BinaryExpression",
+			description:  "Should be parsed as 2**(3**4), not (2**3)**4",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			expr, err := p.Parse()
+			assert.NoError(t, err)
+
+			binExpr, ok := expr.(*parser.BinaryExpression)
+			assert.True(t, ok, "Expected BinaryExpression for input: %s", tt.input)
+
+			// Verify the structure based on the specific test
+			switch tt.name {
+			case "power_vs_multiplication":
+				// Should be: * operator at root, with left=2 and right=(3**2)
+				assert.Equal(t, "*", binExpr.Operator)
+				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
+				assert.True(t, ok, "Right side should be a BinaryExpression")
+				assert.Equal(t, "**", rightExpr.Operator)
+
+			case "power_vs_addition":
+				// Should be: + operator at root, with left=1 and right=(2**3)
+				assert.Equal(t, "+", binExpr.Operator)
+				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
+				assert.True(t, ok, "Right side should be a BinaryExpression")
+				assert.Equal(t, "**", rightExpr.Operator)
+
+			case "right_associative":
+				// Should be: ** operator at root, with left=2 and right=(3**4)
+				assert.Equal(t, "**", binExpr.Operator)
+				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
+				assert.True(t, ok, "Right side should be a BinaryExpression")
+				assert.Equal(t, "**", rightExpr.Operator)
+			}
+		})
+	}
+}

@@ -12,12 +12,13 @@ const (
 	OperatorMultiply                 // *
 	OperatorDivide                   // /
 	OperatorModulo                   // %
+	OperatorPower                    // ** (exponentiation)
 
 	// Bitwise operators
 	OperatorBitwiseAnd // &
 	OperatorBitwiseOr  // |
-	OperatorBitwiseXor // ^
-	OperatorBitwiseNot // ~
+	OperatorBitwiseXor // ^ (XOR)
+	OperatorBitwiseNot // ~ (bitwise NOT)
 
 	// Shift operators
 	OperatorLeftShift  // <<
@@ -71,6 +72,8 @@ func (o Operator) String() string {
 		return "/"
 	case OperatorModulo:
 		return "%"
+	case OperatorPower:
+		return "**"
 	case OperatorBitwiseAnd:
 		return "&"
 	case OperatorBitwiseOr:

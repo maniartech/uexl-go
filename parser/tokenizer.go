@@ -316,6 +316,14 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
+	// Handle ** operator (power)
+	if t.current() == '*' && t.peek() == '*' {
+		t.advance()
+		t.advance()
+		operator := "**"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
 	// Handle -- operator, but be smart about unary vs postfix contexts
 	// For expressions like "--10", "---5", we want to treat as separate "-" tokens
 	if t.current() == '-' && t.peek() == '-' {

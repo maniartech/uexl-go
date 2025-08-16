@@ -227,7 +227,24 @@ func (p *Parser) parseAdditive() Expression {
 }
 
 func (p *Parser) parseMultiplicative() Expression {
-	return p.parseBinaryOp(p.parseUnary, "*", "/", "%")
+	return p.parseBinaryOp(p.parsePower, "*", "/", "%")
+}
+
+func (p *Parser) parsePower() Expression {
+	// Power operator is right-associative, so we parse it differently
+	left := p.parseUnary()
+
+	if p.current.Type == constants.TokenOperator {
+		if opValue, ok := p.current.Value.(string); ok && opValue == "**" {
+			op := p.current
+			p.advance()
+			// For right-associativity, we recursively call parsePower instead of parseUnary
+			right := p.parsePower()
+			return &BinaryExpression{Left: left, Operator: opValue, Right: right, Line: op.Line, Column: op.Column}
+		}
+	}
+
+	return left
 }
 
 func (p *Parser) parseUnary() Expression {

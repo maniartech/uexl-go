@@ -2,6 +2,32 @@
 
 This chapter covers advanced features and patterns in UExL.
 
+## Operator Precedence and Associativity
+
+UExL follows standard mathematical precedence rules:
+
+### Precedence Levels (highest to lowest)
+
+1. **Prefix operators**: `!`, `-`, `--`, `~` (right-associative)
+2. **Power operator**: `**` (right-associative)
+3. **Multiplicative**: `*`, `/`, `%` (left-associative)
+4. **Additive**: `+`, `-` (left-associative)
+5. **Comparison**: `<`, `<=`, `>`, `>=` (left-associative)
+6. **Equality**: `==`, `!=` (left-associative)
+7. **Bitwise AND**: `&` (left-associative)
+8. **Bitwise XOR**: `^` (left-associative)
+9. **Bitwise OR**: `|` (left-associative)
+10. **Logical AND**: `&&` (left-associative)
+11. **Logical OR**: `||` (left-associative)
+
+### Right-Associative Operators
+
+The power operator `**` is right-associative, meaning:
+- `2**3**2` evaluates as `2**(3**2)` = `2**9` = `512`
+- Not as `(2**3)**2` = `8**2` = `64`
+
+This follows mathematical convention for exponentiation.
+
 ## Consecutive Unary Operators
 UExL supports chaining multiple unary operators for advanced logic patterns:
 

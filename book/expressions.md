@@ -11,7 +11,7 @@ An expression is any combination of values, variables, operators, and functions 
 - **Variables:** Named references to values or data in the current context.
   - Example: `x`, `user.name`, `arr[0]`
 - **Binary expressions:** Operations involving two operands and an operator.
-  - Example: `a + b`, `x && y`, `price > 100`
+  - Example: `a + b`, `x && y`, `price > 100`, `base**exponent`
 - **Unary expressions:** Operations involving a single operand and an operator.
   - Example: `-x`, `!flag`, `--number` (double negation), `!!value` (boolean conversion)
 - **Function calls:** Invoking built-in or user-defined functions with arguments.
@@ -50,6 +50,8 @@ min(3, 7, 2)
 --42         // Double negation
 !!user.name  // Boolean conversion
 !!!flag      // Triple NOT
+2**10        // Power: 1024
+8 ^ 5        // Bitwise XOR: 13
 ```
 
 Mastering expressions is key to writing powerful UExL logic. In the next chapter, we'll explore operators and how they shape your expressions.
