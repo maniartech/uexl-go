@@ -199,7 +199,11 @@ func (vm *VM) run() error {
 	return nil
 }
 
-func (vm *VM) Run(bytecode *compiler.ByteCode) error {
+func (vm *VM) Run(bytecode *compiler.ByteCode) (any, error) {
 	vm.setBaseInstructions(bytecode)
-	return vm.run()
+	err := vm.run()
+	if err != nil {
+		return nil, err
+	}
+	return vm.LastPoppedStackElem(), nil
 }
