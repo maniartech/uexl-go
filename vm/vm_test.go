@@ -159,6 +159,7 @@ func TestNumberArithmetic(t *testing.T) {
 		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50},
 		{"-(-20 + 10)", 10},
 		{"--10", 10},
+		{"2 ** 3", 8}, // Power operator test
 
 		// Floating point tests
 		{"1.5", 1.5},
@@ -268,13 +269,14 @@ func TestLogicalShortCircuit(t *testing.T) {
 		{`false || true`, true},
 		{`false || false || true`, true},
 		{`false || 0 || "hello"`, "hello"},
-		{`false || 0 || ""`, false}, // all falsy, returns last
+		{`false || 0 || ""`, ""}, // all falsy, returns last
 
 		// && returns first falsy value, otherwise last value
 		{`true && false`, false},
 		{`true && true && false`, false},
 		{`true && 1 && "hello"`, "hello"},
-		{`true && 1 && ""`, ""}, // "" is falsy
+		{`true && 1 && ""`, ""},     // "" is falsy
+		{`false && 0 && ""`, false}, // all falsy, returns false
 
 		// Chained with numbers and strings
 		{`0 || 42`, 42},
@@ -285,7 +287,7 @@ func TestLogicalShortCircuit(t *testing.T) {
 		{`0 && 1`, 0},
 
 		// Nested expressions
-		{`(false || 0) && (true || "baz")`, false},
+		{`(false || 0) && (true || "baz")`, 0},
 		{`(true && 1) || (false && "baz")`, 1},
 	}
 	runVmTests(t, tests)
