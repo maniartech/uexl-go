@@ -8,12 +8,23 @@ import (
 )
 
 func TestPlayground(t *testing.T) {
-	input := "x + 10 as $abc |: 2 * $abc + 5 |x: $abc / 2"
-
-	expr, err := parser.ParseString(input)
-	if err != nil {
-		t.Fatalf("Failed to parse expression: %v", err)
+	// Test cases for different -- scenarios
+	testCases := []string{
+		"--10",    // double negation
+		"--x",     // double negation with variable
+		"-(-10)",  // explicit parentheses
+		"5--3",    // should this be 5 - (-3) or error?
 	}
 
-	utils.PrintJSON(expr)
+	for i, input := range testCases {
+		t.Logf("Testing case %d: %s", i+1, input)
+		expr, err := parser.ParseString(input)
+		if err != nil {
+			t.Logf("Case %d failed: %v", i+1, err)
+		} else {
+			t.Logf("Case %d succeeded", i+1)
+			utils.PrintJSON(expr)
+		}
+		t.Log("---")
+	}
 }

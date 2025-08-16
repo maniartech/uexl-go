@@ -308,10 +308,88 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
-	// Handle single-character operators
-	for t.pos < len(t.input) && isOperatorChar(t.current()) {
+	// Handle ++ operator
+	if t.current() == '+' && t.peek() == '+' {
 		t.advance()
+		t.advance()
+		operator := "++"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
+
+	// Handle -- operator, but only in postfix contexts or when followed by non-digit
+	// For expressions like "--10", we want to treat as two separate "-" tokens
+	if t.current() == '-' && t.peek() == '-' {
+		// Look ahead to see what comes after the second '-'
+		nextChar := rune(0)
+		if t.pos+2 < len(t.input) {
+			nextChar, _ = utf8.DecodeRuneInString(t.input[t.pos+2:])
+		}
+
+		// If followed by a digit or letter (identifier), treat as two separate minus tokens
+		if isDigit(nextChar) || isLetter(nextChar) {
+			// Return single '-' token
+			t.advance()
+			operator := "-"
+			return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		} else {
+			// Treat as decrement operator
+			t.advance()
+			t.advance()
+			operator := "--"
+			return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		}
+	}
+
+	// Handle == operator
+	if t.current() == '=' && t.peek() == '=' {
+		t.advance()
+		t.advance()
+		operator := "=="
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle != operator
+	if t.current() == '!' && t.peek() == '=' {
+		t.advance()
+		t.advance()
+		operator := "!="
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle <= operator
+	if t.current() == '<' && t.peek() == '=' {
+		t.advance()
+		t.advance()
+		operator := "<="
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle >= operator
+	if t.current() == '>' && t.peek() == '=' {
+		t.advance()
+		t.advance()
+		operator := ">="
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle << operator
+	if t.current() == '<' && t.peek() == '<' {
+		t.advance()
+		t.advance()
+		operator := "<<"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle >> operator
+	if t.current() == '>' && t.peek() == '>' {
+		t.advance()
+		t.advance()
+		operator := ">>"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle single-character operators
+	t.advance()
 	operator := t.input[start:t.pos]
 	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 }
