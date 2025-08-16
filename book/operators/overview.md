@@ -9,11 +9,11 @@ Operators allow you to perform calculations, make decisions, and manipulate data
 - **Primary:** Used for grouping, property access, and indexing.
   - Example: `(a + b)`, `user.name`, `arr[0]`
 - **Unary:** Operate on a single value, such as negation or logical NOT.
-  - Example: `-x`, `!flag`
+  - Example: `-x`, `!flag`, `--x` (double negation), `!!value` (boolean conversion)
 - **Arithmetic:** Perform mathematical calculations.
-  - Example: `a + b`, `x - 1`, `y * 2`, `z / 3`, `n % 2`
+  - Example: `a + b`, `x - 1`, `y * 2`, `z / 3`, `n % 2`, `base**exponent`
 - **Bitwise:** Manipulate individual bits in numbers.
-  - Example: `a & b`, `x | y`, `n ^ m`, `a << 2`, `b >> 1`
+  - Example: `a & b`, `x | y`, `n ^ m`, `~value`, `a << 2`, `b >> 1`
 - **Comparison:** Compare values for ordering.
   - Example: `x < 10`, `score >= 50`
 - **Equality:** Test if values are equal or not.
@@ -30,6 +30,10 @@ Here are some ways you can use operators in UExL:
 [1, 2, 3] |map: $1 * 2 |filter: $1 > 2
 user.age >= 18 ? "adult" : "minor"
 flag = !isDisabled
+--x      // Double negation: -(-(x))
+!!value  // Boolean conversion: !(!(value))
+2**3     // Power operation: 8
+5 ^ 3    // XOR operation: 6
 ```
 
 ## Tips for Using Operators
@@ -44,6 +48,11 @@ Experiment with these expressions:
 x > 10 && y < 20
 [10, 20, 30] |filter: $1 > 15
 user.name == "Alice"
+--10         // Double negation
+!!false      // Boolean conversion
+!!!value     // Triple NOT
+2**8         // Power: 256
+7 ^ 3        // XOR: 4
 ```
 
 Understanding operators unlocks the full power of UExL expressions. In the next chapter, we'll dive into operator precedence and associativity.

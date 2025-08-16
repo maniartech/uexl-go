@@ -194,7 +194,7 @@ func TestPipeExpressionWithAlias(t *testing.T) {
 				assert.True(t, ok, "Expected a ProgramNode for input: %s", tt.input)
 				foundAlias := false
 				for _, pipeExpr := range program.PipeExpressions {
-					if pipeExpr.Aliase != "" {
+					if pipeExpr.Alias != "" {
 						foundAlias = true
 						break
 					}
@@ -259,7 +259,7 @@ func TestPipeAliasInFunctionArgs(t *testing.T) {
 			assert.True(t, ok, "Expected a ProgramNode for input: %s", tt.input)
 			foundAlias := false
 			for _, pipeExpr := range program.PipeExpressions {
-				if pipeExpr.Aliase != "" {
+				if pipeExpr.Alias != "" {
 					foundAlias = true
 					break
 				}

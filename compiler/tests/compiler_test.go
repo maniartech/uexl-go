@@ -34,6 +34,11 @@ func TestNumberArithmetic(t *testing.T) {
 			code.Make(code.OpConstant, 1),
 			code.Make(code.OpDiv),
 		}},
+		{"1 ** 2", []any{1.0, 2.0}, []code.Instructions{
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpConstant, 1),
+			code.Make(code.OpPow),
+		}},
 		{"1 + 2 * 3", []any{1.0, 2.0, 3.0}, []code.Instructions{
 			code.Make(code.OpConstant, 0),
 			code.Make(code.OpConstant, 1),
@@ -226,6 +231,80 @@ func TestBitwiseOperators(t *testing.T) {
 	}
 	runCompilerTestCases(t, cases)
 }
+
+func TestLogicalShortCircuitCompilation(t *testing.T) {
+	cases := []compilerTestCase{
+		// OR: first truthy wins; all falsy -> last term
+		{
+			`false || 0 || ""`,
+			[]any{0.0, ""}, // constants: 0, ""
+			[]code.Instructions{
+				code.Make(code.OpFalse),
+				code.Make(code.OpJumpIfTruthy, 13),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJumpIfTruthy, 13),
+				code.Make(code.OpConstant, 1),
+				// No normalization OpFalse at the end
+			},
+		},
+		{
+			`true || 0 || ""`,
+			[]any{0.0, ""}, // constants: 0, ""
+			[]code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpIfTruthy, 13),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJumpIfTruthy, 13),
+				code.Make(code.OpConstant, 1),
+			},
+		},
+
+		// AND: first falsy wins; all truthy -> last term
+		{
+			`false && 0 && ""`,
+			[]any{0.0, ""}, // constants: 0, ""
+			[]code.Instructions{
+				code.Make(code.OpFalse),
+				code.Make(code.OpJumpIfFalsy, 13),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJumpIfFalsy, 13),
+				code.Make(code.OpConstant, 1),
+				// No jump-to-false block
+			},
+		},
+		{
+			`true && 1 && "hello"`,
+			[]any{1.0, "hello"},
+			[]code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpIfFalsy, 13),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJumpIfFalsy, 13),
+				code.Make(code.OpConstant, 1),
+			},
+		},
+		{
+			`false || true`,
+			[]any{},
+			[]code.Instructions{
+				code.Make(code.OpFalse),
+				code.Make(code.OpJumpIfTruthy, 5),
+				code.Make(code.OpTrue),
+			},
+		},
+		{
+			`true && false`,
+			[]any{},
+			[]code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpIfFalsy, 5),
+				code.Make(code.OpFalse),
+			},
+		},
+	}
+	runCompilerTestCases(t, cases)
+}
+
 func TestContextVariables(t *testing.T) {
 	cases := []compilerTestCase{
 		{"foo", []any{}, []code.Instructions{
@@ -404,7 +483,7 @@ func TestObjectLiterals(t *testing.T) {
 		}},
 		// Object with context variable property
 		{`{"foo": bar}`, []any{"foo"}, []code.Instructions{
-			code.Make(code.OpConstant, 0), // "foo"
+			code.Make(code.OpConstant, 0),   // "foo"
 			code.Make(code.OpContextVar, 0), // bar
 			code.Make(code.OpObject, 2),
 		}},
@@ -425,7 +504,7 @@ func TestObjectLiterals(t *testing.T) {
 				code.Make(code.OpConstant, 2), // "b"
 				code.Make(code.OpConstant, 3), // "c"
 				code.Make(code.OpConstant, 4), // 2.0
-				code.Make(code.OpObject, 2), // {"c": 2}
+				code.Make(code.OpObject, 2),   // {"c": 2}
 				code.Make(code.OpObject, 4),
 			}},
 	}
@@ -490,10 +569,43 @@ func TestFunctionCalls(t *testing.T) {
 			}},
 		// Function call with mixed arguments
 		{`calculate(1, bar, 3)`, []any{1.0, 3.0, "calculate"}, []code.Instructions{
-			code.Make(code.OpConstant, 0), // 1.0
+			code.Make(code.OpConstant, 0),   // 1.0
 			code.Make(code.OpContextVar, 0), // bar
-			code.Make(code.OpConstant, 1), // 3.0
+			code.Make(code.OpConstant, 1),   // 3.0
 			code.Make(code.OpCallFunction, 2, 3),
+		}},
+	}
+	runCompilerTestCases(t, cases)
+}
+
+func TestPipeExpression(t *testing.T) {
+	cases := []compilerTestCase{
+		// Access property by string literal
+		{`[1,2] |map: $item * 2`, []any{1, 2, "pipe", 2, "map"}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // "a"
+			code.Make(code.OpConstant, 1), // 1.0
+			code.Make(code.OpArray, 2),
+			code.Make(code.OpPipe, 2, 3),
+			code.Make(code.OpIdentifier, 0), // $item
+			code.Make(code.OpConstant, 4),   // 2
+			code.Make(code.OpMul),
+			code.Make(code.OpPipe, 5, 6),
+		}},
+		// Multiple pipes with different operators
+		{`[1,2,3] |filter: $item > 1 |map: $item * 2`, []any{1.0, 2.0, 3.0, 1.0, 2.0, 1, "filter", "", 2, "map", ""}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // 1.0
+			code.Make(code.OpConstant, 1), // 2.0
+			code.Make(code.OpConstant, 2), // 3.0
+			code.Make(code.OpArray, 3),
+			code.Make(code.OpPipe, 3, 4),
+			code.Make(code.OpIdentifier, 0), // $item
+			code.Make(code.OpConstant, 5),   // 1.0
+			code.Make(code.OpGreaterThan),
+			code.Make(code.OpPipe, 6, 7),
+			code.Make(code.OpIdentifier, 0), // $item
+			code.Make(code.OpConstant, 8),   // 2.0
+			code.Make(code.OpMul),
+			code.Make(code.OpPipe, 9, 10),
 		}},
 	}
 	runCompilerTestCases(t, cases)

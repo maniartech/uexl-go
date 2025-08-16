@@ -1,6 +1,8 @@
 package compiler
 
 import (
+	"encoding/binary"
+
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/parser"
 )
@@ -21,27 +23,6 @@ func (c *Compiler) setLastInstruction(opcode code.Opcode, position int) {
 	last := EmmittedInstruction{Opcode: opcode, Position: position}
 	c.scopes[c.scopeIndex].previousInstruction = previous
 	c.scopes[c.scopeIndex].lastInstruction = last
-}
-
-func (c *Compiler) removeLastPop() {
-	last := c.scopes[c.scopeIndex].lastInstruction
-	previous := c.scopes[c.scopeIndex].previousInstruction
-	old := c.currentInstructions()
-	new := old[:last.Position]
-	c.scopes[c.scopeIndex].instructions = new
-	c.scopes[c.scopeIndex].lastInstruction = previous
-}
-func (c *Compiler) replaceInstruction(pos int, newInstruction []byte) {
-	ins := c.currentInstructions()
-	for i := 0; i < len(newInstruction); i++ {
-		ins[pos+i] = newInstruction[i]
-	}
-}
-
-func (c *Compiler) changeOperand(opPos int, operand int) {
-	op := code.Opcode(c.currentInstructions()[opPos])
-	newInstruction := code.Make(op, operand)
-	c.replaceInstruction(opPos, newInstruction)
 }
 
 func (c *Compiler) emit(op code.Opcode, operands ...int) int {
@@ -90,7 +71,59 @@ func (c *Compiler) addContextVar(node parser.Node) int {
 	return len(c.contextVars) - 1
 }
 
-func (c *Compiler) addArray(node *parser.ArrayLiteral) int {
-	c.constants = append(c.constants, node)
-	return len(c.constants) - 1
+func (c *Compiler) enterScope() {
+	c.scopes = append(c.scopes, CompilationScope{
+		instructions:        code.Instructions{},
+		lastInstruction:     EmmittedInstruction{},
+		previousInstruction: EmmittedInstruction{},
+	})
+	c.scopeIndex++
+}
+
+func (c *Compiler) exitScope() {
+	if c.scopeIndex == 0 {
+		panic("exitScope: already at the global scope")
+	}
+	c.scopes = c.scopes[:c.scopeIndex]
+	c.scopeIndex--
+}
+
+func (c *Compiler) compilePredicateBlock(expr parser.Node) (int, error) {
+	if expr == nil {
+		return c.addConstant(&InstructionBlock{Instructions: nil}), nil
+	}
+	c.enterScope()
+	err := c.Compile(expr)
+	if err != nil {
+		return 0, err
+	}
+	blockIns := c.ByteCode().Instructions
+
+	c.exitScope()
+	return c.addConstant(&InstructionBlock{Instructions: blockIns}), nil
+}
+
+func (c *Compiler) addPipeLocalVar(name string) int {
+	c.SystemVars = append(c.SystemVars, &parser.Identifier{Name: name})
+	return len(c.SystemVars) - 1
+}
+
+func isPipeLocalVar(name string) bool {
+	return len(name) > 0 && name[0] == '$'
+}
+
+func (c *Compiler) replaceOperand(pos int, value int) {
+	binary.BigEndian.PutUint16(c.currentInstructions()[pos:], uint16(value))
+}
+
+// flattenLogicalChain collects a left-associative chain of the same logical operator into terms.
+// Example: a || b || c  => [a, b, c]
+func flattenLogicalChain(n parser.Node, op string, out *[]parser.Node) {
+	be, ok := n.(*parser.BinaryExpression)
+	if !ok || be.Operator != op {
+		*out = append(*out, n)
+		return
+	}
+	flattenLogicalChain(be.Left, op, out)
+	flattenLogicalChain(be.Right, op, out)
 }

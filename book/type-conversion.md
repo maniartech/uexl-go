@@ -23,6 +23,8 @@ true + 1          // 2 (true is 1)
   - `toNumber(value)`
   - `toString(value)`
   - `toBoolean(value)`
+- Use the double NOT operator (`!!`) for boolean conversion:
+  - `!!value` converts any value to a boolean using truthiness rules
 - If conversion is not possible, the result is `null`.
 
 ### Examples
@@ -32,6 +34,15 @@ toNumber("abc")     // null
 toString(123)       // "123"
 toBoolean(0)        // false
 toBoolean("hello")  // true
+
+// Boolean conversion with double NOT
+!!1                 // true
+!!0                 // false
+!!"text"            // true
+!!""                // false
+!!null              // false
+!![]                // true (non-empty array)
+!!{}                // true (object)
 ```
 
 ## Edge Cases
