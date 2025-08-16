@@ -8,12 +8,14 @@ import (
 )
 
 func TestPlayground(t *testing.T) {
-	// Test cases for different -- scenarios
+	// Test cases for multiple consecutive operators
 	testCases := []string{
-		"--10",    // double negation
-		"--x",     // double negation with variable
-		"-(-10)",  // explicit parentheses
-		"5--3",    // should this be 5 - (-3) or error?
+		"--10",     // double negation
+		"!!true",   // double NOT
+		"!!!false", // triple NOT
+		"!true",    // single NOT
+		"!=",       // should fail (incomplete)
+		"!!x",      // double NOT with variable
 	}
 
 	for i, input := range testCases {

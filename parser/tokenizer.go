@@ -356,6 +356,15 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
+	// Handle consecutive ! operators - always treat as separate tokens for multiple negation
+	// For expressions like "!!true" or "!!!false", we want separate "!" tokens
+	if t.current() == '!' && t.peek() == '!' {
+		// Return single '!' token - let the parser handle multiple consecutive unary operators
+		t.advance()
+		operator := "!"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
 	// Handle <= operator
 	if t.current() == '<' && t.peek() == '=' {
 		t.advance()
