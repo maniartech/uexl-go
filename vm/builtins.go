@@ -3,8 +3,6 @@ package vm
 import (
 	"fmt"
 	"strings"
-
-	"github.com/maniartech/uexl_go/parser"
 )
 
 // Builtins is a map of function names to their implementations.
@@ -13,6 +11,7 @@ var Builtins = VMFunctions{
 	"substr":   builtinSubstr,
 	"contains": builtinContains,
 	"set":      builtinSet,
+	"str":      builtinStr,
 }
 
 // len("abc") or len([1,2,3])
@@ -70,26 +69,35 @@ func builtinSet(args ...any) (any, error) {
 	if len(args) != 3 {
 		return nil, fmt.Errorf("set expects 3 arguments")
 	}
-	obj, ok := args[0].(*parser.ObjectLiteral)
+	obj, ok := args[0].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("set: first argument must be an object")
 	}
 
-	// key := args[1]
-	// Key should either be a string or a number. If it is an identifier, it should be evaluated
-	// to see if it can be used as a key. The evaluated value must be a string or a number.
-	// Finally, the key must be normalized to a string.
-	// TODO: Incomplete.
-	// if id, ok := key.(*parser.Identifier); ok {
+	// Key should either be a string or a number. If number, it should be converted to a string.
+	var key string
+	switch k := args[1].(type) {
+	case string:
+		// Key is already a string.
+	case float64:
+		// Key is a number, convert to string.
+		key = fmt.Sprintf("%d", int(k))
+	case int:
+		// Key is an int, convert to string.
+		key = fmt.Sprintf("%d", k)
+	default:
+		return nil, fmt.Errorf("set: key must be a string or a number")
+	}
 
-	// value := args[2]
-	// if obj.Properties == nil {
-	// 	obj.Properties = make(map[string]parser.Expression)
-	// }
-	// exprValue, ok := value.(parser.Expression)
-	// if !ok {
-	// 	return nil, fmt.Errorf("set: value must be an Expression")
-	// }
-	// obj.Properties[key.Value] = exprValue
+	value := args[2]
+	obj[key] = value
 	return obj, nil
+}
+
+// str converts a value to its string representation.
+func builtinStr(args ...any) (any, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("str expects 1 argument")
+	}
+	return fmt.Sprintf("%v", args[0]), nil
 }

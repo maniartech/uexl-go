@@ -123,8 +123,8 @@ func ReducePipeHandler(input any, block any, alias string, vm *VM) (any, error) 
 	if len(arr) == 0 {
 		return nil, fmt.Errorf("reduce pipe cannot operate on empty array")
 	}
-	acc := arr[0]
-	for i := 1; i < len(arr); i++ {
+	var acc any
+	for i := 0; i < len(arr); i++ {
 		vm.pushPipeScope()
 		vm.setPipeVar("$acc", acc)
 		vm.setPipeVar("$item", arr[i])
