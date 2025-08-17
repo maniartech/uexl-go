@@ -67,6 +67,21 @@ func TestOperatorPrecedence(t *testing.T) {
 			// Should be equivalent to: a || (b && c)
 		},
 		{
+			name:  "nullish coalescing same precedence as logical OR",
+			input: "a ?? b || c && d",
+			// Should be equivalent grouping: (a ?? b) || (c && d)
+		},
+		{
+			name:  "conditional lower than || and ??",
+			input: "a ?? b ? c : d",
+			// Should parse as (a ?? b) ? c : d
+		},
+		{
+			name:  "nested conditional right associative",
+			input: "a ? b : c ? d : e",
+			// Should parse as a ? b : (c ? d : e)
+		},
+		{
 			name:  "shift operators have correct precedence",
 			input: "a + b << c * d",
 			// Should be equivalent to: (a + b) << (c * d)

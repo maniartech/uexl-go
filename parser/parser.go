@@ -107,7 +107,7 @@ func (p *Parser) parsePipeExpression() Expression {
 		return p.handleLeadingPipe()
 	}
 
-	firstExpression := p.parseLogicalOr()
+	firstExpression := p.parseConditional()
 	if firstExpression == nil {
 		return nil
 	}
@@ -170,6 +170,51 @@ func (p *Parser) parsePipeExpression() Expression {
 	return programNode
 }
 
+// parseConditional parses the ternary conditional operator and integrates with nullish coalescing/logical or
+// Precedence: logical-or / nullish (same level) > conditional (?:) > pipe
+// Associativity: conditional is right-associative
+func (p *Parser) parseConditional() Expression {
+	condition := p.parseLogicalOr()
+	if condition == nil {
+		return nil
+	}
+
+	// Check for '?'
+	if p.current.Type == constants.TokenOperator {
+		if opValue, ok := p.current.Value.(string); ok && opValue == "?" {
+			qmark := p.current
+			p.advance() // consume '?'
+
+			// Parse consequent using conditional to support nesting (right-assoc)
+			consequent := p.parseConditional()
+			if consequent == nil {
+				p.addErrorWithExpected(errors.ErrExpectedToken, "expected expression after '?'", ": or expression")
+			}
+
+			if p.current.Type != constants.TokenColon {
+				p.addErrorWithExpected(errors.ErrExpectedToken, "expected ':' in conditional expression", ":")
+			} else {
+				p.advance() // consume ':'
+			}
+
+			alternate := p.parseConditional()
+			if alternate == nil {
+				p.addError(errors.ErrInvalidExpression, "invalid expression after ':' in conditional")
+			}
+
+			return &ConditionalExpression{
+				Condition:  condition,
+				Consequent: consequent,
+				Alternate:  alternate,
+				Line:       qmark.Line,
+				Column:     qmark.Column,
+			}
+		}
+	}
+
+	return condition
+}
+
 func (p *Parser) parsePipeAlias() (string, error) {
 	if p.current.Type == constants.TokenAs {
 		// If we're in a sub-expression (not top-level pipe), error
@@ -191,7 +236,8 @@ func (p *Parser) parsePipeAlias() (string, error) {
 }
 
 func (p *Parser) parseLogicalOr() Expression {
-	return p.parseBinaryOp(p.parseLogicalAnd, constants.SymbolLogicalOr)
+	// Treat nullish coalescing (??) at the same precedence level as logical OR (||)
+	return p.parseBinaryOp(p.parseLogicalAnd, constants.SymbolLogicalOr, "??")
 }
 
 func (p *Parser) parseLogicalAnd() Expression {
@@ -716,7 +762,7 @@ func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]stri
 		return false
 	}
 
-	nextExpr := p.parseLogicalOr()
+	nextExpr := p.parseConditional()
 	if nextExpr == nil {
 		p.addError(errors.ErrEmptyPipe, errors.GetErrorMessage(errors.ErrEmptyPipe))
 		p.consumeRemainingTokens()

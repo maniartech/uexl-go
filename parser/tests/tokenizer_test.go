@@ -23,6 +23,19 @@ func TestTokenizerBasic(t *testing.T) {
 			},
 		},
 		{
+			name:  "Nullish and ternary tokens",
+			input: "a ?? b ? c : d",
+			tokens: []Token{
+				{Type: constants.TokenIdentifier, Value: "a", Token: "a", Line: 1, Column: 1},
+				{Type: constants.TokenOperator, Value: "??", Token: "??", Line: 1, Column: 3},
+				{Type: constants.TokenIdentifier, Value: "b", Token: "b", Line: 1, Column: 6},
+				{Type: constants.TokenOperator, Value: "?", Token: "?", Line: 1, Column: 8},
+				{Type: constants.TokenIdentifier, Value: "c", Token: "c", Line: 1, Column: 10},
+				{Type: constants.TokenColon, Value: ":", Token: ":", Line: 1, Column: 12},
+				{Type: constants.TokenIdentifier, Value: "d", Token: "d", Line: 1, Column: 14},
+			},
+		},
+		{
 			name:  "Numbers and operators",
 			input: "3.14 + x * (y - z)",
 			tokens: []Token{
