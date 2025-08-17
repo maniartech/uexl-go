@@ -6,7 +6,7 @@ Understanding operator precedence is crucial for writing correct and predictable
 | Precedence | Operator(s) | Description | Associativity |
 |------------|-------------|-------------|---------------|
 | 1 | `()` | Grouping | Left-to-right |
-| 2 | `.` `[]` | Property/Index access | Left-to-right |
+| 2 | `.` `[]` | Property/Index access (objects, arrays, strings) | Left-to-right |
 | 3 | `-` (unary), `!` | Negation, Logical NOT | Right-to-left |
 | 4 | `**` | Exponentiation/Power | Right-to-left |
 | 5 | `%` | Modulo | Left-to-right |
@@ -113,6 +113,7 @@ x > 10 && y < 20 // Comparison before logical AND
 2**3**2          // 512: right-associative power 2**(3**2)
 2*3**2           // 18: power before multiplication 2*(3**2)
 5 ^ 3            // 6: bitwise XOR
+"hello"[1]       // "e": string index access
 0 || 10          // 10: logical OR replaces falsy 0
 0 ?? 10          // 0: nullish keeps valid falsy 0
 (a ?? b) || c    // Parenthesize when mixing with ||

@@ -19,7 +19,7 @@ An expression is any combination of values, variables, operators, and functions 
 - **Pipe expressions:** Chaining operations where the output of one stage is passed as input to the next.
   - Example: `[1, 2, 3] |map: $1 * 2`, `data |filter: $1.active`
 - **Object/array member access:** Accessing properties or elements using dot or bracket notation.
-  - Example: `users[0].name`, `data["key"]`
+  - Example: `users[0].name`, `data["key"]`, `"hello"[1]  // "e"`
 - **Grouped expressions:** Using parentheses to control evaluation order.
   - Example: `(a + b) * c`
 

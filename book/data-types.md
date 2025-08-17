@@ -21,6 +21,8 @@ Strings are sequences of characters, enclosed in single or double quotes. Use th
   - `'world'`
   - `"He said, 'hi'"`
 - **Edge Case:** Escape sequences (like `\"`, `\\`) are not supported; use matching quotes to include quotes inside strings.
+ - **Indexing:** Use square brackets to access a character by zero-based index: `"abc"[1] // "b"`. Out-of-bounds returns `null`. Strings are immutable.
+ - **Unicode Note:** Indexing is by position within the underlying string. For multi-byte or combined characters, `s[i]` may not correspond to a full user-perceived glyph.
 
 ## Booleans
 Booleans represent logical truth—`true` or `false`. Use them in conditions, filters, and logical operations.
