@@ -26,3 +26,4 @@
   - [Dynamic Pipe Expressions](v2/dynamic-pipe-expressions.md)
   - [Dynamic Function Expressions](v2/dynamic-function-expressions.md)
   - [Migration and Design Notes](v2/migration-and-design.md)
+  - [Nullish Coalescing Operator](v2/nullish-coalescing-operator.md)

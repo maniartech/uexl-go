@@ -105,6 +105,9 @@ Explanation:
 - Use pipes to break complex logic into clear, sequential steps.
 - Remember that `$last` refers to the value from the previous stage for all pipes; specialized pipes add more variables.
 - Combine pipes with functions and operators for powerful transformations.
+- Use the nullish coalescing operator `??` to provide safe defaults for missing values without overriding valid falsy ones:
+  - `data |: ($last.items ?? []) |map: $item.name`
+  - `values |reduce: ($acc ?? 0) + $item`
 
 ## Practice: Try It Yourself
 
