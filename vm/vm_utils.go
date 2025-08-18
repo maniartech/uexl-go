@@ -4,38 +4,80 @@ import (
 	"fmt"
 
 	"github.com/maniartech/uexl_go/code"
-	"github.com/maniartech/uexl_go/compiler"
 	"github.com/maniartech/uexl_go/parser"
 )
 
 const StackSize = 1024
+const MaxFrames = 1024
 
 var True = parser.BooleanLiteral{Value: true}
 var False = parser.BooleanLiteral{Value: false}
 var Null = parser.NullLiteral{}
 
-type VMFunctions map[string]func(args ...parser.Node) (parser.Node, error)
+type VMFunctions map[string]func(args ...any) (any, error)
+type PipeHandler func(
+	input any,
+	block any,
+	alias string,
+	vm *VM) (any, error)
+
+type PipeHandlers map[string]PipeHandler
+
+type LibContext struct {
+	Functions    VMFunctions
+	PipeHandlers PipeHandlers
+}
+
+type Frame struct {
+	instructions code.Instructions
+	ip           int
+	basePointer  int
+}
 
 type VM struct {
-	constants       []parser.Node
-	contextVars     []parser.Node
+	constants       []any
+	contextVars     []any
+	systemVars      []any
+	aliasVars       map[string]any
 	functionContext VMFunctions
-	instructions    code.Instructions
-	stack           []parser.Node
-	sp              int
+	pipeHandlers    PipeHandlers     // Add pipe handlers registry
+	pipeScopes      []map[string]any // Add scope stack for pipe variables
+
+	instructions code.Instructions
+	stack        []any
+	sp           int
+	frames       []*Frame
+	framesIdx    int
 }
 
-func New(bytecode *compiler.ByteCode, functionContext VMFunctions) *VM {
+func New(libCtx LibContext) *VM {
+	if libCtx.PipeHandlers == nil {
+		libCtx.PipeHandlers = make(PipeHandlers)
+	}
+	if libCtx.Functions == nil {
+		libCtx.Functions = make(VMFunctions)
+	}
+
 	return &VM{
-		constants:       bytecode.Constants,
-		contextVars:     bytecode.ContextVars,
-		instructions:    bytecode.Instructions,
-		functionContext: functionContext,
-		stack:           make([]parser.Node, StackSize),
-		sp:              0,
+		functionContext: libCtx.Functions,
+		pipeHandlers:    libCtx.PipeHandlers,
+		frames:          make([]*Frame, MaxFrames),
+		pipeScopes:      make([]map[string]any, 0),
+		stack:           make([]any, StackSize),
+		aliasVars:       make(map[string]any),
+	}
+
+}
+
+func NewFrame(instructions code.Instructions, basePointer int) *Frame {
+	return &Frame{
+		instructions: instructions,
+		ip:           0,
+		basePointer:  basePointer,
 	}
 }
-func (vm *VM) Push(node parser.Node) error {
+
+func (vm *VM) Push(node any) error {
 	if vm.sp >= StackSize {
 		return fmt.Errorf("stack overflow")
 	}
@@ -44,7 +86,7 @@ func (vm *VM) Push(node parser.Node) error {
 	return nil
 }
 
-func (vm *VM) Pop() parser.Node {
+func (vm *VM) Pop() any {
 	if vm.sp == 0 {
 		return nil
 	}
@@ -54,18 +96,57 @@ func (vm *VM) Pop() parser.Node {
 	return node
 }
 
-func (vm *VM) LastPoppedStackElem() parser.Node {
+func (vm *VM) LastPoppedStackElem() any {
 	if vm.sp == 0 {
 		return nil
 	}
 	return vm.stack[vm.sp-1]
 }
 
-func (vm *VM) Top() parser.Node {
+func (vm *VM) Top() any {
 	// Check if the stack is empty
 	if vm.sp == 0 {
 		return nil
 	}
 	// Return the top element without removing it
 	return vm.stack[vm.sp-1]
+}
+
+func (vm *VM) pushPipeScope() {
+	vm.pipeScopes = append(vm.pipeScopes, make(map[string]any))
+}
+
+func (vm *VM) popPipeScope() {
+	if len(vm.pipeScopes) > 0 {
+		vm.pipeScopes = vm.pipeScopes[:len(vm.pipeScopes)-1]
+	}
+}
+
+func (vm *VM) setPipeVar(name string, value any) {
+	if len(vm.pipeScopes) > 0 {
+		vm.pipeScopes[len(vm.pipeScopes)-1][name] = value
+	}
+}
+
+func (vm *VM) getPipeVar(name string) (any, bool) {
+	for i := len(vm.pipeScopes) - 1; i >= 0; i-- {
+		if val, ok := vm.pipeScopes[i][name]; ok {
+			return val, true
+		}
+	}
+	return nil, false
+}
+
+func (vm *VM) pushFrame(f *Frame) {
+	vm.frames[vm.framesIdx] = f
+	vm.framesIdx++
+}
+
+func (vm *VM) popFrame() *Frame {
+	vm.framesIdx--
+	return vm.frames[vm.framesIdx]
+}
+
+func (vm *VM) currentFrame() *Frame {
+	return vm.frames[vm.framesIdx-1]
 }

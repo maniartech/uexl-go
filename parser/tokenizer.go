@@ -81,6 +81,8 @@ func (t *Tokenizer) NextToken() (Token, error) {
 		return t.singleCharToken(constants.TokenDot)
 	case ch == ':':
 		return t.singleCharToken(constants.TokenColon)
+	case ch == '?':
+		return t.readQuestionOrNullish()
 	case ch == '|':
 		return t.readPipeOrBitwiseOr()
 	default:
@@ -257,7 +259,7 @@ func (t *Tokenizer) readString() (Token, error) {
 }
 
 // Ref: https://regex101.com/r/w6qtHq/1
-var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-z]+)?:`)
+var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-zA-Z]+)?:`)
 
 func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
 	start := t.pos
@@ -300,6 +302,14 @@ func (t *Tokenizer) readOperator() (Token, error) {
 	start := t.pos
 	startColumn := t.column
 
+	// Handle nullish coalescing operator '??'
+	if t.current() == '?' && t.peek() == '?' {
+		t.advance()
+		t.advance()
+		operator := "??"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
 	// Handle && operator
 	if t.current() == '&' && t.peek() == '&' {
 		t.advance()
@@ -308,11 +318,123 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
-	// Handle single-character operators
-	for t.pos < len(t.input) && isOperatorChar(t.current()) {
+	// Handle ++ operator
+	if t.current() == '+' && t.peek() == '+' {
 		t.advance()
+		t.advance()
+		operator := "++"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
+
+	// Handle ** operator (power)
+	if t.current() == '*' && t.peek() == '*' {
+		t.advance()
+		t.advance()
+		operator := "**"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle -- operator, but be smart about unary vs postfix contexts
+	// For expressions like "--10", "---5", we want to treat as separate "-" tokens
+	if t.current() == '-' && t.peek() == '-' {
+		// Look ahead to see what comes after the second '-'
+		nextChar := rune(0)
+		if t.pos+2 < len(t.input) {
+			nextChar, _ = utf8.DecodeRuneInString(t.input[t.pos+2:])
+		}
+
+		// If followed by a digit, letter (identifier), or another operator (like another -),
+		// treat as separate minus tokens for unary contexts
+		if isDigit(nextChar) || isLetter(nextChar) || isOperatorChar(nextChar) {
+			// Return single '-' token
+			t.advance()
+			operator := "-"
+			return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		} else {
+			// Treat as decrement operator (for cases like "i--" in postfix contexts)
+			t.advance()
+			t.advance()
+			operator := "--"
+			return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		}
+	}
+
+	// Handle == operator
+	if t.current() == '=' && t.peek() == '=' {
+		t.advance()
+		t.advance()
+		operator := "=="
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle != operator
+	if t.current() == '!' && t.peek() == '=' {
+		t.advance()
+		t.advance()
+		operator := "!="
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle consecutive ! operators - always treat as separate tokens for multiple negation
+	// For expressions like "!!true" or "!!!false", we want separate "!" tokens
+	if t.current() == '!' && t.peek() == '!' {
+		// Return single '!' token - let the parser handle multiple consecutive unary operators
+		t.advance()
+		operator := "!"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle <= operator
+	if t.current() == '<' && t.peek() == '=' {
+		t.advance()
+		t.advance()
+		operator := "<="
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle >= operator
+	if t.current() == '>' && t.peek() == '=' {
+		t.advance()
+		t.advance()
+		operator := ">="
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle << operator
+	if t.current() == '<' && t.peek() == '<' {
+		t.advance()
+		t.advance()
+		operator := "<<"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle >> operator
+	if t.current() == '>' && t.peek() == '>' {
+		t.advance()
+		t.advance()
+		operator := ">>"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle single-character operators
+	t.advance()
 	operator := t.input[start:t.pos]
+	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+}
+
+// readQuestionOrNullish handles tokens that start with '?': either '?' or '??'
+func (t *Tokenizer) readQuestionOrNullish() (Token, error) {
+	startColumn := t.column
+	// current is '?'
+	t.advance()
+	if t.current() == '?' {
+		// it's '??'
+		t.advance()
+		operator := "??"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+	// single '?'
+	operator := "?"
 	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 }
 
@@ -368,7 +490,7 @@ func isLetter(r rune) bool {
 }
 
 func isOperatorChar(r rune) bool {
-	return strings.ContainsRune("+-*/%<>=!&|^", r)
+	return strings.ContainsRune("+-*/%<>=!&|^?", r)
 }
 
 func (t *Tokenizer) peek() rune {

@@ -44,7 +44,7 @@ func testInstructions(expected []code.Instructions, actual code.Instructions) er
 func testConstants(
 	t *testing.T,
 	expected []any,
-	actual []parser.Node,
+	actual []any,
 ) error {
 	if len(expected) != len(actual) {
 		return fmt.Errorf("wrong number of constants. got=%d, want=%d",
@@ -53,7 +53,8 @@ func testConstants(
 	for i, constant := range expected {
 		switch constant := constant.(type) {
 		case float64:
-			if err := testNumerLiteral(constant, actual[i]); err != nil {
+		case int:
+			if err := testNumerLiteral(float64(constant), actual[i]); err != nil {
 				return fmt.Errorf("test case %d: %s", i, err)
 			}
 		case string:
@@ -67,7 +68,7 @@ func testConstants(
 	return nil
 }
 
-func testNumerLiteral(expected float64, actual parser.Node) error {
+func testNumerLiteral(expected float64, actual any) error {
 	if num, ok := actual.(*parser.NumberLiteral); ok {
 		if num.Value != expected {
 			return fmt.Errorf("wrong number literal. got=%v, want=%v",
@@ -78,7 +79,7 @@ func testNumerLiteral(expected float64, actual parser.Node) error {
 	return fmt.Errorf("expected a number literal, got %T", actual)
 }
 
-func testStringLiteral(expected string, actual parser.Node) error {
+func testStringLiteral(expected string, actual any) error {
 	if str, ok := actual.(*parser.StringLiteral); ok {
 		if str.Value != expected {
 			return fmt.Errorf("wrong string literal. got=%q, want=%q",

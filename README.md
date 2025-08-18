@@ -108,4 +108,19 @@ This basic example demonstrates how to use UExL to evaluate simple arithmetic ex
 
 ```go
 result, err := uexl.Eval("10 + 20 |: $1 * 2") // Returns 60
+
+if err != nil {
+    log.Fatal(err)
+}
+
+exprc, err := uexl.Compile("10 + 20 |: abc * 2")
+if err != nil {
+    log.Fatal(err)
+}
+
+result, err := uexl.Run(exprc, map[]{
+  "abc": 30,
+})
+
+fmt.Println("Result:", result)
 ```

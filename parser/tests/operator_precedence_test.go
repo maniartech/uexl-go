@@ -67,6 +67,21 @@ func TestOperatorPrecedence(t *testing.T) {
 			// Should be equivalent to: a || (b && c)
 		},
 		{
+			name:  "nullish coalescing same precedence as logical OR",
+			input: "a ?? b || c && d",
+			// Should be equivalent grouping: (a ?? b) || (c && d)
+		},
+		{
+			name:  "conditional lower than || and ??",
+			input: "a ?? b ? c : d",
+			// Should parse as (a ?? b) ? c : d
+		},
+		{
+			name:  "nested conditional right associative",
+			input: "a ? b : c ? d : e",
+			// Should parse as a ? b : (c ? d : e)
+		},
+		{
 			name:  "shift operators have correct precedence",
 			input: "a + b << c * d",
 			// Should be equivalent to: (a + b) << (c * d)
@@ -231,6 +246,285 @@ func TestPipeExpressionPrecedence(t *testing.T) {
 			_, err := p.Parse()
 
 			assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+		})
+	}
+}
+
+// TestConsecutiveOperators tests parsing of consecutive unary operators like -- and !!
+func TestConsecutiveOperators(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectError bool
+		description string
+	}{
+		{
+			name:        "double_negation_number",
+			input:       "--10",
+			expectError: false,
+			description: "Double negation with number should parse as -(-(10))",
+		},
+		{
+			name:        "double_negation_variable",
+			input:       "--x",
+			expectError: false,
+			description: "Double negation with variable should parse as -(-(x))",
+		},
+		{
+			name:        "triple_negation",
+			input:       "---5",
+			expectError: false,
+			description: "Triple negation should parse as -(-(-(5)))",
+		},
+		{
+			name:        "double_not_true",
+			input:       "!!true",
+			expectError: false,
+			description: "Double NOT with boolean should parse as !(!(true))",
+		},
+		{
+			name:        "double_not_false",
+			input:       "!!false",
+			expectError: false,
+			description: "Double NOT with boolean should parse as !(!(false))",
+		},
+		{
+			name:        "triple_not",
+			input:       "!!!true",
+			expectError: false,
+			description: "Triple NOT should parse as !(!(!(true)))",
+		},
+		{
+			name:        "double_not_variable",
+			input:       "!!x",
+			expectError: false,
+			description: "Double NOT with variable should parse as !(!(x))",
+		},
+		{
+			name:        "mixed_consecutive_operators",
+			input:       "!-5",
+			expectError: false,
+			description: "Mixed unary operators should parse as !(-(5))",
+		},
+		{
+			name:        "mixed_consecutive_operators_reverse",
+			input:       "-!true",
+			expectError: false,
+			description: "Mixed unary operators should parse as -(!(true))",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			expr, err := p.Parse()
+
+			if tt.expectError {
+				assert.Error(t, err, "Expected error for input: %s", tt.input)
+			} else {
+				assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+				assert.NotNil(t, expr, "Expression should not be nil for input: %s", tt.input)
+
+				// Verify that we get a UnaryExpression for consecutive operators
+				unaryExpr, ok := expr.(*parser.UnaryExpression)
+				assert.True(t, ok, "Expected UnaryExpression for input: %s", tt.input)
+				assert.NotNil(t, unaryExpr.Operand, "Operand should not be nil for input: %s", tt.input)
+			}
+		})
+	}
+}
+
+// TestConsecutiveOperatorsParsing tests the AST structure of consecutive operators
+func TestConsecutiveOperatorsParsing(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          string
+		expectedOp     string
+		expectedNested int // How many nested unary expressions we expect
+	}{
+		{
+			name:           "double_minus",
+			input:          "--10",
+			expectedOp:     "-",
+			expectedNested: 2,
+		},
+		{
+			name:           "triple_minus",
+			input:          "---10",
+			expectedOp:     "-",
+			expectedNested: 3,
+		},
+		{
+			name:           "double_not",
+			input:          "!!true",
+			expectedOp:     "!",
+			expectedNested: 2,
+		},
+		{
+			name:           "triple_not",
+			input:          "!!!true",
+			expectedOp:     "!",
+			expectedNested: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			expr, err := p.Parse()
+			assert.NoError(t, err)
+
+			// Check nesting depth
+			current := expr
+			depth := 0
+			for {
+				unaryExpr, ok := current.(*parser.UnaryExpression)
+				if !ok {
+					break
+				}
+				depth++
+				assert.Equal(t, tt.expectedOp, unaryExpr.Operator, "Expected operator %s at depth %d", tt.expectedOp, depth)
+				current = unaryExpr.Operand
+			}
+
+			assert.Equal(t, tt.expectedNested, depth, "Expected nesting depth %d for input %s", tt.expectedNested, tt.input)
+		})
+	}
+}
+
+// TestPowerOperator tests the ** power operator
+func TestPowerOperator(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectError bool
+		description string
+	}{
+		{
+			name:        "simple_power",
+			input:       "2**3",
+			expectError: false,
+			description: "Simple power operation: 2**3",
+		},
+		{
+			name:        "power_with_spaces",
+			input:       "2 ** 3",
+			expectError: false,
+			description: "Power operation with spaces: 2 ** 3",
+		},
+		{
+			name:        "right_associative_power",
+			input:       "2**3**2",
+			expectError: false,
+			description: "Right-associative power: 2**(3**2) = 2**9",
+		},
+		{
+			name:        "power_with_parentheses",
+			input:       "(2**3)**2",
+			expectError: false,
+			description: "Power with parentheses: (2**3)**2 = 8**2",
+		},
+		{
+			name:        "power_with_negative",
+			input:       "(-2)**3",
+			expectError: false,
+			description: "Power with negative base: (-2)**3",
+		},
+		{
+			name:        "power_with_decimal",
+			input:       "2.5**2",
+			expectError: false,
+			description: "Power with decimal: 2.5**2",
+		},
+		{
+			name:        "zero_power",
+			input:       "5**0",
+			expectError: false,
+			description: "Zero exponent: 5**0",
+		},
+		{
+			name:        "power_vs_multiplication",
+			input:       "2*3**2",
+			expectError: false,
+			description: "Power has higher precedence than multiplication: 2*(3**2)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			expr, err := p.Parse()
+
+			if tt.expectError {
+				assert.Error(t, err, "Expected error for input: %s", tt.input)
+			} else {
+				assert.NoError(t, err, "Parsing should not produce an error for input: %s", tt.input)
+				assert.NotNil(t, expr, "Expression should not be nil for input: %s", tt.input)
+			}
+		})
+	}
+}
+
+// TestPowerOperatorPrecedence tests that power operator has correct precedence
+func TestPowerOperatorPrecedence(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		expectedType string
+		description  string
+	}{
+		{
+			name:         "power_vs_multiplication",
+			input:        "2*3**2",
+			expectedType: "BinaryExpression",
+			description:  "Should be parsed as 2*(3**2), not (2*3)**2",
+		},
+		{
+			name:         "power_vs_addition",
+			input:        "1+2**3",
+			expectedType: "BinaryExpression",
+			description:  "Should be parsed as 1+(2**3), not (1+2)**3",
+		},
+		{
+			name:         "right_associative",
+			input:        "2**3**4",
+			expectedType: "BinaryExpression",
+			description:  "Should be parsed as 2**(3**4), not (2**3)**4",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := parser.NewParser(tt.input)
+			expr, err := p.Parse()
+			assert.NoError(t, err)
+
+			binExpr, ok := expr.(*parser.BinaryExpression)
+			assert.True(t, ok, "Expected BinaryExpression for input: %s", tt.input)
+
+			// Verify the structure based on the specific test
+			switch tt.name {
+			case "power_vs_multiplication":
+				// Should be: * operator at root, with left=2 and right=(3**2)
+				assert.Equal(t, "*", binExpr.Operator)
+				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
+				assert.True(t, ok, "Right side should be a BinaryExpression")
+				assert.Equal(t, "**", rightExpr.Operator)
+
+			case "power_vs_addition":
+				// Should be: + operator at root, with left=1 and right=(2**3)
+				assert.Equal(t, "+", binExpr.Operator)
+				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
+				assert.True(t, ok, "Right side should be a BinaryExpression")
+				assert.Equal(t, "**", rightExpr.Operator)
+
+			case "right_associative":
+				// Should be: ** operator at root, with left=2 and right=(3**4)
+				assert.Equal(t, "**", binExpr.Operator)
+				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
+				assert.True(t, ok, "Right side should be a BinaryExpression")
+				assert.Equal(t, "**", rightExpr.Operator)
+			}
 		})
 	}
 }

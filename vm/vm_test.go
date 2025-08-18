@@ -25,13 +25,11 @@ func parse(input string) parser.Node {
 	return node
 }
 
-type vmTestCases struct {
-	input    string
-	expected any
-}
-
 func TestVM(t *testing.T) {
-	vm := vm.New(&compiler.ByteCode{}, vm.Builtins)
+	vm := vm.New(vm.LibContext{
+		Functions:    nil,
+		PipeHandlers: nil,
+	})
 	if vm == nil {
 		t.Fatal("failed to create VM")
 	}
@@ -39,99 +37,93 @@ func TestVM(t *testing.T) {
 
 type vmTestCase struct {
 	input    string
-	expected interface{}
+	expected any
 }
 
 func runVmTests(t *testing.T, tests []vmTestCase) {
 	t.Helper()
-	for _, tt := range tests {
+	for i, tt := range tests {
 		program := parse(tt.input)
 		comp := compiler.New()
 		err := comp.Compile(program)
 		if err != nil {
-			t.Fatalf("compiler error: %s", err)
+			t.Fatalf("[case %d] compiler error: %s", i+1, err)
 		}
-		vm := vm.New(comp.ByteCode(), vm.Builtins)
-		err = vm.Run()
+		vm := vm.New(vm.LibContext{
+			Functions:    vm.Builtins,
+			PipeHandlers: vm.DefaultPipeHandlers,
+		})
+		bytecode := comp.ByteCode()
+		output, err := vm.Run(bytecode)
 		if err != nil {
-			t.Fatalf("vm error: %s", err)
+			t.Fatalf("[case %d] vm error: %s", i+1, err)
 		}
-		stackElem := vm.LastPoppedStackElem()
-		err = testExpectedObject(t, tt.expected, stackElem)
+		err = testExpectedObject(t, tt.expected, output)
 		if err != nil {
-			t.Fatalf("testExpectedObject error: %s", err)
+			t.Fatalf("[case %d] testExpectedObject error: %s", i+1, err)
 		}
-
 	}
 }
 
 // testExpectedObject compares the expected value with the actual value from the VM stack.
-func testExpectedObject(t *testing.T, expected any, actual parser.Node) error {
-	switch actual := actual.(type) {
-	case *parser.NumberLiteral:
-		// NumberLiteral can be integer or float
-		if expectedInt, ok := expected.(int); ok {
-			if actual.Value != float64(expectedInt) {
-				return fmt.Errorf("expected %d, got %f", expectedInt, actual.Value)
-			}
-		} else if expectedFloat, ok := expected.(float64); ok {
-			if actual.Value != expectedFloat {
-				return fmt.Errorf("expected %f, got %f", expectedFloat, actual.Value)
-			}
-		} else {
-			return fmt.Errorf("expected a number, got %T", expected)
+func testExpectedObject(t *testing.T, expected any, actual any) error {
+	switch v := actual.(type) {
+	case float64:
+	case int:
+		// converting the value to float64 for comparison
+		if float64(v) != actual.(float64) {
+			return fmt.Errorf("expected %f, got %f", float64(v), actual.(float64))
 		}
-	case *parser.BooleanLiteral:
-		if expectedBool, ok := expected.(bool); ok {
-			if actual.Value != expectedBool {
-				return fmt.Errorf("expected %t, got %t", expectedBool, actual.Value)
+	case bool:
+		if a, ok := actual.(bool); ok {
+			if v != a {
+				return fmt.Errorf("expected %t, got %t", v, a)
 			}
 		} else {
-			return fmt.Errorf("expected a boolean, got %T", expected)
+			return fmt.Errorf("expected a boolean, got %T", actual)
 		}
-	case *parser.StringLiteral:
-		if expectedStr, ok := expected.(string); ok {
-			if actual.Value != expectedStr {
-				return fmt.Errorf("expected %q, got %q", expectedStr, actual.Value)
+	case string:
+		if a, ok := actual.(string); ok {
+			if v != a {
+				return fmt.Errorf("expected %q, got %q", v, a)
 			}
 		} else {
-			return fmt.Errorf("expected a string, got %T", expected)
+			return fmt.Errorf("expected a string, got %T", actual)
 		}
-	case *parser.ArrayLiteral:
-		if expectedArray, ok := expected.([]any); ok {
-			if len(actual.Elements) != len(expectedArray) {
-				return fmt.Errorf("expected array of length %d, got %d", len(expectedArray), len(actual.Elements))
-			}
-			for i, elem := range actual.Elements {
-				if err := testExpectedObject(t, expectedArray[i], elem); err != nil {
-					return fmt.Errorf("error at index %d: %s", i, err)
-				}
-			}
-		} else {
+	case []any:
+		e, ok := expected.([]any)
+		if !ok {
 			return fmt.Errorf("expected an array, got %T", expected)
 		}
-	case *parser.ObjectLiteral:
-		if expectedMap, ok := expected.(map[string]any); ok {
-			if len(actual.Properties) != len(expectedMap) {
-				return fmt.Errorf("expected object with %d properties, got %d", len(expectedMap), len(actual.Properties))
+		if len(v) != len(e) {
+			return fmt.Errorf("expected array of length %d, got %d", len(e), len(v))
+		}
+		for i := range v {
+			if err := testExpectedObject(t, e[i], v[i]); err != nil {
+				return fmt.Errorf("error at index %d: %s", i, err)
 			}
-			for key, value := range actual.Properties {
-				if expectedValue, exists := expectedMap[key]; exists {
-					if err := testExpectedObject(t, expectedValue, value); err != nil {
-						return fmt.Errorf("error for key %q: %s", key, err)
-					}
-				} else {
-					return fmt.Errorf("unexpected key %q in object", key)
-				}
-			}
-			// Also check that all expected keys are present
-			for expectedKey := range expectedMap {
-				if _, exists := actual.Properties[expectedKey]; !exists {
-					return fmt.Errorf("missing expected key %q in object", expectedKey)
-				}
-			}
-		} else {
+		}
+	case map[string]any:
+		e, ok := expected.(map[string]any)
+		if !ok {
 			return fmt.Errorf("expected an object, got %T", expected)
+		}
+		if len(v) != len(e) {
+			return fmt.Errorf("expected object with %d properties, got %d", len(e), len(v))
+		}
+		for key, val := range v {
+			expVal, exists := e[key]
+			if !exists {
+				return fmt.Errorf("unexpected key %q in object", key)
+			}
+			if err := testExpectedObject(t, expVal, val); err != nil {
+				return fmt.Errorf("error for key %q: %s", key, err)
+			}
+		}
+		for key := range e {
+			if _, exists := v[key]; !exists {
+				return fmt.Errorf("missing expected key %q in object", key)
+			}
 		}
 	default:
 		return fmt.Errorf("unsupported type: %T (value: %v)", actual, actual)
@@ -159,6 +151,7 @@ func TestNumberArithmetic(t *testing.T) {
 		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50},
 		{"-(-20 + 10)", 10},
 		{"--10", 10},
+		{"2 ** 3", 8}, // Power operator test
 
 		// Floating point tests
 		{"1.5", 1.5},
@@ -261,6 +254,37 @@ func TestBooleanLogic(t *testing.T) {
 	}
 	runVmTests(t, tests)
 }
+
+func TestLogicalShortCircuit(t *testing.T) {
+	tests := []vmTestCase{
+		// || returns first truthy value
+		{`false || true`, true},
+		{`false || false || true`, true},
+		{`false || 0 || "hello"`, "hello"},
+		{`false || 0 || ""`, ""}, // all falsy, returns last
+
+		// && returns first falsy value, otherwise last value
+		{`true && false`, false},
+		{`true && true && false`, false},
+		{`true && 1 && "hello"`, "hello"},
+		{`true && 1 && ""`, ""},     // "" is falsy
+		{`false && 0 && ""`, false}, // all falsy, returns false
+
+		// Chained with numbers and strings
+		{`0 || 42`, 42},
+		{`"foo" || "bar"`, "foo"},
+		{`"" || "bar"`, "bar"},
+		{`1 && 2 && 3`, 3},
+		{`1 && 0 && 3`, 0},
+		{`0 && 1`, 0},
+
+		// Nested expressions
+		{`(false || 0) && (true || "baz")`, 0},
+		{`(true && 1) || (false && "baz")`, 1},
+	}
+	runVmTests(t, tests)
+}
+
 func TestStringLiterals(t *testing.T) {
 	tests := []vmTestCase{
 		{`"hello"`, "hello"},
@@ -311,7 +335,7 @@ func TestStringContainsFunction(t *testing.T) {
 	tests := []vmTestCase{
 		{`contains("hello", "ll")`, true},
 		{`contains("hello", "z")`, false},
-		{`contains("foobar", "foo")`, true},
+		{`contains("f"+"oobar", "foo")`, true},
 	}
 	runVmTests(t, tests)
 }
@@ -367,6 +391,64 @@ func TestObjectIndexing(t *testing.T) {
 		{`{"foo": "bar"}["foo"]`, "bar"},
 		{`{"arr": [1,2,3]}["arr"][1]`, 2},
 		{`{"obj": {"nested": 99}}["obj"]["nested"]`, 99},
+	}
+	runVmTests(t, tests)
+}
+
+func TestPipeFunction(t *testing.T) {
+	tests := []vmTestCase{
+		{`"foo" as $foo |pipe: $foo + "bar"`, "foobar"},
+		{"[1,2] |map: $item * 2", []any{2, 4}},
+		{"[1,2] |map: $item * $index", []any{0, 2}},
+		{"[1,2] |map: $item * 2 |map: $item + 1", []any{3, 5}},
+		{"[1,2,3,4,5,6] |filter: $item > 2", []any{3, 4, 5, 6}},
+
+		// Reduce: sum all items
+		{"[1,2,3,4] |reduce: ($acc || 0) + $item", 10},
+
+		// TODO: Reduce to an object
+		{"[1,2,3,4] |reduce: set($acc || {}, $index, $item)", map[string]any{
+			"0": 1,
+			"1": 2,
+			"2": 3,
+			"3": 4,
+		}},
+
+		// set with string key
+		{`set({}, "a", 1)`, map[string]any{"a": 1}},
+		// set with numeric key coerced to string
+		{`set({}, 5, "x")`, map[string]any{"5": "x"}},
+
+		// Find: first item greater than 2
+		{"[1,2,3,4] |find: $item > 2", 3},
+
+		// Some: any item is even
+		{"[1,2,3,4] |some: $item % 2 == 0", true},
+		{"[1,3,5] |some: $item % 2 == 0", false},
+
+		// Every: all items are positive
+		{"[1,2,3,4] |every: $item > 0", true},
+		{"[1,2,3,0] |every: $item > 0", false},
+
+		// Unique: remove duplicates
+		{"[1,2,2,3,1,4] |unique: $item", []any{1, 2, 3, 4}},
+
+		// Sort: sort by value
+		{"[3,1,2] |sort: $item", []any{1, 2, 3}},
+		// Sort: sort by computed value
+		{"[3,1,2] |sort: $item * -1", []any{3, 2, 1}},
+
+		// GroupBy: group by even/odd
+		// {`[1,2,3,4] |groupBy: $item % 2`, map[string]any{
+		// 	"1": []any{1, 3},
+		// 	"0": []any{2, 4},
+		// }},
+
+		// // Window: window size 2, sum each window
+		{"[1,2,3,4] |window: $window[0] + $window[1]", []any{3, 5, 7}},
+
+		// Chunk: chunk size 2, sum each chunk
+		// {"[1,2,3,4,5] |chunk: $chunk[0] + ($chunk[1] ?? 0)", []any{3, 7, 5}},
 	}
 	runVmTests(t, tests)
 }

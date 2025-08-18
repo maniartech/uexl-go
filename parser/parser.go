@@ -107,7 +107,7 @@ func (p *Parser) parsePipeExpression() Expression {
 		return p.handleLeadingPipe()
 	}
 
-	firstExpression := p.parseLogicalOr()
+	firstExpression := p.parseConditional()
 	if firstExpression == nil {
 		return nil
 	}
@@ -164,13 +164,59 @@ func (p *Parser) parsePipeExpression() Expression {
 		programNode.PipeExpressions = append(programNode.PipeExpressions, PipeExpression{
 			Expression: expr,
 			PipeType:   pipeTypes[i],
-			Aliase:     aliases[i],
+			Alias:      aliases[i],
+			Index:      i,
 			Line:       startLine,
 			Column:     startColumn,
 		})
 	}
 
 	return programNode
+}
+
+// parseConditional parses the ternary conditional operator and integrates with nullish coalescing/logical or
+// Precedence: logical-or / nullish (same level) > conditional (?:) > pipe
+// Associativity: conditional is right-associative
+func (p *Parser) parseConditional() Expression {
+	condition := p.parseLogicalOr()
+	if condition == nil {
+		return nil
+	}
+
+	// Check for '?'
+	if p.current.Type == constants.TokenOperator {
+		if opValue, ok := p.current.Value.(string); ok && opValue == "?" {
+			qmark := p.current
+			p.advance() // consume '?'
+
+			// Parse consequent using conditional to support nesting (right-assoc)
+			consequent := p.parseConditional()
+			if consequent == nil {
+				p.addErrorWithExpected(errors.ErrExpectedToken, "expected expression after '?'", ": or expression")
+			}
+
+			if p.current.Type != constants.TokenColon {
+				p.addErrorWithExpected(errors.ErrExpectedToken, "expected ':' in conditional expression", ":")
+			} else {
+				p.advance() // consume ':'
+			}
+
+			alternate := p.parseConditional()
+			if alternate == nil {
+				p.addError(errors.ErrInvalidExpression, "invalid expression after ':' in conditional")
+			}
+
+			return &ConditionalExpression{
+				Condition:  condition,
+				Consequent: consequent,
+				Alternate:  alternate,
+				Line:       qmark.Line,
+				Column:     qmark.Column,
+			}
+		}
+	}
+
+	return condition
 }
 
 func (p *Parser) parsePipeAlias() (string, error) {
@@ -194,7 +240,8 @@ func (p *Parser) parsePipeAlias() (string, error) {
 }
 
 func (p *Parser) parseLogicalOr() Expression {
-	return p.parseBinaryOp(p.parseLogicalAnd, constants.SymbolLogicalOr)
+	// Treat nullish coalescing (??) at the same precedence level as logical OR (||)
+	return p.parseBinaryOp(p.parseLogicalAnd, constants.SymbolLogicalOr, "??")
 }
 
 func (p *Parser) parseLogicalAnd() Expression {
@@ -230,7 +277,24 @@ func (p *Parser) parseAdditive() Expression {
 }
 
 func (p *Parser) parseMultiplicative() Expression {
-	return p.parseBinaryOp(p.parseUnary, "*", "/", "%")
+	return p.parseBinaryOp(p.parsePower, "*", "/", "%")
+}
+
+func (p *Parser) parsePower() Expression {
+	// Power operator is right-associative, so we parse it differently
+	left := p.parseUnary()
+
+	if p.current.Type == constants.TokenOperator {
+		if opValue, ok := p.current.Value.(string); ok && opValue == "**" {
+			op := p.current
+			p.advance()
+			// For right-associativity, we recursively call parsePower instead of parseUnary
+			right := p.parsePower()
+			return &BinaryExpression{Left: left, Operator: opValue, Right: right, Line: op.Line, Column: op.Column}
+		}
+	}
+
+	return left
 }
 
 func (p *Parser) parseUnary() Expression {
@@ -292,25 +356,63 @@ func (p *Parser) parseMemberAccess() Expression {
 			dot := p.current
 			p.advance()
 
-			// Check for end of input or unexpected token after dot
-			if p.current.Type != constants.TokenIdentifier {
-				p.addErrorWithExpected(errors.ErrExpectedIdentifier, "expected identifier after '.'", "identifier")
-				return expr // Return what we have so far since this is an error
-			}
+			// Disambiguate after '.'
+			// 1) .<identifier> => MemberAccess (object/property)
+			// 2) .<number>     => IndexAccess with numeric literal index
+			// 3) .(expr)       => IndexAccess with arbitrary expression
+			switch p.current.Type {
+			case constants.TokenIdentifier:
+				property, ok := p.current.Value.(string)
+				if !ok {
+					property = p.current.Token
+				}
+				p.advance()
+				expr = &MemberAccess{
+					Object:   expr,
+					Property: property,
+					Line:     dot.Line,
+					Column:   dot.Column,
+				}
+				continue
 
-			property, ok := p.current.Value.(string)
-			if !ok {
-				property = p.current.Token
-			}
-			p.advance()
+			case constants.TokenNumber:
+				// Treat as index access: obj.<number>
+				indexExpr := p.parseNumber()
+				expr = &IndexAccess{
+					Array:  expr,
+					Index:  indexExpr,
+					Line:   dot.Line,
+					Column: dot.Column,
+				}
+				continue
 
-			expr = &MemberAccess{
-				Object:   expr,
-				Property: property,
-				Line:     dot.Line,
-				Column:   dot.Column,
+			case constants.TokenLeftParen:
+				// Treat .(expr) as index access using grouped expression
+				// Save previous state similar to bracket indexing to allow full expressions
+				wasInParenthesis := p.inParenthesis
+				wasSubExpressionActive := p.subExpressionActive
+				p.inParenthesis = true
+				p.subExpressionActive = true
+
+				indexExpr := p.parseGroupedExpression()
+
+				// Restore previous state
+				p.inParenthesis = wasInParenthesis
+				p.subExpressionActive = wasSubExpressionActive
+
+				expr = &IndexAccess{
+					Array:  expr,
+					Index:  indexExpr,
+					Line:   dot.Line,
+					Column: dot.Column,
+				}
+				continue
+
+			default:
+				// Unexpected token after '.'
+				p.addErrorWithExpected(errors.ErrExpectedIdentifier, "expected identifier, number, or '(...)' after '.'", "identifier|number|(")
+				return expr
 			}
-			continue // check for more member access operations
 		}
 
 		// Handle function call after member or index access
@@ -702,7 +804,7 @@ func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]stri
 		return false
 	}
 
-	nextExpr := p.parseLogicalOr()
+	nextExpr := p.parseConditional()
 	if nextExpr == nil {
 		p.addError(errors.ErrEmptyPipe, errors.GetErrorMessage(errors.ErrEmptyPipe))
 		p.consumeRemainingTokens()

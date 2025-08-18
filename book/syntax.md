@@ -25,6 +25,7 @@ min(1, 2, 3)        // Function call
 [1, 2, 3] |map: $1 * 2 // Pipe operation
 user.name           // Object property access
 (a + b) * c         // Grouped expression
+"hello"[0]          // String index access
 ```
 
 ## Whitespace and Formatting

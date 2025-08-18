@@ -244,14 +244,34 @@ user.name
 user["name"]
 ```
 
-### Array Access
+### Array and String Access
 
-Elements of arrays can be accessed using bracket notation with a zero-based index:
+Elements of arrays and characters of strings can be accessed using:
+
+- Bracket notation with a zero-based index, and
+- Dot notation with a numeric index (or a parenthesized expression)
+
+Bracket notation examples:
 
 ```
-numbers[0]    // First element
-names[2]      // Third element
+numbers[0]       // First element of array
+names[2]         // Third element of array
+"hello"[1]       // "e" (second character)
+"hello"[10]      // null (out of bounds)
 ```
+
+Dot index notation examples:
+
+```
+[10, 20, 30].1       // 20
+'abc'.2              // "c"
+data.items.0         // Same as data.items[0]
+"hello".(1 + 1)     // "l" (index computed from expression)
+```
+
+Notes:
+- Dot-based index access does not clash with object member access: `.identifier` is still property access, while `.number` or `.(...)` is treated as index access.
+- Use parentheses after a dot to index by any expression (including identifiers): `arr.(i + 1)`.
 
 ## Type Conversion and Coercion
 

@@ -5,6 +5,7 @@ type NodeType string
 const (
 	NodeTypeBinaryExpression NodeType = "BinaryExpression"
 	NodeTypeUnaryExpression  NodeType = "UnaryExpression"
+	NodeTypeConditional      NodeType = "ConditionalExpression"
 	NodeTypeNumberLiteral    NodeType = "NumberLiteral"
 	NodeTypeStringLiteral    NodeType = "StringLiteral"
 	NodeTypeBooleanLiteral   NodeType = "BooleanLiteral"
@@ -39,6 +40,19 @@ type BinaryExpression struct {
 func (be *BinaryExpression) expressionNode()      {}
 func (be *BinaryExpression) Type() NodeType       { return NodeTypeBinaryExpression }
 func (be *BinaryExpression) Position() (int, int) { return be.Line, be.Column }
+
+// ConditionalExpression represents the ternary operator: condition ? consequent : alternate
+type ConditionalExpression struct {
+	Condition  Expression
+	Consequent Expression
+	Alternate  Expression
+	Line       int
+	Column     int
+}
+
+func (ce *ConditionalExpression) expressionNode()      {}
+func (ce *ConditionalExpression) Type() NodeType       { return NodeTypeConditional }
+func (ce *ConditionalExpression) Position() (int, int) { return ce.Line, ce.Column }
 
 type UnaryExpression struct {
 	Operator string
@@ -146,9 +160,10 @@ func (ma *MemberAccess) Type() NodeType       { return NodeTypeMemberAccess }
 func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
 
 type PipeExpression struct {
-	Expression Expression
+	Expression Expression // The pipe's predicate expression block
 	PipeType   string
-	Aliase     string
+	Alias      string
+	Index      int // Index of the predicate block
 	Line       int
 	Column     int
 }

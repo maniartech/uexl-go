@@ -12,10 +12,13 @@ type Opcode byte
 const (
 	OpConstant Opcode = iota
 	OpContextVar
+	OpIdentifier
+	OpStore
 	OpPop
 	OpAdd
 	OpSub
 	OpMul
+	OpPow
 	OpDiv
 	OpMod
 	OpMinus
@@ -34,10 +37,14 @@ const (
 	OpBitwiseNot
 	OpShiftLeft
 	OpShiftRight
+	OpJump
+	OpJumpIfTruthy
+	OpJumpIfFalsy
 	OpArray
 	OpIndex
 	OpObject
 	OpCallFunction
+	OpPipe
 )
 
 func (op Opcode) String() string {
@@ -56,11 +63,15 @@ type Definition struct {
 var definations = map[Opcode]*Definition{
 	OpConstant:           {"OpConstant", []int{2}},
 	OpContextVar:         {"OpContextVar", []int{2}},
+	OpIdentifier:         {"OpIdentifier", []int{2}},
+	OpStore:              {"OpStore", []int{2}},
 	OpPop:                {"OpPop", []int{}},
 	OpAdd:                {"OpAdd", []int{}},
 	OpSub:                {"OpSub", []int{}},
 	OpMul:                {"OpMul", []int{}},
+	OpPow:                {"OpPow", []int{}},
 	OpDiv:                {"OpDiv", []int{}},
+	OpMod:                {"OpMod", []int{}},
 	OpTrue:               {"OpTrue", []int{}},
 	OpFalse:              {"OpFalse", []int{}},
 	OpEqual:              {"OpEqual", []int{}},
@@ -77,10 +88,14 @@ var definations = map[Opcode]*Definition{
 	OpBitwiseNot:         {"OpBitwiseNot", []int{}},
 	OpShiftLeft:          {"OpShiftLeft", []int{}},
 	OpShiftRight:         {"OpShiftRight", []int{}},
+	OpJump:               {"OpJump", []int{2}},
+	OpJumpIfTruthy:       {"OpJumpIfTruthy", []int{2}},
+	OpJumpIfFalsy:        {"OpJumpIfFalsy", []int{2}},
 	OpArray:              {"OpArray", []int{2}},
 	OpObject:             {"OpHash", []int{2}},
 	OpIndex:              {"OpIndex", []int{}},
 	OpCallFunction:       {"OpCallFunction", []int{2, 2}},
+	OpPipe:               {"OpPipe", []int{2, 2, 2}}, // pipeTypeIdx, aliasIdx, blockIdx
 }
 
 func Lookup(op byte) (*Definition, error) {

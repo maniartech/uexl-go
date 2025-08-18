@@ -20,17 +20,17 @@ const (
 	PrecedenceOr      = 1  // ||
 	PrecedenceAnd     = 2  // &&
 	PrecedenceBitOr   = 3  // |
-	PrecedenceBitXor  = 4  // ^
-	PrecedenceBitAnd  = 5  // &
-	PrecedenceEquals  = 6  // == !=
-	PrecedenceCompare = 7  // > < >= <=
-	PrecedenceShift   = 8  // << >>
-	PrecedenceSum     = 9  // + -
-	PrecedenceProduct = 10 // * / %
+	PrecedenceBitAnd  = 4  // &
+	PrecedenceEquals  = 5  // == !=
+	PrecedenceCompare = 6  // > < >= <=
+	PrecedenceShift   = 7  // << >>
+	PrecedenceSum     = 8  // + -
+	PrecedenceProduct = 9  // * / %
+	PrecedencePower   = 10 // ** (right-associative)
 	PrecedencePrefix  = 11 // -x !x ~x
-	PrecedenceCall    = 12 // myFunction(x)
-	PrecedenceIndex   = 13 // array[index]
-	PrecedenceHighest = 14
+	PrecedenceCall    = 13 // myFunction(x)
+	PrecedenceIndex   = 14 // array[index]
+	PrecedenceHighest = 15
 )
 
 // Operator symbols - centralized string constants
@@ -41,6 +41,7 @@ const (
 	SymbolMultiply = "*"
 	SymbolDivide   = "/"
 	SymbolModulo   = "%"
+	SymbolPower    = "**"
 
 	// Bitwise operators
 	SymbolBitwiseAnd = "&"

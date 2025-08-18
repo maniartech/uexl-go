@@ -7,7 +7,7 @@ import (
 )
 
 func demonstratePanicFixes() {
-	fmt.Println("=== Demonstrating Parser Error Handling Improvements ===\n")
+	fmt.Println("=== Demonstrating Parser Error Handling Improvements ===")
 
 	testCases := []string{
 		"",                    // empty string
