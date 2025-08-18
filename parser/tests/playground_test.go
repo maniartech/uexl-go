@@ -10,7 +10,26 @@ import (
 )
 
 func TestPlayground(t *testing.T) {
-	input := "[0,2,3,4] |reduce: set($acc || {}, $index, $item)"
+	input := "[1, 2, 3, 4].2" // Example input to test
+	// input := "[1,2,3,4] |reduce: ($acc || 0) +  $item"
+	// input := "[1,2,3,4] |reduce: ($acc || '') + str($item) + ',' |: substr($last, 0, len($last)-1)"
+
+	// Reusability Approaches
+
+	// When Arg is passed from context
+	// input := "arg |reduce: ($acc || '') + str($item) + ',' |: substr($last, 0, len($last)-1)"
+
+	// When reusable expressions are defined
+	// concatStr := "|reduce: ($acc || '') + str($item) + ',' |: substr($last, 0, len($last)-1)"
+	// input := "[1,2, 3, 4, 5] " + concatStr
+
+	// Dynamic Function Expressions
+	// concatStr := "|reduce: ($acc || '') + str($item) + ',' |: substr($last, 0, len($last)-1)"
+	// uexl.RegisterFunctionExpression("concatStr", concatStr)
+	// input := "concatStr([1,2, 3, 4, 5])"
+
+	// Dynamic Pipe Expressions, defines predicate expression that works value
+	// ?
 
 	parserNode, err := parser.ParseString(input)
 	if err != nil {

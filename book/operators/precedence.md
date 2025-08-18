@@ -6,7 +6,7 @@ Understanding operator precedence is crucial for writing correct and predictable
 | Precedence | Operator(s) | Description | Associativity |
 |------------|-------------|-------------|---------------|
 | 1 | `()` | Grouping | Left-to-right |
-| 2 | `.` `[]` | Property/Index access | Left-to-right |
+| 2 | `.` `[]` | Property/Index access (objects, arrays, strings) | Left-to-right |
 | 3 | `-` (unary), `!` | Negation, Logical NOT | Right-to-left |
 | 4 | `**` | Exponentiation/Power | Right-to-left |
 | 5 | `%` | Modulo | Left-to-right |
@@ -20,7 +20,8 @@ Understanding operator precedence is crucial for writing correct and predictable
 | 13 | `|` | Bitwise OR | Left-to-right |
 | 14 | `&&` | Logical AND | Left-to-right |
 | 15 | `||` | Logical OR | Left-to-right |
-| 16 | `|:` `|map:` etc. | Pipe | Left-to-right |
+| 16 | `??` | Nullish coalescing | Left-to-right |
+| 17 | `|:` `|map:` etc. | Pipe | Left-to-right |
 
 ## Associativity
 - **Left-to-right**: Operators are evaluated from left to right (e.g., `a - b - c` is `(a - b) - c`).
@@ -80,6 +81,20 @@ Note the distinction between bitwise and logical operators:
 5 ** 3       // Power: 125 (5 to the power of 3)
 true && false // Logical AND: false
 5 & 3        // Bitwise AND: 1 (binary: 101 & 011 = 001)
+
+## Nullish Coalescing (??)
+`a ?? b` evaluates to `a` if it is not nullish; otherwise it evaluates to `b`. Use it to provide defaults only for missing values, not for all falsy values.
+
+- `0 ?? 10` → `0` (keeps valid falsy)
+- `"" ?? "(empty)"` → `""`
+- `null ?? 10` → `10`
+
+When combining `??` with `&&` or `||`, add parentheses for clarity:
+
+```
+(a ?? b) || c
+a && (b ?? d)
+```
 ```
 
 ## Practical Tips
@@ -98,6 +113,10 @@ x > 10 && y < 20 // Comparison before logical AND
 2**3**2          // 512: right-associative power 2**(3**2)
 2*3**2           // 18: power before multiplication 2*(3**2)
 5 ^ 3            // 6: bitwise XOR
+"hello"[1]       // "e": string index access
+0 || 10          // 10: logical OR replaces falsy 0
+0 ?? 10          // 0: nullish keeps valid falsy 0
+(a ?? b) || c    // Parenthesize when mixing with ||
 ```
 
 Refer to this table when constructing complex expressions to ensure correct evaluation order.

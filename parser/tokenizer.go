@@ -81,6 +81,8 @@ func (t *Tokenizer) NextToken() (Token, error) {
 		return t.singleCharToken(constants.TokenDot)
 	case ch == ':':
 		return t.singleCharToken(constants.TokenColon)
+	case ch == '?':
+		return t.readQuestionOrNullish()
 	case ch == '|':
 		return t.readPipeOrBitwiseOr()
 	default:
@@ -300,6 +302,14 @@ func (t *Tokenizer) readOperator() (Token, error) {
 	start := t.pos
 	startColumn := t.column
 
+	// Handle nullish coalescing operator '??'
+	if t.current() == '?' && t.peek() == '?' {
+		t.advance()
+		t.advance()
+		operator := "??"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
 	// Handle && operator
 	if t.current() == '&' && t.peek() == '&' {
 		t.advance()
@@ -412,6 +422,22 @@ func (t *Tokenizer) readOperator() (Token, error) {
 	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 }
 
+// readQuestionOrNullish handles tokens that start with '?': either '?' or '??'
+func (t *Tokenizer) readQuestionOrNullish() (Token, error) {
+	startColumn := t.column
+	// current is '?'
+	t.advance()
+	if t.current() == '?' {
+		// it's '??'
+		t.advance()
+		operator := "??"
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+	// single '?'
+	operator := "?"
+	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+}
+
 func (t *Tokenizer) singleCharToken(tokenType constants.TokenType) (Token, error) {
 	charValue := string(t.current())
 	token := Token{Type: tokenType, Value: charValue, Token: charValue, Line: t.line, Column: t.column}
@@ -464,7 +490,7 @@ func isLetter(r rune) bool {
 }
 
 func isOperatorChar(r rune) bool {
-	return strings.ContainsRune("+-*/%<>=!&|^", r)
+	return strings.ContainsRune("+-*/%<>=!&|^?", r)
 }
 
 func (t *Tokenizer) peek() rune {

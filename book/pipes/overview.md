@@ -105,6 +105,9 @@ Explanation:
 - Use pipes to break complex logic into clear, sequential steps.
 - Remember that `$last` refers to the value from the previous stage for all pipes; specialized pipes add more variables.
 - Combine pipes with functions and operators for powerful transformations.
+- Use the nullish coalescing operator `??` to provide safe defaults for missing values without overriding valid falsy ones:
+  - `data |: ($last.items ?? []) |map: $item.name`
+  - `values |reduce: ($acc ?? 0) + $item`
 
 ## Practice: Try It Yourself
 
@@ -119,3 +122,15 @@ Mastering pipes will help you write concise, readable, and powerful UExL code. I
 The value of the first expression is accessible in the next stage as `$last` for simple pipes, and as `$item`, `$index`, `$acc` for specialized pipes.
 
 See the following chapters for pipe types and chaining.
+
+## Developer policy: custom pipe stages
+
+When implementing custom pipe handlers:
+
+- Pure by default: do not mutate the incoming collection or external state. Produce new values.
+- Copy-returning updates: if a stage conceptually updates an accumulator (e.g., reduce), ensure the helper used (like `set`) returns a copy rather than mutating the original.
+- Deterministic evaluation: process items left-to-right; avoid hidden re-evaluation or dependence on prior side effects.
+- Short-circuit semantics: honor standard UExL short-circuiting in your predicate expressions; optional chaining must prevent evaluating index/key expressions when base is nullish.
+- Clear naming: if a stage can cause side effects or is stateful, make it explicit in the name and documentation.
+
+See also: Mutability and Purity.

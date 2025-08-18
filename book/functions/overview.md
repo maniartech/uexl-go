@@ -38,3 +38,15 @@ sum([1, 2, 3, 4])      // 10
 - Passing `null` as an argument may produce `null` or an error, depending on the function.
 
 Refer to the next chapter for user-defined functions.
+
+## Developer policy: custom functions
+
+When adding user-defined or library functions:
+
+- Pure by default: functions must not mutate their inputs or ambient context. Return new values instead.
+- No assignment semantics: do not emulate `=`, `+=`, `++`, `--` via functions.
+- Side effects must be explicit and documented: if a function performs I/O or observable effects, name and document it clearly.
+- Prefer copy-returning updates: if a function conceptually “updates” a structure (e.g., set), return a new structure without modifying the original.
+- Respect evaluation order: arguments are evaluated before the call; avoid re-evaluating passed expressions inside the function.
+
+See also: Mutability and Purity.

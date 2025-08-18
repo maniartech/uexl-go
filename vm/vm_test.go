@@ -434,15 +434,20 @@ func TestPipeFunction(t *testing.T) {
 		{"[1,2,3,4,5,6] |filter: $item > 2", []any{3, 4, 5, 6}},
 
 		// Reduce: sum all items
-		{"[1,2,3,4] |reduce: $acc + $item", 10},
+		{"[1,2,3,4] |reduce: ($acc || 0) + $item", 10},
 
 		// TODO: Reduce to an object
-		// {"[1,2,3,4] |reduce: set($acc || {}, $index, $item)", map[string]any{
-		// 	"0": 1,
-		// 	"1": 2,
-		// 	"2": 3,
-		// 	"3": 4,
-		// }},
+		{"[1,2,3,4] |reduce: set($acc || {}, $index, $item)", map[string]any{
+			"0": 1,
+			"1": 2,
+			"2": 3,
+			"3": 4,
+		}},
+
+		// set with string key
+		{`set({}, "a", 1)`, map[string]any{"a": 1}},
+		// set with numeric key coerced to string
+		{`set({}, 5, "x")`, map[string]any{"5": "x"}},
 
 		// Find: first item greater than 2
 		{"[1,2,3,4] |find: $item > 2", 3},

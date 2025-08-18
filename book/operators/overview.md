@@ -7,7 +7,7 @@ Operators allow you to perform calculations, make decisions, and manipulate data
 
 ## Categories of Operators
 - **Primary:** Used for grouping, property access, and indexing.
-  - Example: `(a + b)`, `user.name`, `arr[0]`
+  - Example: `(a + b)`, `user.name`, `arr[0]`, `"abc"[2]`
 - **Unary:** Operate on a single value, such as negation or logical NOT.
   - Example: `-x`, `!flag`, `--x` (double negation), `!!value` (boolean conversion)
 - **Arithmetic:** Perform mathematical calculations.
@@ -20,6 +20,7 @@ Operators allow you to perform calculations, make decisions, and manipulate data
   - Example: `a == b`, `x != y`
 - **Logical:** Combine boolean values.
   - Example: `x && y`, `a || b`
+  - Nullish coalescing: `a ?? b` keeps valid falsy values and only falls back for nullish
 - **Pipe:** Chain and transform data.
   - Example: `|:`, `|map:`, `|filter:`, `|reduce:`
 
@@ -34,6 +35,8 @@ flag = !isDisabled
 !!value  // Boolean conversion: !(!(value))
 2**3     // Power operation: 8
 5 ^ 3    // XOR operation: 6
+0 || 10  // Logical OR: 10 (replaces falsy 0)
+0 ?? 10  // Nullish: 0 (keeps valid falsy)
 ```
 
 ## Tips for Using Operators

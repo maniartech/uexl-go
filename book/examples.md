@@ -21,6 +21,13 @@ a == 1 || b == 2  // true if a equals 1 or b equals 2
 len([1, 2, 3])    // 3
 ```
 
+## String Indexing
+```
+"world"[0]        // "w"
+"world"[10]       // null (out of bounds)
+words |map: $1[0]  // take first character of each word
+```
+
 ## Bitwise Operations
 ```
 5 ^ 3             // 6 (XOR: 101 ^ 011 = 110)

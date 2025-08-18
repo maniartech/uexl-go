@@ -36,6 +36,11 @@ arr[0]
 users[2].name
 ```
 
+Strings can also be indexed by zero-based position to get a character:
+```
+"UExL"[0]  // "U"
+```
+
 ## Special Identifiers in Pipes
 Within pipe operations, `$1` refers to the input value passed to the pipe. For reduce pipes, `$2` and higher refer to additional arguments.
 ```

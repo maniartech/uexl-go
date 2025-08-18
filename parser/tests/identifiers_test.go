@@ -771,11 +771,6 @@ func TestIdentifierParsingErrors(t *testing.T) {
 			description: "Leading dot should cause parsing error",
 		},
 		{
-			name:        "Dot followed by number",
-			input:       "obj.123",
-			description: "Dot followed by number should cause parsing error",
-		},
-		{
 			name:        "Double dot in middle",
 			input:       "obj.prop..method",
 			description: "Double dot in middle should cause parsing error",
@@ -861,10 +856,10 @@ func TestIdentifierSyntaxValidation(t *testing.T) {
 			description: "Leading dot should cause parsing error",
 		},
 		{
-			name:        "Dot with number",
+			name:        "Dot with number (index access)",
 			input:       "obj.123",
-			shouldError: true,
-			description: "Dot followed by number should cause parsing error",
+			shouldError: false,
+			description: "Dot followed by number is valid index access now",
 		},
 		{
 			name:        "Mixed invalid pattern",
