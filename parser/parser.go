@@ -281,20 +281,59 @@ func (p *Parser) parseMultiplicative() Expression {
 }
 
 func (p *Parser) parsePower() Expression {
-	// Power operator is right-associative, so we parse it differently
+	// Power operator is right-associative and has higher precedence than unary
+	// To mirror JavaScript precedence, if the left side is a chain of unary operators
+	// (e.g., -, !), and we see '**', we must lift those unary operators to wrap the
+	// entire exponent expression:  -2**3  =>  -(2**3),  !!2**3  =>  !!(2**3)
+
 	left := p.parseUnary()
 
 	if p.current.Type == constants.TokenOperator {
 		if opValue, ok := p.current.Value.(string); ok && opValue == "**" {
 			op := p.current
 			p.advance()
-			// For right-associativity, we recursively call parsePower instead of parseUnary
+
+			// Peel leading unary operators from the left side if present
+			ops, base := peelLeadingUnary(left)
+
+			// Right-associative parse for the right operand
 			right := p.parsePower()
-			return &BinaryExpression{Left: left, Operator: opValue, Right: right, Line: op.Line, Column: op.Column}
+
+			powerExpr := &BinaryExpression{Left: base, Operator: opValue, Right: right, Line: op.Line, Column: op.Column}
+
+			// Re-apply peeled unary operators around the power expression (outermost first)
+			if len(ops) > 0 {
+				expr := Expression(powerExpr)
+				for _, uop := range ops {
+					expr = &UnaryExpression{Operator: uop, Operand: expr, Line: op.Line, Column: op.Column}
+				}
+				return expr
+			}
+
+			return powerExpr
 		}
 	}
 
 	return left
+}
+
+// peelLeadingUnary extracts a sequence of leading unary operators ('-' and '!')
+// from the given expression. It returns the operators in outer-to-inner order
+// and the innermost non-unary base expression.
+func peelLeadingUnary(expr Expression) ([]string, Expression) {
+	ops := []string{}
+
+	for {
+		if ue, ok := expr.(*UnaryExpression); ok {
+			if ue.Operator == "-" || ue.Operator == "!" {
+				ops = append(ops, ue.Operator)
+				expr = ue.Operand
+				continue
+			}
+		}
+		break
+	}
+	return ops, expr
 }
 
 func (p *Parser) parseUnary() Expression {
