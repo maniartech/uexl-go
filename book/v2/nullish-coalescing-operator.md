@@ -8,6 +8,8 @@ In UExL, “nullish” means:
 
 Short-circuiting: the right-hand side is only evaluated if the left-hand side is nullish.
 
+Note on equality: `==`/`!=` in UExL are exact for primitives and deep for arrays/objects (no special handling for nullish). Prefer `??` for nullish fallbacks instead of `x == null`. Use `!!x` if you need a boolean conversion before applying logic.
+
 ## Why not use || for defaults?
 
 `||` is a truthiness operator: it replaces any falsy value. That’s often wrong for real data where `0`, `false`, and `""` are meaningful.

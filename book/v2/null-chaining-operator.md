@@ -6,6 +6,8 @@ Also known as: optional chaining (JS/TS), null‑aware access (Dart), safe navig
 
 UExL scope: identifiers, object member access, and index access. The call form (e.g., `fn?.(args)`) is not supported.
 
+Note on equality and nullish: Equality operators (`==`, `!=`) are exact for primitives and deep for arrays/objects; they do not treat “missing” specially. Use `?.` to read safely and pair it with `??` to provide defaults. Use `!!x` when you need to coerce a value to boolean before applying logical ops.
+
 ## Summary
 
 - Syntax: `expr?.prop` and `expr?.[index]`

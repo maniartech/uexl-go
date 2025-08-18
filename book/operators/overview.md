@@ -9,7 +9,7 @@ Operators allow you to perform calculations, make decisions, and manipulate data
 - **Primary:** Used for grouping, property access, and indexing.
   - Example: `(a + b)`, `user.name`, `arr[0]`, `"abc"[2]`
 - **Unary:** Operate on a single value, such as negation or logical NOT.
-  - Example: `-x`, `!flag`, `--x` (double negation), `!!value` (boolean conversion)
+  - Example: `-x`, `!flag`, `--x` (numeric double negation), `!!value` (boolean conversion)
 - **Arithmetic:** Perform mathematical calculations.
   - Example: `a + b`, `x - 1`, `y * 2`, `z / 3`, `n % 2`, `base**exponent`
 - **Bitwise:** Manipulate individual bits in numbers.
@@ -17,9 +17,9 @@ Operators allow you to perform calculations, make decisions, and manipulate data
 - **Comparison:** Compare values for ordering.
   - Example: `x < 10`, `score >= 50`
 - **Equality:** Test if values are equal or not.
-  - Example: `a == b`, `x != y`
-- **Logical:** Combine boolean values.
-  - Example: `x && y`, `a || b`
+  - Example: `a == b`, `x != y` (exact for primitives; deep for arrays/objects)
+- **Logical:** Combine values by truthiness with short-circuiting.
+  - Example: `x && y`, `a || b` (truthiness-based)
   - Nullish coalescing: `a ?? b` keeps valid falsy values and only falls back for nullish
 - **Pipe:** Chain and transform data.
   - Example: `|:`, `|map:`, `|filter:`, `|reduce:`
@@ -27,16 +27,19 @@ Operators allow you to perform calculations, make decisions, and manipulate data
 ## Practical Examples
 Here are some ways you can use operators in UExL:
 ```
+// Core patterns
 (a + b) * c > 100 && isActive
 [1, 2, 3] |map: $1 * 2 |filter: $1 > 2
 user.age >= 18 ? "adult" : "minor"
-flag = !isDisabled
---x      // Double negation: -(-(x))
+// Unary
+!isDisabled
+--x      // Numeric double negation: -(-(x))
 !!value  // Boolean conversion: !(!(value))
 2**3     // Power operation: 8
 5 ^ 3    // XOR operation: 6
-0 || 10  // Logical OR: 10 (replaces falsy 0)
+0 || 10  // Logical OR (truthiness): 10 (replaces falsy 0)
 0 ?? 10  // Nullish: 0 (keeps valid falsy)
+user?.name ?? "Anonymous"  // Nullish-aware access and fallback
 ```
 
 ## Tips for Using Operators

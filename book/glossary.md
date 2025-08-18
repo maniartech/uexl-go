@@ -12,6 +12,11 @@ A quick reference for UExL terminology and concepts.
   - Returns the left value unless it is nullish; otherwise returns the right.
   - Keeps valid falsy (0, "", false).
   - See: v2/nullish-coalescing-operator.md
+- Equality (==, !=)
+  - Exact equality for primitives; no cross‑type coercion (e.g., "1" == 1 is false).
+  - Deep equality for arrays and objects in both == and !=.
+  - There are no ===/!== operators; use ==/!= for equality and rely on ?./?? for nullish flow.
+  - Convert to boolean explicitly with !! when needed (double NOT via truthiness).
 - Short-circuiting
   - Logical ops (||, &&) and null/optional access may stop evaluating later parts when the result is already determined.
   - Example: a && b only evaluates b if a is truthy; a?.[i] only evaluates i if a is non‑nullish.
@@ -48,6 +53,8 @@ A quick reference for UExL terminology and concepts.
   - Zero values by type: number 0; string ""; boolean false; empty array []; empty object {}.
   - Null and unavailable/missing are nullish and therefore falsy.
   - Logical operators (||, &&) rely on this notion of truthiness.
+- Boolean conversion
+  - Use !!x to coerce any value to a boolean via truthiness; !x yields the opposite.
 - Nullish
   - A value is nullish if it is `null` or unavailable/missing/undefined (e.g., absent key, out‑of‑bounds index, unresolved identifier).
   - Operators (??) and (?. / ?[ ]) treat nullish as “absent” for fallback and short‑circuiting.

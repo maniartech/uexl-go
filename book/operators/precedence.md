@@ -14,7 +14,7 @@ Understanding operator precedence is crucial for writing correct and predictable
 | 7 | `+` `-` | Addition, Subtraction | Left-to-right |
 | 8 | `<<` `>>` | Bitwise Shift | Left-to-right |
 | 9 | `<` `>` `<=` `>=` | Comparison | Left-to-right |
-| 10 | `==` `!=` | Equality | Left-to-right |
+| 10 | `==` `!=` | Equality (exact for primitives; deep for arrays/objects) | Left-to-right |
 | 11 | `&` | Bitwise AND | Left-to-right |
 | 12 | `^` | Bitwise XOR | Left-to-right |
 | 13 | `|` | Bitwise OR | Left-to-right |
@@ -81,6 +81,12 @@ Note the distinction between bitwise and logical operators:
 5 ** 3       // Power: 125 (5 to the power of 3)
 true && false // Logical AND: false
 5 & 3        // Bitwise AND: 1 (binary: 101 & 011 = 001)
+
+## Equality notes
+- Only `==` and `!=` exist; there is no `===`/`!==`.
+- Equality is exact for primitives (no cross-type coercion) and deep for arrays/objects.
+- Use `!!x` to convert any value to a boolean via truthiness.
+- Use `??` and `?.` for nullish flows; equality does not treat "missing" specially.
 
 ## Nullish Coalescing (??)
 `a ?? b` evaluates to `a` if it is not nullish; otherwise it evaluates to `b`. Use it to provide defaults only for missing values, not for all falsy values.
