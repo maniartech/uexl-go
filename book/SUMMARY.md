@@ -28,4 +28,4 @@
   - [Dynamic Function Expressions](v2/dynamic-function-expressions.md)
   - [Migration and Design Notes](v2/migration-and-design.md)
   - [Nullish Coalescing Operator](v2/nullish-coalescing-operator.md)
-  - [Optional Chaining Operator](v2/optional-chaining-operator.md)
+  - [Null Chaining Operator](v2/null-chaining-operator.md)
