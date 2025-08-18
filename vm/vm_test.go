@@ -255,6 +255,36 @@ func TestBooleanLogic(t *testing.T) {
 	runVmTests(t, tests)
 }
 
+func TestUnaryLogicalNot(t *testing.T) {
+	tests := []vmTestCase{
+		{`!true`, false},
+		{`!false`, true},
+		{`!1`, false},
+		{`!0`, true},
+		{`!"hello"`, false},
+		{`!""`, true},
+		{`!!true`, true},
+		{`!!false`, false},
+		{`!!1`, true},
+		{`!!0`, false},
+		{`!!"hello"`, true},
+		{`!!""`, false},
+		{`!(!true)`, true},
+		{`!(!false)`, false},
+		{`!!(1 + 1)`, true},
+		{`!!(0)`, false},
+		{`!([1,2,3])`, false},
+		{`!([])`, true},
+		{`!!([1,2,3])`, true},
+		{`!!([])`, false},
+		{`!({})`, true},
+		{`!!({})`, false},
+		{`!({"a":1})`, false},
+		{`!!({"a":1})`, true},
+	}
+	runVmTests(t, tests)
+}
+
 func TestLogicalShortCircuit(t *testing.T) {
 	tests := []vmTestCase{
 		// || returns first truthy value
@@ -326,7 +356,7 @@ func TestStringSubstringFunction(t *testing.T) {
 	tests := []vmTestCase{
 		{`substr("hello", 0, 2)`, "he"},
 		{`substr("world", 1, 3)`, "orl"},
-		{`substr("foobar", 3, 3)`, "bar"},
+		{`substr("foobar", 1+2, 3)`, "bar"},
 	}
 	runVmTests(t, tests)
 }
