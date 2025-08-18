@@ -140,18 +140,18 @@ Don’t
 - Identifiers and undefined:
 	- UExL treats undefined identifiers as `null`. If any step in `a?.b?.c` resolves to `null`, the rest of the chain short-circuits.
 
-## Operator precedence
+## Operator precedence (relative)
 
-Ordering (from tighter to looser) relative to nearby operators:
+From tighter to looser around optional access:
 1) Member/index access (including `?.`, `?[ ]`)
-2) Unary operators
-3) Multiplicative/additive
-4) Comparisons
-5) Logical `&&`, `||`
-6) Nullish coalescing `??`
+2) Unary operators and power (`**` binds tighter than unary)
+3) Multiplicative/additive and shifts
+4) Nullish coalescing `??`
+5) Comparisons and equality
+6) Bitwise and logical `&&`, `||`
 7) Ternary `?:`
 
-This matches typical expectations: property/index access binds tightly. Parenthesize for clarity when mixing.
+Property/index access binds very tightly; `??` binds tighter than logical operators in UExL. Parenthesize for readability in complex expressions.
 
 ## Interactions with pipes
 

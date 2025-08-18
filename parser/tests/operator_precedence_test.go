@@ -67,9 +67,9 @@ func TestOperatorPrecedence(t *testing.T) {
 			// Should be equivalent to: a || (b && c)
 		},
 		{
-			name:  "nullish coalescing same precedence as logical OR",
+			name:  "nullish coalescing tighter than logical OR",
 			input: "a ?? b || c && d",
-			// Should be equivalent grouping: (a ?? b) || (c && d)
+			// Should group as: (a ?? b) || (c && d)
 		},
 		{
 			name:  "conditional lower than || and ??",

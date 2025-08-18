@@ -240,8 +240,8 @@ func (p *Parser) parsePipeAlias() (string, error) {
 }
 
 func (p *Parser) parseLogicalOr() Expression {
-	// Treat nullish coalescing (??) at the same precedence level as logical OR (||)
-	return p.parseBinaryOp(p.parseLogicalAnd, constants.SymbolLogicalOr, "??")
+	// Logical OR handles only ||; nullish (??) is at a tighter precedence level
+	return p.parseBinaryOp(p.parseLogicalAnd, constants.SymbolLogicalOr)
 }
 
 func (p *Parser) parseLogicalAnd() Expression {
@@ -265,11 +265,19 @@ func (p *Parser) parseEquality() Expression {
 }
 
 func (p *Parser) parseComparison() Expression {
-	return p.parseBinaryOp(p.parseBitwiseShift, "<", ">", "<=", ">=")
+	// Comparison is looser than nullish; parse nullish first
+	return p.parseBinaryOp(p.parseNullish, "<", ">", "<=", ">=")
 }
 
 func (p *Parser) parseBitwiseShift() Expression {
 	return p.parseBinaryOp(p.parseAdditive, "<<", ">>")
+}
+
+// parseNullish parses the nullish coalescing operator (??)
+// Precedence: looser than arithmetic/shift, tighter than comparison/equality and all logical ops
+// Associativity: left-to-right
+func (p *Parser) parseNullish() Expression {
+	return p.parseBinaryOp(p.parseBitwiseShift, "??")
 }
 
 func (p *Parser) parseAdditive() Expression {

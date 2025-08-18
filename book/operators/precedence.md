@@ -6,22 +6,23 @@ Understanding operator precedence is crucial for writing correct and predictable
 | Precedence | Operator(s) | Description | Associativity |
 |------------|-------------|-------------|---------------|
 | 1 | `()` | Grouping | Left-to-right |
-| 2 | `.` `[]` | Property/Index access (objects, arrays, strings) | Left-to-right |
-| 3 | `-` (unary), `!` | Negation, Logical NOT | Right-to-left |
-| 4 | `**` | Exponentiation/Power | Right-to-left |
+| 2 | `.` `[]` `?.` `?[ ]` | Property/Index/Optional access (objects, arrays, strings) | Left-to-right |
+| 3 | `**` | Exponentiation/Power | Right-to-left |
+| 4 | `-` (unary), `!` | Negation, Logical NOT | Right-to-left |
 | 5 | `%` | Modulo | Left-to-right |
 | 6 | `*` `/` | Multiplication, Division | Left-to-right |
 | 7 | `+` `-` | Addition, Subtraction | Left-to-right |
 | 8 | `<<` `>>` | Bitwise Shift | Left-to-right |
-| 9 | `<` `>` `<=` `>=` | Comparison | Left-to-right |
-| 10 | `==` `!=` | Equality (exact for primitives; deep for arrays/objects) | Left-to-right |
-| 11 | `&` | Bitwise AND | Left-to-right |
-| 12 | `^` | Bitwise XOR | Left-to-right |
-| 13 | `|` | Bitwise OR | Left-to-right |
-| 14 | `&&` | Logical AND | Left-to-right |
-| 15 | `||` | Logical OR | Left-to-right |
-| 16 | `??` | Nullish coalescing | Left-to-right |
-| 17 | `|:` `|map:` etc. | Pipe | Left-to-right |
+| 9 | `??` | Nullish coalescing | Left-to-right |
+| 10 | `<` `>` `<=` `>=` | Comparison | Left-to-right |
+| 11 | `==` `!=` | Equality (exact for primitives; deep for arrays/objects) | Left-to-right |
+| 12 | `&` | Bitwise AND | Left-to-right |
+| 13 | `^` | Bitwise XOR | Left-to-right |
+| 14 | `|` | Bitwise OR | Left-to-right |
+| 15 | `&&` | Logical AND | Left-to-right |
+| 16 | `||` | Logical OR | Left-to-right |
+| 17 | `?:` | Conditional (ternary) | Right-to-left |
+| 18 | `|:` `|map:` etc. | Pipe | Left-to-right |
 
 ## Associativity
 - **Left-to-right**: Operators are evaluated from left to right (e.g., `a - b - c` is `(a - b) - c`).
@@ -67,7 +68,7 @@ The power operator has its own precedence level and is right-associative, which 
 ```
 
 ### Power vs Other Operators
-The power operator has higher precedence than multiplication but lower than unary operators:
+The power operator has higher precedence than multiplication and also higher precedence than unary operators:
 ```
 2*3**2       // Evaluates as 2*(3**2) = 2*9 = 18
 -2**3        // Evaluates as -(2**3) = -8
@@ -91,16 +92,23 @@ true && false // Logical AND: false
 ## Nullish Coalescing (??)
 `a ?? b` evaluates to `a` if it is not nullish; otherwise it evaluates to `b`. Use it to provide defaults only for missing values, not for all falsy values.
 
+Precedence placement in UExL:
+- `??` binds tighter than comparisons, equality, bitwise, and logical operators.
+- `??` is looser than arithmetic (`%`, `*`, `/`, `+`, `-`) and bitwise shifts (`<<`, `>>`).
+- `??` is left-associative: `a ?? b ?? c` → `(a ?? b) ?? c`.
+
 - `0 ?? 10` → `0` (keeps valid falsy)
 - `"" ?? "(empty)"` → `""`
 - `null ?? 10` → `10`
 
-When combining `??` with `&&` or `||`, add parentheses for clarity:
+When combining `??` with `&&` or `||`, UExL parses without requiring parentheses because `??` binds tighter. These are equivalent:
 
 ```
-(a ?? b) || c
-a && (b ?? d)
+a || b ?? c   // same as a || (b ?? c)
+a && b ?? d   // same as a && (b ?? d)
 ```
+
+Parentheses are still recommended for readability in complex expressions.
 ```
 
 ## Practical Tips
@@ -122,7 +130,7 @@ x > 10 && y < 20 // Comparison before logical AND
 "hello"[1]       // "e": string index access
 0 || 10          // 10: logical OR replaces falsy 0
 0 ?? 10          // 0: nullish keeps valid falsy 0
-(a ?? b) || c    // Parenthesize when mixing with ||
+a || (b ?? c)    // ?? binds tighter than ||; parentheses for clarity only
 ```
 
 Refer to this table when constructing complex expressions to ensure correct evaluation order.

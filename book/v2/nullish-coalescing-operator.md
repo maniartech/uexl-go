@@ -86,10 +86,11 @@ Tip: When available in your version, prefer the explicit initializer form for re
 		- `values |reduce: ($acc ?? 0) + $item ?? 0`
 		- `values |reduce(0): $acc + $item`
 
-- Mixing with logical operators:
-	- When combining `??` with `||` or `&&`, use parentheses for clarity and to avoid ambiguity:
-		- `(a ?? b) || c`
-		- `a && (b ?? d)`
+- Precedence and mixing with logical operators:
+	- In UExL, `??` binds tighter than `||` and `&&`, so these are equivalent:
+		- `a || b ?? c` → `a || (b ?? c)`
+		- `a && b ?? d` → `a && (b ?? d)`
+	- Parentheses are still encouraged for readability in complex expressions.
 
 - Performance: `??` short-circuits. If the left side is not nullish, the right side isn’t evaluated.
 

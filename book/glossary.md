@@ -24,7 +24,7 @@ A quick reference for UExL terminology and concepts.
   - Applying successive property/index accesses: a.b[c].d
   - With null chaining: a?.b?.[i]?.d
 - Precedence and associativity
-  - Defines how expressions group without parentheses. Access (., [], ?., ?[]) binds tighter than ??, ||, &&, and ?:
+  - Defines how expressions group without parentheses. Access (., [], ?., ?[]) binds tighter than `??`, `||`, `&&`, and `?:`. Also, `??` binds tighter than `||`/`&&` in UExL.
   - See: operators/precedence.md
 
 ## Pipes
