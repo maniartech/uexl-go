@@ -166,42 +166,35 @@ func (vm *VM) executeBooleanComparisonOperation(operator code.Opcode, left, righ
 }
 
 func (vm *VM) executeUnaryExpression(operator code.Opcode, operand any) error {
-	switch v := operand.(type) {
-	case float64:
-		return vm.executeUnaryNumericOperation(operator, v)
-	case string:
-		return fmt.Errorf("unary operations not supported for strings")
-	case bool:
-		return vm.executeUnaryBooleanOperation(operator, v)
+	switch operator {
+	case code.OpMinus:
+		return vm.executeUnaryMinusOperation(operand)
+	case code.OpBang:
+		return vm.executeUnaryBangOperation(operand)
 	default:
 		return fmt.Errorf("unknown operand type: %T", operand)
 	}
 }
 
-func (vm *VM) executeUnaryNumericOperation(operator code.Opcode, operand any) error {
-	operandValue, ok := operand.(float64)
-	if !ok {
-		return fmt.Errorf("unary numeric operation requires float64 operand, got %T", operand)
-	}
-	switch operator {
-	case code.OpMinus:
-		vm.Push(-operandValue)
+func (vm *VM) executeUnaryMinusOperation(operand any) error {
+	switch v := operand.(type) {
+	case float64:
+		vm.Push(-v)
+	case int:
+		vm.Push(float64(-v))
 	default:
-		return fmt.Errorf("unknown unary operator: %v", operator)
+		return fmt.Errorf("unknown operand type: %T", operand)
 	}
 	return nil
 }
 
-func (vm *VM) executeUnaryBooleanOperation(operator code.Opcode, operand any) error {
-	operandValue, ok := operand.(bool)
-	if !ok {
-		return fmt.Errorf("unary boolean operation requires bool operand, got %T", operand)
-	}
-	switch operator {
-	case code.OpBang:
-		vm.Push(!operandValue)
+func (vm *VM) executeUnaryBangOperation(operand any) error {
+	switch v := operand.(type) {
+	case bool:
+		vm.Push(!v)
 	default:
-		return fmt.Errorf("unknown unary operator: %v", operator)
+		// Unary Logical Not converts anything falsy to false
+		vm.Push(!isTruthy(operand))
 	}
 	return nil
 }
