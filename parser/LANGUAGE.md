@@ -244,13 +244,15 @@ user.name
 user["name"]
 ```
 
-### Array Access
+### Array and String Access
 
-Elements of arrays can be accessed using bracket notation with a zero-based index:
+Elements of arrays and characters of strings can be accessed using bracket notation with a zero-based index:
 
 ```
-numbers[0]    // First element
-names[2]      // Third element
+numbers[0]     // First element of array
+names[2]       // Third element of array
+"hello"[1]     // "e" (second character)
+"hello"[10]    // null (out of bounds)
 ```
 
 ## Type Conversion and Coercion
