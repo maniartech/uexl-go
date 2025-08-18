@@ -79,6 +79,7 @@ func builtinSet(args ...any) (any, error) {
 	switch k := args[1].(type) {
 	case string:
 		// Key is already a string.
+		key = k
 	case float64:
 		// Key is a number, convert to string.
 		key = fmt.Sprintf("%d", int(k))
