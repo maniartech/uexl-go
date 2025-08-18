@@ -1,6 +1,6 @@
-# Optional chaining operator (?.)
+# Null chaining operator (?.)
 
-Optional chaining provides null‑aware access to properties and indices. It returns `null` if the left-hand side is nullish, and otherwise performs the access normally. This prevents errors when traversing partially missing data.
+Null chaining provides null‑aware access to properties and indices. It returns `null` if the left-hand side is nullish, and otherwise performs the access normally. This prevents errors when traversing partially missing data.
 
 Also known as: optional chaining (JS/TS), null‑aware access (Dart), safe navigation operator, null‑conditional operator.
 
@@ -10,7 +10,7 @@ UExL scope: identifiers, object member access, and index access. The call form (
 
 - Syntax: `expr?.prop` and `expr?.[index]`
 - Semantics: short-circuit to `null` if `expr` is nullish; otherwise, behave like normal `.` or `[]` access
-- Notation: no spaces between `?` and `.` or `[` for optional chaining to be recognized
+- Notation: no spaces between `?` and `.` or `[` for null chaining to be recognized
 - Precedence: same as normal property/index access, and tighter than `??`, `||`, `&&`, and `?:`
 - Short-circuiting: the right side (including the index expression) is not evaluated if the left side is nullish
 - No call form: `fn?.(args)` is not part of this spec
@@ -22,7 +22,7 @@ Nullish in UExL means:
 
 ## Motivation
 
-Real-world data often has optional or partially missing fields. Optional chaining makes access concise and safe without conflating “missing” with valid falsy values (`0`, `false`, `""`). It also composes naturally with the nullish coalescing operator `??` to provide layered fallbacks.
+Real-world data often has optional or partially missing fields. Null chaining makes access concise and safe without conflating “missing” with valid falsy values (`0`, `false`, `""`). It also composes naturally with the nullish coalescing operator `??` to provide layered fallbacks.
 
 ## Syntax and grammar
 
@@ -41,7 +41,7 @@ Notes:
 
 ### Chaining after any expression
 
-Optional chaining applies to the result of any expression, not just identifiers. Because `?.`/`?[ ]` are postfix and high‑precedence, add parentheses when you intend to chain off the whole expression:
+Null chaining applies to the result of any expression, not just identifiers. Because `?.`/`?[ ]` are postfix and high‑precedence, add parentheses when you intend to chain off the whole expression:
 
 - `(a ?? b)?.c`
 - `(cond ? a : b)?.[i]`
@@ -73,7 +73,7 @@ Evaluation order and side effects:
 
 ### Relationship to nullish coalescing (??)
 
-Optional chaining reads safely; nullish coalescing provides defaults.
+Null chaining reads safely; nullish coalescing provides defaults.
 
 - `user?.nickname ?? "Anonymous"`
 - `(source |: $last.items)?.[0]?.value ?? "N/A"`
@@ -153,7 +153,7 @@ This matches typical expectations: property/index access binds tightly. Parenthe
 
 ## Interactions with pipes
 
-Optional chaining is often used with the pipeline context variables:
+Null chaining is often used with the pipeline context variables:
 
 - `data |: $last.items` may produce `null` if `items` is missing; follow with `?.[0]` safely:
 	- `(data |: $last.items)?.[0] ?? null`
