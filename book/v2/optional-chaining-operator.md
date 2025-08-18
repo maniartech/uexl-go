@@ -212,7 +212,7 @@ Chaining after arbitrary expressions
 
 Index side effects
 - `(null)?.[boom()]` → does not call `boom`
-- `(obj)?.[i = i + 1]` → increments only if `obj` is non-nullish
+- `(obj)?.[computeIndex()]` → calls `computeIndex()` only if `obj` is non-nullish
 
 Mixing
 - `a?.b.c` → `(a?.b).c`
