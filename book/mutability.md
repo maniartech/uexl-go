@@ -9,7 +9,7 @@ This page summarizes the mutability policy and the practical patterns to work wi
 - No assignment or increment/decrement operators: there is no `=`, `+=`, `-=`, `++`, `--`, etc.
 - Pure by default: operators like `+ - * /`, property/index access (`.`, `[i]`), and their optional variants (`?.`, `?[i]`) do not mutate.
 - Explicit updates via functions return copies: update helpers like `set(obj, key, val)` return a new object/array with the change applied; the input is not mutated.
-- Deterministic evaluation: left-to-right evaluation within an expression, with short-circuiting for logical ops and optional chaining; avoid re-evaluation of already computed subexpressions.
+- Deterministic evaluation: left-to-right evaluation within an expression, with short-circuiting for logical ops and null chaining; avoid re-evaluation of already computed subexpressions.
 
 ## Why this design?
 
@@ -22,7 +22,7 @@ This page summarizes the mutability policy and the practical patterns to work wi
 
 Reading is always non-mutating:
 - Member access: `user.name`, `order.items[0]`
-- Optional chaining (null-aware access): `user?.address?.city`, `list?.[0]`
+- Null chaining (null-aware access): `user?.address?.city`, `list?.[0]`
 
 Updating is explicit and returns a new value:
 - `set(obj, key, value)` → returns a copy of `obj` with `key` set to `value`.
@@ -36,9 +36,9 @@ Examples:
 - Update by dynamic key without mutation:
   - `set(user ?? {}, fieldName, value)`
 
-## Optional chaining and side effects
+## Null chaining and side effects
 
-Optional chaining does not evaluate the right side when the base is nullish:
+Null chaining does not evaluate the right side when the base is nullish:
 - `(obj)?.[computeIndex()]` → `computeIndex()` only runs if `obj` is non-nullish
 
 This prevents accidental side effects when data is missing. See v2/optional-chaining-operator.md for full semantics.
@@ -63,7 +63,7 @@ These choices keep UExL a safe, declarative layer atop your application’s stat
 ## Implementation notes (for readers of the engine)
 
 - Builtins like `set` should not mutate their first argument; they must return a new value. If performance is a concern, consider copy-on-write or persistent data structures in the future.
-- Optional chaining must short-circuit without evaluating index/key expressions.
+- Null chaining must short-circuit without evaluating index/key expressions.
 - Logical operators should short-circuit and return the conventional values (e.g., `||` returns first truthy, `&&` returns first falsy or last value).
 
 ## Future directions

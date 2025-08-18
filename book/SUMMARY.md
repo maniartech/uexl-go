@@ -7,6 +7,7 @@
 - [Operators](operators/overview.md)
   - [Operator Precedence](operators/precedence.md)
 - [Expressions](expressions.md)
+- [Glossary](glossary.md)
 - [Mutability and Purity](mutability.md)
 - [Context](context.md)
 - [Pipes](pipes/overview.md)

@@ -123,8 +123,8 @@ Don’t
 - Index expression is not evaluated on short-circuit:
 	- `(null)?.[expensive()]` → `null`, no side effects
 
-- Out-of-bounds indexing behavior is unchanged; if normal indexing returns `null` for OOB/missing keys, optional chaining preserves that behavior:
-	- `arr?.[999]` → `null` (either from short-circuit or from normal indexing rules)
+- Missing keys and out-of-bounds indices normalize to `null` in UExL; null chaining preserves that behavior:
+	- `arr?.[999]` → `null` (either from short-circuit on a nullish base or from missing index normalization)
 
 - Access on non-object/non-array follows normal rules once the left is non-nullish:
 	- If `A` is non-nullish but not indexable, `A?.[i]` behaves like `A[i]` and may error according to normal semantics
