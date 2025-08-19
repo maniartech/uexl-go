@@ -9,19 +9,11 @@ import (
 )
 
 func TestPlayground(t *testing.T) {
-	p, err := parser.ParseString("arr[0]['address']['street']")
+	p, err := parser.ParseString("arr.0.2.3.4")
 	if err != nil {
 		t.Fatalf("Failed to parse expression: %v", err)
 	}
 
 	fmt.Println("Parsed AST for p:")
 	utils.PrintJSON(p)
-
-	p2, err := parser.ParseString("arr.0.address.street.name")
-	if err != nil {
-		t.Fatalf("Failed to parse expression: %v", err)
-	}
-
-	fmt.Println("Parsed AST for p2:")
-	utils.PrintJSON(p2)
 }
