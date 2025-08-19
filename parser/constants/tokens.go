@@ -10,6 +10,9 @@ const (
 	TokenNumber
 	TokenIdentifier
 	TokenOperator
+	// Optional chaining composite tokens
+	TokenQuestionDot         // '?.'
+	TokenQuestionLeftBracket // '?['
 	TokenLeftParen
 	TokenRightParen
 	TokenLeftBracket
@@ -39,6 +42,10 @@ func (t TokenType) String() string {
 		return "Identifier"
 	case TokenOperator:
 		return "Operator"
+	case TokenQuestionDot:
+		return "QuestionDot"
+	case TokenQuestionLeftBracket:
+		return "QuestionLeftBracket"
 	case TokenLeftParen:
 		return "LeftParen"
 	case TokenRightParen:

@@ -237,8 +237,8 @@ func TestArray(t *testing.T) {
 		}
 
 		// Check array part
-		if arrayLiteral, ok := indexAccess.Array.(*ArrayLiteral); !ok {
-			t.Errorf("Array part: Expected *ArrayLiteral, got %T", indexAccess.Array)
+		if arrayLiteral, ok := indexAccess.Target.(*ArrayLiteral); !ok {
+			t.Errorf("Array part: Expected *ArrayLiteral, got %T", indexAccess.Target)
 		} else if len(arrayLiteral.Elements) != 3 {
 			t.Errorf("Array part: Expected 3 elements, got %d", len(arrayLiteral.Elements))
 		}
@@ -265,8 +265,8 @@ func TestArray(t *testing.T) {
 		}
 
 		// Check array part
-		if arrayLiteral, ok := indexAccess.Array.(*ArrayLiteral); !ok {
-			t.Errorf("Array part: Expected *ArrayLiteral, got %T", indexAccess.Array)
+		if arrayLiteral, ok := indexAccess.Target.(*ArrayLiteral); !ok {
+			t.Errorf("Array part: Expected *ArrayLiteral, got %T", indexAccess.Target)
 		} else if len(arrayLiteral.Elements) != 3 {
 			t.Errorf("Array part: Expected 3 elements, got %d", len(arrayLiteral.Elements))
 		}
@@ -319,13 +319,13 @@ func TestArray(t *testing.T) {
 		}
 
 		// Check that the array part is also an IndexAccess
-		innerIndexAccess, ok := outerIndexAccess.Array.(*IndexAccess)
+		innerIndexAccess, ok := outerIndexAccess.Target.(*IndexAccess)
 		if !ok {
-			t.Errorf("Inner access: Expected *IndexAccess, got %T", outerIndexAccess.Array)
+			t.Errorf("Inner access: Expected *IndexAccess, got %T", outerIndexAccess.Target)
 		} else {
 			// Check that the innermost array is a nested array literal
-			if arrayLiteral, ok := innerIndexAccess.Array.(*ArrayLiteral); !ok {
-				t.Errorf("Innermost array: Expected *ArrayLiteral, got %T", innerIndexAccess.Array)
+			if arrayLiteral, ok := innerIndexAccess.Target.(*ArrayLiteral); !ok {
+				t.Errorf("Innermost array: Expected *ArrayLiteral, got %T", innerIndexAccess.Target)
 			} else if len(arrayLiteral.Elements) != 2 {
 				t.Errorf("Innermost array: Expected 2 elements, got %d", len(arrayLiteral.Elements))
 			}

@@ -18,9 +18,9 @@ func TestStringIndexing_Basic(t *testing.T) {
 	}
 
 	// Array should be a StringLiteral("hello")
-	sl, ok := ia.Array.(*parser.StringLiteral)
+	sl, ok := ia.Target.(*parser.StringLiteral)
 	if !ok {
-		t.Fatalf("expected StringLiteral as array, got %T", ia.Array)
+		t.Fatalf("expected StringLiteral as target, got %T", ia.Target)
 	}
 	assert.Equal(t, "hello", sl.Value)
 
@@ -79,14 +79,14 @@ func TestStringIndexing_Chained(t *testing.T) {
 		t.Fatalf("expected outer IndexAccess, got %T", ast)
 	}
 	// Inner IndexAccess
-	inner, ok := outer.Array.(*parser.IndexAccess)
+	inner, ok := outer.Target.(*parser.IndexAccess)
 	if !ok {
-		t.Fatalf("expected inner IndexAccess, got %T", outer.Array)
+		t.Fatalf("expected inner IndexAccess, got %T", outer.Target)
 	}
 	// Base should be StringLiteral("hi")
-	sl, ok := inner.Array.(*parser.StringLiteral)
+	sl, ok := inner.Target.(*parser.StringLiteral)
 	if !ok {
-		t.Fatalf("expected StringLiteral base, got %T", inner.Array)
+		t.Fatalf("expected StringLiteral base, got %T", inner.Target)
 	}
 	assert.Equal(t, "hi", sl.Value)
 }

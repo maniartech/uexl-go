@@ -259,9 +259,9 @@ func TestNumberErrorCases(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "Multiple decimal points",
+			name:        "Multiple decimal points (valid as member access)",
 			input:       "3.14.15",
-			expectError: true,
+			expectError: false, // This should parse as (3.14).15 - member access
 		},
 		{
 			name:        "Number followed by identifier (not error case)",

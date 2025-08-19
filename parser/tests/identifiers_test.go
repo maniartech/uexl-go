@@ -285,10 +285,11 @@ func TestIdentifierTokenization(t *testing.T) {
 				{".", constants.TokenDot},
 				{"items", constants.TokenIdentifier},
 				{".", constants.TokenDot},
-				{"0.", constants.TokenNumber},
+				{"0", constants.TokenNumber},
+				{".", constants.TokenDot},
 				{"name", constants.TokenIdentifier},
 			},
-			description: "Dot notation with number should be separate tokens (0. is a valid number)",
+			description: "Dot notation with number should be separate tokens (0 then .)",
 		},
 
 		// Invalid dot patterns (tokenized correctly but should cause parsing errors)

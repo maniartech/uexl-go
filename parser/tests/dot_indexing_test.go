@@ -11,16 +11,16 @@ func TestDotIndexing_Number_OnArray(t *testing.T) {
 	p := parser.NewParser("[10,20,30].1")
 	expr, err := p.Parse()
 	assert.NoError(t, err)
-	_, ok := expr.(*parser.IndexAccess)
-	assert.True(t, ok, "expected IndexAccess for .number on array")
+	_, ok := expr.(*parser.MemberAccess)
+	assert.True(t, ok, "expected MemberAccess for .number on array")
 }
 
 func TestDotIndexing_Number_OnString(t *testing.T) {
 	p := parser.NewParser("'abc'.2")
 	expr, err := p.Parse()
 	assert.NoError(t, err)
-	_, ok := expr.(*parser.IndexAccess)
-	assert.True(t, ok, "expected IndexAccess for .number on string")
+	_, ok := expr.(*parser.MemberAccess)
+	assert.True(t, ok, "expected MemberAccess for .number on string")
 }
 
 func TestDotIndexing_GroupedExpr_OnArray(t *testing.T) {
@@ -43,10 +43,10 @@ func TestDotIndexing_Chaining_Mixed(t *testing.T) {
 	p := parser.NewParser("[ ['a','b','c'], ['d','e'] ].0[1]")
 	expr, err := p.Parse()
 	assert.NoError(t, err)
-	// Should parse as IndexAccess of IndexAccess
+	// Should parse as IndexAccess([1]) of MemberAccess(.0)
 	outer, ok := expr.(*parser.IndexAccess)
 	assert.True(t, ok)
-	_, ok = outer.Array.(*parser.IndexAccess)
+	_, ok = outer.Target.(*parser.MemberAccess)
 	assert.True(t, ok)
 }
 
@@ -54,10 +54,10 @@ func TestDotIndexing_DoesNotClash_WithMemberAccess(t *testing.T) {
 	p := parser.NewParser("obj.prop.0")
 	expr, err := p.Parse()
 	assert.NoError(t, err)
-	// obj.prop is a MemberAccess; .0 should then be IndexAccess on that
-	idx, ok := expr.(*parser.IndexAccess)
+	// obj.prop is a MemberAccess; .0 should now be MemberAccess on that (consistent syntax-based approach)
+	ma, ok := expr.(*parser.MemberAccess)
 	assert.True(t, ok)
-	_, ok = idx.Array.(*parser.MemberAccess)
+	_, ok = ma.Target.(*parser.MemberAccess)
 	assert.True(t, ok)
 }
 
