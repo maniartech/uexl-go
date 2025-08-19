@@ -103,16 +103,34 @@ func (t *Tokenizer) NextToken() (Token, error) {
 
 func (t *Tokenizer) readNumber() (Token, error) {
 	start := t.pos
+	startColumn := t.column
 
-	// Read integer part and decimal part
-	for t.pos < len(t.input) && (isDigit(t.current()) || t.current() == '.') {
+	// Read integer part (mandatory when entering here)
+	for t.pos < len(t.input) && isDigit(t.current()) {
 		t.advance()
+	}
+
+	// Read optional fractional part: only if '.' is followed by a digit
+	if t.pos < len(t.input) && t.current() == '.' {
+		// Peek next rune to ensure it's a digit; otherwise, treat '.' as a separate token (e.g., member access)
+		if t.pos+1 < len(t.input) {
+			nextRune, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
+			if isDigit(nextRune) {
+				// consume '.'
+				t.advance()
+				// consume fractional digits
+				for t.pos < len(t.input) && isDigit(t.current()) {
+					t.advance()
+				}
+			}
+		}
 	}
 
 	// Check for scientific notation - only if followed by proper exponent
 	if t.pos < len(t.input) && (t.current() == 'e' || t.current() == 'E') {
 		// Look ahead to see if this is a valid exponent
 		savedPos := t.pos
+		savedColumn := t.column
 		t.advance() // consume 'e' or 'E'
 
 		// Optional sign
@@ -124,6 +142,7 @@ func (t *Tokenizer) readNumber() (Token, error) {
 		if t.pos >= len(t.input) || !isDigit(t.current()) {
 			// Not a valid scientific notation, backtrack
 			t.pos = savedPos
+			t.column = savedColumn
 		} else {
 			// Valid scientific notation, consume all digits
 			for t.pos < len(t.input) && isDigit(t.current()) {
@@ -137,9 +156,9 @@ func (t *Tokenizer) readNumber() (Token, error) {
 	if err != nil {
 		// Invalid number format - return error
 		errMsg := errors.GetErrorMessage(errors.ErrInvalidNumber)
-		return Token{}, errors.NewParserError(errors.ErrInvalidNumber, t.line, t.column-(t.pos-start), fmt.Sprintf("%s: '%s'", errMsg, originalToken))
+		return Token{}, errors.NewParserError(errors.ErrInvalidNumber, t.line, startColumn, fmt.Sprintf("%s: '%s'", errMsg, originalToken))
 	}
-	return Token{Type: constants.TokenNumber, Value: value, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
+	return Token{Type: constants.TokenNumber, Value: value, Token: originalToken, Line: t.line, Column: startColumn}, nil
 }
 
 func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
@@ -427,13 +446,30 @@ func (t *Tokenizer) readQuestionOrNullish() (Token, error) {
 	startColumn := t.column
 	// current is '?'
 	t.advance()
+
+	// Priority: '??' > '?.' > '?[' > '?'
 	if t.current() == '?' {
 		// it's '??'
 		t.advance()
 		operator := "??"
 		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
-	// single '?'
+
+	if t.current() == '.' {
+		// '?.'
+		t.advance()
+		tokenStr := "?."
+		return Token{Type: constants.TokenQuestionDot, Value: tokenStr, Token: tokenStr, Line: t.line, Column: startColumn}, nil
+	}
+
+	if t.current() == '[' {
+		// '?['
+		t.advance()
+		tokenStr := "?["
+		return Token{Type: constants.TokenQuestionLeftBracket, Value: tokenStr, Token: tokenStr, Line: t.line, Column: startColumn}, nil
+	}
+
+	// single '?' -> used by conditional operator parsing
 	operator := "?"
 	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 }

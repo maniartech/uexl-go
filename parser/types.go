@@ -149,8 +149,9 @@ func (fc *FunctionCall) Type() NodeType       { return NodeTypeFunctionCall }
 func (fc *FunctionCall) Position() (int, int) { return fc.Line, fc.Column }
 
 type MemberAccess struct {
-	Object   Expression
+	Target   Expression
 	Property string
+	Optional bool
 	Line     int
 	Column   int
 }

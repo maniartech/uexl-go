@@ -181,7 +181,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 		}
 
 	case *parser.IndexAccess:
-		if err := c.Compile(node.Array); err != nil {
+		if err := c.Compile(node.Target); err != nil {
 			return err
 		}
 		if err := c.Compile(node.Index); err != nil {

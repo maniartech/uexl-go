@@ -25,10 +25,11 @@ type Parser struct {
 
 // IndexAccess represents array index access expressions
 type IndexAccess struct {
-	Array  Expression
-	Index  Expression
-	Line   int
-	Column int
+	Target   Expression
+	Index    Expression
+	Optional bool
+	Line     int
+	Column   int
 }
 
 func (ia *IndexAccess) expressionNode()      {}
@@ -363,7 +364,7 @@ func (p *Parser) parseMemberAccess() Expression {
 
 	for {
 		// Handle array index access
-		if p.current.Type == constants.TokenLeftBracket {
+		if p.current.Type == constants.TokenLeftBracket || p.current.Type == constants.TokenQuestionLeftBracket {
 			bracket := p.current
 			p.advance() // consume '['
 
@@ -390,23 +391,57 @@ func (p *Parser) parseMemberAccess() Expression {
 
 			// Create an index access expression
 			expr = &IndexAccess{
-				Array:  expr,
-				Index:  indexExpr,
-				Line:   bracket.Line,
-				Column: bracket.Column,
+				Target:   expr,
+				Index:    indexExpr,
+				Optional: bracket.Type == constants.TokenQuestionLeftBracket,
+				Line:     bracket.Line,
+				Column:   bracket.Column,
 			}
 			continue // check for more member access operations
 		}
 
 		// Handle dot access
-		if p.current.Type == constants.TokenDot {
+		if p.current.Type == constants.TokenDot || p.current.Type == constants.TokenQuestionDot {
 			dot := p.current
 			p.advance()
 
 			// Disambiguate after '.'
 			// 1) .<identifier> => MemberAccess (object/property)
-			// 2) .<number>     => IndexAccess with numeric literal index
+			// 2) .<number>     => MemberAccess (property access, runtime converts if needed)
 			// 3) .(expr)       => IndexAccess with arbitrary expression
+			// Special-case: '?.[' optional element access (JS-style). Treat as optional index.
+			if dot.Type == constants.TokenQuestionDot && p.current.Type == constants.TokenLeftBracket {
+				bracket := p.current
+				p.advance() // consume '['
+
+				// Save and set flags for index expression
+				wasInParenthesis := p.inParenthesis
+				wasSubExpressionActive := p.subExpressionActive
+				p.inParenthesis = true
+				p.subExpressionActive = true
+
+				indexExpr := p.parseExpression()
+
+				if p.current.Type != constants.TokenRightBracket {
+					p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']' after array index", "]")
+				} else {
+					p.advance() // consume ']'
+				}
+
+				// Restore flags
+				p.inParenthesis = wasInParenthesis
+				p.subExpressionActive = wasSubExpressionActive
+
+				expr = &IndexAccess{
+					Target:   expr,
+					Index:    indexExpr,
+					Optional: true,
+					Line:     bracket.Line,
+					Column:   bracket.Column,
+				}
+				continue
+			}
+
 			switch p.current.Type {
 			case constants.TokenIdentifier:
 				property, ok := p.current.Value.(string)
@@ -415,21 +450,25 @@ func (p *Parser) parseMemberAccess() Expression {
 				}
 				p.advance()
 				expr = &MemberAccess{
-					Object:   expr,
+					Target:   expr,
 					Property: property,
+					Optional: dot.Type == constants.TokenQuestionDot,
 					Line:     dot.Line,
 					Column:   dot.Column,
 				}
 				continue
 
 			case constants.TokenNumber:
-				// Treat as index access: obj.<number>
-				indexExpr := p.parseNumber()
-				expr = &IndexAccess{
-					Array:  expr,
-					Index:  indexExpr,
-					Line:   dot.Line,
-					Column: dot.Column,
+				// Treat as property access: obj.<number> → MemberAccess
+				// The number becomes a string property
+				numberToken := p.current.Token
+				p.advance()
+				expr = &MemberAccess{
+					Target:   expr,
+					Property: numberToken,
+					Optional: dot.Type == constants.TokenQuestionDot,
+					Line:     dot.Line,
+					Column:   dot.Column,
 				}
 				continue
 
@@ -448,16 +487,22 @@ func (p *Parser) parseMemberAccess() Expression {
 				p.subExpressionActive = wasSubExpressionActive
 
 				expr = &IndexAccess{
-					Array:  expr,
-					Index:  indexExpr,
-					Line:   dot.Line,
-					Column: dot.Column,
+					Target:   expr,
+					Index:    indexExpr,
+					Optional: false,
+					Line:     dot.Line,
+					Column:   dot.Column,
 				}
 				continue
 
 			default:
 				// Unexpected token after '.'
-				p.addErrorWithExpected(errors.ErrExpectedIdentifier, "expected identifier, number, or '(...)' after '.'", "identifier|number|(")
+				// For optional dot access, only identifier is valid per spec
+				if dot.Type == constants.TokenQuestionDot {
+					p.addErrorWithExpected(errors.ErrExpectedIdentifier, "expected identifier after '?.'", "identifier")
+				} else {
+					p.addErrorWithExpected(errors.ErrExpectedIdentifier, "expected identifier, number, or '(...)' after '.'", "identifier|number|(")
+				}
 				return expr
 			}
 		}
