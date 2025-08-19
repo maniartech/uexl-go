@@ -47,8 +47,14 @@ func TestIndexThenMemberAccess_DotNumberThenDot(t *testing.T) {
 	ma, ok := expr.(*p.MemberAccess)
 	if assert.True(t, ok, "expected MemberAccess at top-level") {
 		assert.Equal(t, "address", ma.Property)
-		_, isMember := ma.Target.(*p.MemberAccess)
+		inner, isMember := ma.Target.(*p.MemberAccess)
 		assert.True(t, isMember, "object of member should be MemberAccess (arr.0)")
+		if isMember {
+			// inner should have integer property 0
+			v, isInt := inner.Property.(int)
+			assert.True(t, isInt, "dot-number should produce integer property")
+			assert.Equal(t, 0, v)
+		}
 	}
 }
 
@@ -64,8 +70,13 @@ func TestIndexThenMemberAccess_Chain_DotNumberThenDot(t *testing.T) {
 		maAddress, ok := maStreet.Target.(*p.MemberAccess)
 		if assert.True(t, ok, "expected inner MemberAccess for .address") {
 			assert.Equal(t, "address", maAddress.Property)
-			_, isMember := maAddress.Target.(*p.MemberAccess)
+			inner, isMember := maAddress.Target.(*p.MemberAccess)
 			assert.True(t, isMember, "object of .address should be MemberAccess (arr.0)")
+			if isMember {
+				v, isInt := inner.Property.(int)
+				assert.True(t, isInt, "dot-number should produce integer property")
+				assert.Equal(t, 0, v)
+			}
 		}
 	}
 }

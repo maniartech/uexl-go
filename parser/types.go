@@ -150,7 +150,7 @@ func (fc *FunctionCall) Position() (int, int) { return fc.Line, fc.Column }
 
 type MemberAccess struct {
 	Target   Expression
-	Property string
+	Property any
 	Optional bool
 	Line     int
 	Column   int

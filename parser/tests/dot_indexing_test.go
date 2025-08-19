@@ -11,16 +11,27 @@ func TestDotIndexing_Number_OnArray(t *testing.T) {
 	p := parser.NewParser("[10,20,30].1")
 	expr, err := p.Parse()
 	assert.NoError(t, err)
-	_, ok := expr.(*parser.MemberAccess)
+	ma, ok := expr.(*parser.MemberAccess)
 	assert.True(t, ok, "expected MemberAccess for .number on array")
+	if ok {
+		// Property should be an int for dot-number
+		v, isInt := ma.Property.(int)
+		assert.True(t, isInt, "expected integer property for dot-number")
+		assert.Equal(t, 1, v)
+	}
 }
 
 func TestDotIndexing_Number_OnString(t *testing.T) {
 	p := parser.NewParser("'abc'.2")
 	expr, err := p.Parse()
 	assert.NoError(t, err)
-	_, ok := expr.(*parser.MemberAccess)
+	ma, ok := expr.(*parser.MemberAccess)
 	assert.True(t, ok, "expected MemberAccess for .number on string")
+	if ok {
+		v, isInt := ma.Property.(int)
+		assert.True(t, isInt, "expected integer property for dot-number")
+		assert.Equal(t, 2, v)
+	}
 }
 
 func TestDotIndexing_GroupedExpr_OnArray(t *testing.T) {

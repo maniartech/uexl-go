@@ -460,12 +460,20 @@ func (p *Parser) parseMemberAccess() Expression {
 
 			case constants.TokenNumber:
 				// Treat as property access: obj.<number> → MemberAccess
-				// The number becomes a string property
-				numberToken := p.current.Token
+				// Store numeric property as int for dot-number cases
+				// Tokenizer provides Value as float64; convert to int if it's an integer value
+				var prop any
+				if f, ok := p.current.Value.(float64); ok {
+					// Convert only if it's an integer (e.g., 0, 1, 2). For 1.0 style, still int.
+					prop = int(f)
+				} else {
+					// Fallback to token string if value is not float64 (shouldn't happen)
+					prop = p.current.Token
+				}
 				p.advance()
 				expr = &MemberAccess{
 					Target:   expr,
-					Property: numberToken,
+					Property: prop,
 					Optional: dot.Type == constants.TokenQuestionDot,
 					Line:     dot.Line,
 					Column:   dot.Column,
