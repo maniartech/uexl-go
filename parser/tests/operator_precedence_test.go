@@ -152,6 +152,14 @@ func TestDotExpressionPrecedence(t *testing.T) {
 			input: "a.b",
 		},
 		{
+			name:  "simple dot expression",
+			input: "arr.0",
+		},
+		{
+			name:  "simple dot expression",
+			input: "arr.0.address.street",
+		},
+		{
 			name:  "chained dot expressions",
 			input: "a.b.c.d",
 		},
