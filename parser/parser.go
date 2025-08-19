@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/maniartech/uexl_go/parser/constants"
@@ -460,23 +461,65 @@ func (p *Parser) parseMemberAccess() Expression {
 
 			case constants.TokenNumber:
 				// Treat as property access: obj.<number> → MemberAccess
-				// Store numeric property as int for dot-number cases
-				// Tokenizer provides Value as float64; convert to int if it's an integer value
-				var prop any
-				if f, ok := p.current.Value.(float64); ok {
-					// Convert only if it's an integer (e.g., 0, 1, 2). For 1.0 style, still int.
-					prop = int(f)
-				} else {
-					// Fallback to token string if value is not float64 (shouldn't happen)
-					prop = p.current.Token
-				}
+				// If the numeric token contains a decimal point (e.g., "1.5"),
+				// split it into multiple member accesses: obj.1.5 => ((obj).1).5
+				tok := p.current
 				p.advance()
-				expr = &MemberAccess{
-					Target:   expr,
-					Property: prop,
-					Optional: dot.Type == constants.TokenQuestionDot,
-					Line:     dot.Line,
-					Column:   dot.Column,
+
+				tokenStr := tok.Token
+				if strings.Contains(tokenStr, ".") {
+					parts := strings.Split(tokenStr, ".")
+					for _, part := range parts {
+						if part == "" {
+							// Skip empty segments defensively; shouldn't occur for valid numbers
+							continue
+						}
+						// Parse each segment as integer
+						// We avoid using the float64 value to preserve exact segment semantics
+						var segVal int
+						// Support leading zeros (e.g., "05")
+						// Atoi handles them fine
+						if iv, err := strconv.Atoi(part); err == nil {
+							segVal = iv
+						} else {
+							// Fallback: attempt via float then cast
+							if fv, ok := tok.Value.(float64); ok {
+								segVal = int(fv)
+							} else {
+								// As a last resort, keep as raw string
+								expr = &MemberAccess{
+									Target:   expr,
+									Property: part,
+									Optional: dot.Type == constants.TokenQuestionDot,
+									Line:     dot.Line,
+									Column:   dot.Column,
+								}
+								continue
+							}
+						}
+						expr = &MemberAccess{
+							Target:   expr,
+							Property: segVal,
+							Optional: dot.Type == constants.TokenQuestionDot,
+							Line:     dot.Line,
+							Column:   dot.Column,
+						}
+					}
+				} else {
+					// Simple integer-like number
+					var prop any
+					if f, ok := tok.Value.(float64); ok {
+						prop = int(f)
+					} else {
+						prop = tok.Token
+					}
+					expr = &MemberAccess{
+						Target:   expr,
+						Property: prop,
+						Optional: dot.Type == constants.TokenQuestionDot,
+						Line:     dot.Line,
+						Column:   dot.Column,
+					}
 				}
 				continue
 
