@@ -115,3 +115,59 @@ func TestOptional_AfterFunctionCall(t *testing.T) {
 		}
 	}
 }
+
+// New tests: Optional chaining on LHS of nullish coalescing
+func TestOptional_WithNullish_Property(t *testing.T) {
+	parser := p.NewParser("obj?.name ?? y")
+	ast, err := parser.Parse()
+	assert.NoError(t, err)
+
+	be, ok := ast.(*p.BinaryExpression)
+	if assert.True(t, ok, "expected BinaryExpression") {
+		assert.Equal(t, "??", be.Operator)
+
+		// LHS should be an optional member access: obj?.name
+		ma, ok := be.Left.(*p.MemberAccess)
+		if assert.True(t, ok, "left of ?? should be MemberAccess") {
+			assert.True(t, ma.Optional, "member should be optional")
+			assert.Equal(t, "name", ma.Property)
+			id, ok := ma.Target.(*p.Identifier)
+			if assert.True(t, ok, "target should be Identifier") {
+				assert.Equal(t, "obj", id.Name)
+			}
+		}
+
+		// RHS should be an identifier y
+		rid, ok := be.Right.(*p.Identifier)
+		if assert.True(t, ok, "right of ?? should be Identifier") {
+			assert.Equal(t, "y", rid.Name)
+		}
+	}
+}
+
+func TestOptional_WithNullish_Index(t *testing.T) {
+	parser := p.NewParser("arr?.[i] ?? 0")
+	ast, err := parser.Parse()
+	assert.NoError(t, err)
+
+	be, ok := ast.(*p.BinaryExpression)
+	if assert.True(t, ok, "expected BinaryExpression") {
+		assert.Equal(t, "??", be.Operator)
+
+		// LHS should be an optional index access: arr?.[i]
+		ia, ok := be.Left.(*p.IndexAccess)
+		if assert.True(t, ok, "left of ?? should be IndexAccess") {
+			assert.True(t, ia.Optional, "index should be optional")
+			_, ok := ia.Target.(*p.Identifier)
+			assert.True(t, ok, "target should be Identifier")
+			_, ok = ia.Index.(*p.Identifier)
+			assert.True(t, ok, "index should be Identifier expression")
+		}
+
+		// RHS should be number literal 0
+		rn, ok := be.Right.(*p.NumberLiteral)
+		if assert.True(t, ok, "right of ?? should be NumberLiteral") {
+			assert.Equal(t, 0.0, rn.Value)
+		}
+	}
+}
