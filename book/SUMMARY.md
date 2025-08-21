@@ -1,6 +1,7 @@
 # UExL Language Book Summary
 
 - [Introduction](introduction.md)
+- [Design Philosophy](design-philosophy.md)
 - [Syntax](syntax.md)
 - [Data Types](data-types.md)
 - [Variables and Identifiers](variables-identifiers.md)
