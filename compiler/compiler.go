@@ -179,7 +179,6 @@ func (c *Compiler) Compile(node parser.Node) error {
 			c.emit(code.OpPipe, pipeTypeIdx, aliasIdx, blockIdx)
 
 		}
-
 	case *parser.IndexAccess:
 		if err := c.Compile(node.Target); err != nil {
 			return err
@@ -187,8 +186,23 @@ func (c *Compiler) Compile(node parser.Node) error {
 		if err := c.Compile(node.Index); err != nil {
 			return err
 		}
+		if node.Optional {
+			c.emit(code.OpTrue)
+		} else {
+			c.emit(code.OpFalse)
+		}
 		c.emit(code.OpIndex)
-
+	case *parser.MemberAccess:
+		if err := c.Compile(node.Target); err != nil {
+			return err
+		}
+		c.emit(code.OpConstant, c.addConstant(node.Property)) // Push property onto stack
+		if node.Optional {
+			c.emit(code.OpTrue)
+		} else {
+			c.emit(code.OpFalse)
+		}
+		c.emit(code.OpMemberAccess)
 	case *parser.ObjectLiteral:
 		// Ensure deterministic order by sorting keys
 		keys := make([]string, 0, len(node.Properties))
@@ -218,6 +232,8 @@ func (c *Compiler) Compile(node parser.Node) error {
 	case *parser.StringLiteral:
 		// Add the string literal to constants
 		c.emit(code.OpConstant, c.addConstant(node.Value))
+	case *parser.NullLiteral:
+		c.emit(code.OpNull)
 	case *parser.Identifier:
 		// Identifiers are variables passed via go's environment context. They are "Constant" in a sense that they are not computed at runtime.
 		// If identifer begins with a dollar sign, it is a local variable in the pipe context.

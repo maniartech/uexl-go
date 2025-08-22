@@ -21,6 +21,7 @@ const (
 	OpPow
 	OpDiv
 	OpMod
+	OpNullish
 	OpMinus
 	OpBang
 	OpTrue
@@ -40,11 +41,17 @@ const (
 	OpJump
 	OpJumpIfTruthy
 	OpJumpIfFalsy
+	OpJumpIfNil
+	OpJumpIfNotNil
 	OpArray
 	OpIndex
+	OpMemberAccess
+	OpNullishIndex
+	OpNullishMemberAccess
 	OpObject
 	OpCallFunction
 	OpPipe
+	OpNull
 )
 
 func (op Opcode) String() string {
@@ -61,41 +68,47 @@ type Definition struct {
 }
 
 var definations = map[Opcode]*Definition{
-	OpConstant:           {"OpConstant", []int{2}},
-	OpContextVar:         {"OpContextVar", []int{2}},
-	OpIdentifier:         {"OpIdentifier", []int{2}},
-	OpStore:              {"OpStore", []int{2}},
-	OpPop:                {"OpPop", []int{}},
-	OpAdd:                {"OpAdd", []int{}},
-	OpSub:                {"OpSub", []int{}},
-	OpMul:                {"OpMul", []int{}},
-	OpPow:                {"OpPow", []int{}},
-	OpDiv:                {"OpDiv", []int{}},
-	OpMod:                {"OpMod", []int{}},
-	OpTrue:               {"OpTrue", []int{}},
-	OpFalse:              {"OpFalse", []int{}},
-	OpEqual:              {"OpEqual", []int{}},
-	OpNotEqual:           {"OpNotEqual", []int{}},
-	OpGreaterThan:        {"OpGreaterThan", []int{}},
-	OpGreaterThanOrEqual: {"OpGreaterThanOrEqual", []int{}},
-	OpMinus:              {"OpMinus", []int{}},
-	OpBang:               {"OpBang", []int{}},
-	OpLogicalAnd:         {"OpLogicalAnd", []int{}},
-	OpLogicalOr:          {"OpLogicalOr", []int{}},
-	OpBitwiseAnd:         {"OpBitwiseAnd", []int{}},
-	OpBitwiseOr:          {"OpBitwiseOr", []int{}},
-	OpBitwiseXor:         {"OpBitwiseXor", []int{}},
-	OpBitwiseNot:         {"OpBitwiseNot", []int{}},
-	OpShiftLeft:          {"OpShiftLeft", []int{}},
-	OpShiftRight:         {"OpShiftRight", []int{}},
-	OpJump:               {"OpJump", []int{2}},
-	OpJumpIfTruthy:       {"OpJumpIfTruthy", []int{2}},
-	OpJumpIfFalsy:        {"OpJumpIfFalsy", []int{2}},
-	OpArray:              {"OpArray", []int{2}},
-	OpObject:             {"OpHash", []int{2}},
-	OpIndex:              {"OpIndex", []int{}},
-	OpCallFunction:       {"OpCallFunction", []int{2, 2}},
-	OpPipe:               {"OpPipe", []int{2, 2, 2}}, // pipeTypeIdx, aliasIdx, blockIdx
+	OpConstant:            {"OpConstant", []int{2}},
+	OpContextVar:          {"OpContextVar", []int{2}},
+	OpIdentifier:          {"OpIdentifier", []int{2}},
+	OpStore:               {"OpStore", []int{2}},
+	OpPop:                 {"OpPop", []int{}},
+	OpAdd:                 {"OpAdd", []int{}},
+	OpSub:                 {"OpSub", []int{}},
+	OpMul:                 {"OpMul", []int{}},
+	OpPow:                 {"OpPow", []int{}},
+	OpDiv:                 {"OpDiv", []int{}},
+	OpMod:                 {"OpMod", []int{}},
+	OpTrue:                {"OpTrue", []int{}},
+	OpFalse:               {"OpFalse", []int{}},
+	OpEqual:               {"OpEqual", []int{}},
+	OpNotEqual:            {"OpNotEqual", []int{}},
+	OpGreaterThan:         {"OpGreaterThan", []int{}},
+	OpGreaterThanOrEqual:  {"OpGreaterThanOrEqual", []int{}},
+	OpMinus:               {"OpMinus", []int{}},
+	OpBang:                {"OpBang", []int{}},
+	OpLogicalAnd:          {"OpLogicalAnd", []int{}},
+	OpLogicalOr:           {"OpLogicalOr", []int{}},
+	OpBitwiseAnd:          {"OpBitwiseAnd", []int{}},
+	OpBitwiseOr:           {"OpBitwiseOr", []int{}},
+	OpBitwiseXor:          {"OpBitwiseXor", []int{}},
+	OpBitwiseNot:          {"OpBitwiseNot", []int{}},
+	OpShiftLeft:           {"OpShiftLeft", []int{}},
+	OpShiftRight:          {"OpShiftRight", []int{}},
+	OpJump:                {"OpJump", []int{2}},
+	OpJumpIfTruthy:        {"OpJumpIfTruthy", []int{2}},
+	OpJumpIfFalsy:         {"OpJumpIfFalsy", []int{2}},
+	OpJumpIfNil:           {"OpJumpIfNil", []int{2}},
+	OpJumpIfNotNil:        {"OpJumpIfNotNil", []int{2}},
+	OpArray:               {"OpArray", []int{2}},
+	OpIndex:               {"OpIndex", []int{}},
+	OpNullishIndex:        {"OpNullishIndex", []int{}},
+	OpMemberAccess:        {"OpMemberAccess", []int{}},
+	OpNullishMemberAccess: {"OpNullishMemberAccess", []int{}},
+	OpObject:              {"OpObject", []int{2}},
+	OpCallFunction:        {"OpCallFunction", []int{2, 2}},
+	OpPipe:                {"OpPipe", []int{2, 2, 2}}, // pipeTypeIdx, aliasIdx, blockIdx
+	OpNull:                {"OpNull", []int{}},
 }
 
 func Lookup(op byte) (*Definition, error) {
