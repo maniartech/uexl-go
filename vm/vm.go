@@ -131,6 +131,12 @@ func (vm *VM) run() error {
 				return err
 			}
 			frame.ip += 1
+		case code.OpNull:
+			err := vm.Push(nil)
+			if err != nil {
+				return err
+			}
+			frame.ip += 1
 		case code.OpArray:
 			length := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			array := vm.buildArray(int(length))
@@ -151,9 +157,24 @@ func (vm *VM) run() error {
 			}
 			frame.ip += 3
 		case code.OpIndex:
+			nullish := vm.Pop().(bool)
 			index := vm.Pop()
-			array := vm.Pop()
-			err := vm.executeIndex(array, index)
+			target := vm.Pop()
+			err := vm.executeIndex(target, index, nullish)
+			if err != nil {
+				return err
+			}
+			frame.ip += 1
+		// case code.OpNullishIndex:
+		// 	index := vm.Pop()
+		// 	target := vm.Pop()
+
+		// 	frame.ip += 1
+		case code.OpMemberAccess:
+			nullish := vm.Pop().(bool)
+			index := vm.Pop()
+			target := vm.Pop()
+			err := vm.executeMemberAccess(target, index, nullish)
 			if err != nil {
 				return err
 			}
@@ -166,7 +187,6 @@ func (vm *VM) run() error {
 				return err
 			}
 			frame.ip += 5
-
 		case code.OpPipe:
 			pipeTypeIdx := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			aliasIdx := code.ReadUint16(frame.instructions[frame.ip+3 : frame.ip+5])
