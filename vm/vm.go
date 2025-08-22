@@ -119,6 +119,15 @@ func (vm *VM) run() error {
 			} else {
 				frame.ip += 3
 			}
+		case code.OpJumpIfNil:
+			// Operand is uint16 target address
+			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			// Peek (do not pop) so subsequent access still has receiver
+			if vm.sp > 0 && vm.stack[vm.sp-1] == nil {
+				frame.ip = int(pos)
+				continue
+			}
+			frame.ip += 3
 		case code.OpTrue:
 			err := vm.Push(true)
 			if err != nil {
@@ -157,25 +166,16 @@ func (vm *VM) run() error {
 			}
 			frame.ip += 3
 		case code.OpIndex:
-			nullish := vm.Pop().(bool)
 			index := vm.Pop()
 			target := vm.Pop()
-			err := vm.executeIndex(target, index, nullish)
-			if err != nil {
+			if err := vm.executeIndex(target, index); err != nil {
 				return err
 			}
 			frame.ip += 1
-		// case code.OpNullishIndex:
-		// 	index := vm.Pop()
-		// 	target := vm.Pop()
-
-		// 	frame.ip += 1
 		case code.OpMemberAccess:
-			nullish := vm.Pop().(bool)
-			index := vm.Pop()
+			prop := vm.Pop()
 			target := vm.Pop()
-			err := vm.executeMemberAccess(target, index, nullish)
-			if err != nil {
+			if err := vm.executeMemberAccess(target, prop); err != nil {
 				return err
 			}
 			frame.ip += 1

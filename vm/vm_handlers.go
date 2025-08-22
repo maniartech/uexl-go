@@ -235,38 +235,32 @@ func (vm *VM) buildObject(startIndex, endIndex int) (map[string]any, error) {
 	return object, nil
 }
 
-func (vm *VM) executeIndex(operand, index any, nullish bool) error {
+func (vm *VM) executeIndex(operand, index any) error {
 	switch arr := operand.(type) {
 	case []any, string:
-		return vm.executeIndexValue(arr, index, nullish)
+		return vm.executeIndexValue(arr, index)
 	case map[string]any:
-		return vm.executeMapIndexAccess(arr, index, nullish)
+		return vm.executeMapIndexAccess(arr, index)
 	case nil:
-		if nullish {
-			return vm.Push(nil)
-		}
-	
+		return fmt.Errorf("cannot index nil")
 	}
 	return fmt.Errorf("indexing not supported for %T", operand)
 }
 
-func (vm *VM) executeMemberAccess(container, index any, nullish bool) error {
+func (vm *VM) executeMemberAccess(container, index any) error {
 	switch v := container.(type) {
 	case map[string]any:
-		return vm.executeMapIndexAccess(v, index, nullish)
+		return vm.executeMapIndexAccess(v, index)
 	case []any, string:
-		return vm.executeIndexValue(v, index, nullish)
+		return vm.executeIndexValue(v, index)
 	case nil:
-		if nullish {
-			return vm.Push(nil)
-		}
+		return fmt.Errorf("cannot access member of nil")
 	}
 	return fmt.Errorf("member access not supported for %T", container)
 }
 
-// Suggestion for merging array and string index functions
-func (vm *VM) executeIndexValue(target any, index any, nullish bool) error {
-	idx := 0
+func (vm *VM) executeIndexValue(target any, index any) error {
+	var idx int
 	switch v := index.(type) {
 	case float64:
 		idx = int(v)
@@ -276,54 +270,36 @@ func (vm *VM) executeIndexValue(target any, index any, nullish bool) error {
 		return fmt.Errorf("array index must be int, got %T", index)
 	}
 
-	// Determine the type of the target and perform the appropriate indexing
 	switch v := target.(type) {
 	case []any:
 		if idx < 0 || idx >= len(v) {
-			if nullish {
-				return vm.Push(nil)
-			}
 			return fmt.Errorf("array index out of bounds: %d", idx)
-
 		}
 		return vm.Push(v[idx])
 	case string:
 		if idx < 0 || idx >= len(v) {
-			if nullish {
-				return vm.Push(nil)
-			}
 			return fmt.Errorf("string index out of bounds: %d", idx)
 		}
 		return vm.Push(string(v[idx]))
 	default:
-		if nullish {
-			return vm.Push(nil)
-		}
 		return fmt.Errorf("unsupported target type for indexing: %T", target)
 	}
 }
 
-func (vm *VM) executeMapIndexAccess(container, index any, nullish bool) error {
+func (vm *VM) executeMapIndexAccess(container, index any) error {
 	key, ok := index.(string)
 	if !ok {
 		return fmt.Errorf("object key must be string, got %T", index)
 	}
 	if container == nil {
-		if nullish {
-			return vm.Push(nil)
-		}
 		return fmt.Errorf("cannot access property of nil")
 	}
 	value, exists := container.(map[string]any)[key]
 	if !exists {
-		if nullish {
-			return vm.Push(nil)
-		}
 		return fmt.Errorf("key %q not found in object", key)
 	}
 	return vm.Push(value)
 }
-
 func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
 
 	if int(funcIndex) < 0 || int(funcIndex) >= len(vm.constants) {

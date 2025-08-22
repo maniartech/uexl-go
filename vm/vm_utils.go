@@ -43,11 +43,10 @@ type VM struct {
 	pipeHandlers    PipeHandlers     // Add pipe handlers registry
 	pipeScopes      []map[string]any // Add scope stack for pipe variables
 
-	instructions code.Instructions
-	stack        []any
-	sp           int
-	frames       []*Frame
-	framesIdx    int
+	stack     []any
+	sp        int
+	frames    []*Frame
+	framesIdx int
 }
 
 func New(libCtx LibContext) *VM {
