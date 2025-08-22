@@ -31,6 +31,12 @@ type InstructionBlock struct {
 	Instructions code.Instructions
 }
 
+type accessStep struct {
+	isMember   bool
+	property   any
+	isOptional bool
+}
+
 func (c *Compiler) Compile(node parser.Node) error {
 	switch node := node.(type) {
 	case *parser.BinaryExpression:
@@ -179,30 +185,41 @@ func (c *Compiler) Compile(node parser.Node) error {
 			c.emit(code.OpPipe, pipeTypeIdx, aliasIdx, blockIdx)
 
 		}
-	case *parser.IndexAccess:
-		if err := c.Compile(node.Target); err != nil {
+	case *parser.MemberAccess, *parser.IndexAccess:
+		base, steps := flattenAccessChain(node)
+		// Compile base once
+		if err := c.Compile(base); err != nil {
 			return err
 		}
-		if err := c.Compile(node.Index); err != nil {
-			return err
+
+		// Collect jump placeholders for every optional step; each JumpIfNil
+		// skips the remainder of the chain (including future index/property eval).
+		var jumpPositions []int
+		for _, step := range steps {
+			if step.isOptional {
+				pos := len(c.currentInstructions())
+				c.emit(code.OpJumpIfNil, 0) // placeholder (uint16 address)
+				jumpPositions = append(jumpPositions, pos)
+			}
+			if step.isMember {
+				// Push property name constant
+				propIdx := c.addConstant(step.property)
+				c.emit(code.OpConstant, propIdx)
+				// Perform member access (consumes receiver + property)
+				c.emit(code.OpMemberAccess)
+			} else {
+				// Compile index expression only if not short-circuited
+				if err := c.Compile(step.property.(parser.Node)); err != nil {
+					return err
+				}
+				c.emit(code.OpIndex)
+			}
 		}
-		if node.Optional {
-			c.emit(code.OpTrue)
-		} else {
-			c.emit(code.OpFalse)
+		end := len(c.currentInstructions())
+		for _, jp := range jumpPositions {
+			c.replaceOperand(jp+1, end)
 		}
-		c.emit(code.OpIndex)
-	case *parser.MemberAccess:
-		if err := c.Compile(node.Target); err != nil {
-			return err
-		}
-		c.emit(code.OpConstant, c.addConstant(node.Property)) // Push property onto stack
-		if node.Optional {
-			c.emit(code.OpTrue)
-		} else {
-			c.emit(code.OpFalse)
-		}
-		c.emit(code.OpMemberAccess)
+		return nil
 	case *parser.ObjectLiteral:
 		// Ensure deterministic order by sorting keys
 		keys := make([]string, 0, len(node.Properties))
