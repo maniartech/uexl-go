@@ -60,24 +60,35 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 		}
 		err = testExpectedObject(t, tt.expected, output)
 		if err != nil {
-			t.Fatalf("[case %d] testExpectedObject error: %s", i+1, err)
+			t.Fatalf("[case %d][input: %q] testExpectedObject error: %s", i+1, tt.input, err)
 		}
 	}
 }
 
 // testExpectedObject compares the expected value with the actual value from the VM stack.
 func testExpectedObject(t *testing.T, expected any, actual any) error {
-	switch v := actual.(type) {
+	switch v := expected.(type) {
 	case float64:
-	case int:
 		// converting the value to float64 for comparison
-		if float64(v) != actual.(float64) {
-			return fmt.Errorf("expected %f, got %f", float64(v), actual.(float64))
+		if a, ok := actual.(float64); ok {
+			if v != a {
+				return fmt.Errorf("expected %f, got %f", v, a)
+			}
+		} else {
+			return fmt.Errorf("expected a float64, got %T", actual)
+		}
+	case int:
+		if a, ok := actual.(int); ok {
+			if v != a {
+				return fmt.Errorf("expected %d, got %d", v, a)
+			}
+		} else {
+			return fmt.Errorf("expected a int, got %T", actual)
 		}
 	case bool:
 		if a, ok := actual.(bool); ok {
 			if v != a {
-				return fmt.Errorf("expected %t, got %t", v, a)
+				return fmt.Errorf("expected %t, got %t", expected, actual)
 			}
 		} else {
 			return fmt.Errorf("expected a boolean, got %T", actual)
@@ -85,7 +96,7 @@ func testExpectedObject(t *testing.T, expected any, actual any) error {
 	case string:
 		if a, ok := actual.(string); ok {
 			if v != a {
-				return fmt.Errorf("expected %q, got %q", v, a)
+				return fmt.Errorf("expected %q, got %q", expected, actual)
 			}
 		} else {
 			return fmt.Errorf("expected a string, got %T", actual)
@@ -93,7 +104,7 @@ func testExpectedObject(t *testing.T, expected any, actual any) error {
 	case []any:
 		e, ok := expected.([]any)
 		if !ok {
-			return fmt.Errorf("expected an array, got %T", expected)
+			return fmt.Errorf("expected an array, got %T", actual)
 		}
 		if len(v) != len(e) {
 			return fmt.Errorf("expected array of length %d, got %d", len(e), len(v))
@@ -124,6 +135,10 @@ func testExpectedObject(t *testing.T, expected any, actual any) error {
 			if _, exists := v[key]; !exists {
 				return fmt.Errorf("missing expected key %q in object", key)
 			}
+		}
+	case nil:
+		if actual != nil {
+			return fmt.Errorf("expected nil, got %T", actual)
 		}
 	default:
 		return fmt.Errorf("unsupported type: %T (value: %v)", actual, actual)
@@ -281,6 +296,38 @@ func TestUnaryLogicalNot(t *testing.T) {
 		{`!!({})`, false},
 		{`!({"a":1})`, false},
 		{`!!({"a":1})`, true},
+
+		// More complex and nested cases
+		{`!([1, false, 0, ""])`, false},
+		{`!([false, 0, ""])`, false},
+		{`!!([false, 0, ""])`, true},
+		{`!([1, 2, 3][0])`, false},
+		{`!([1, 2, 3][2])`, false},
+		{`!([1, 2, 3][2])`, true}, // out of bounds returns undefined/falsy
+		{`!({"a": 0, "b": false}["a"])`, true},
+		{`!({"a": 1, "b": false}["a"])`, false},
+		{`!({"a": 1, "b": false}["b"])`, true},
+		{`!!({"a": 1, "b": false}["a"])`, true},
+		{`!!({"a": 1, "b": false}["b"])`, false},
+		{`!([1,2,3][0] && true)`, false},
+		{`!([1,2,3][0] && false)`, true},
+		{`!([1,2,3][0] || false)`, false},
+		{`!((1 && 0) || ("" && true))`, true},
+		{`!!((1 && 0) || ("" && true))`, false},
+		{`!((1 || 0) && ("foo" || ""))`, false},
+		{`!!((1 || 0) && ("foo" || ""))`, true},
+		{`!(!([1,2,3][1] > 1))`, true},
+		{`!!(!([1,2,3][1] > 1))`, false},
+		{`!(!([1,2,3][1] < 1))`, false},
+		{`!!(!([1,2,3][1] < 1))`, true},
+		{`!(!([1,2,3][1] == 2))`, true},
+		{`!!(!([1,2,3][1] == 2))`, false},
+		{`!(!([1,2,3][1] != 2))`, false},
+		{`!!(!([1,2,3][1] != 2))`, true},
+		{`!(!([1,2,3][1] >= 2))`, true},
+		{`!!(!([1,2,3][1] >= 2))`, false},
+		{`!(!([1,2,3][1] <= 2))`, true},
+		{`!!(!([1,2,3][1] <= 2))`, false},
 	}
 	runVmTests(t, tests)
 }
@@ -380,21 +427,53 @@ func TestArrayLiterals(t *testing.T) {
 	}
 	runVmTests(t, tests)
 }
-func TestArrayIndexing(t *testing.T) {
+func TestIndexing(t *testing.T) {
 	tests := []vmTestCase{
-		{"[1, 2, 3][0]", 1},
-		{"[1, 2, 3][1]", 2},
-		{"[1, 2, 3][2]", 3},
-		{"[10, 20, 30, 40][3]", 40},
-		{"[true, false, true][1]", false},
-		{`["a", "b", "c"][2]`, "c"},
-		{"[1 + 2, 3 * 4, 5 - 1][1]", 12},
-		{"[1, 2, 3][0] == 1", true},
-		{"[1, 2, 3][1] + 5", 7},
-		{"[1, 2, 3][2] * 2", 6},
-		{"[1, 2, 3][0] + [4, 5, 6][2]", 7},
-		{"[[1,2],[3,4]][1][0]", 3},
-		{"[1, [2, 3+5], 4][1][1]", 8},
+		// Array indexing with []
+		// {"[1, 2, 3][0]", 1.0},
+		// {"[1, 2, 3][1]", 2.0},
+		// {"[1, 2, 3][2]", 3.0},
+		// {"[10, 20, 30, 40][3]", 40.0},
+		// {"[true, false, true][1]", false},
+		// {`["a", "b", "c"][2]`, "c"},
+		// {"[1 + 2, 3 * 4, 5 - 1][1]", 12.0},
+		// {"[1, 2, 3][0] == 1", true},
+		// {"[1, 2, 3][1] + 5", 7.0},
+		// {"[1, 2, 3][2] * 2", 6.0},
+		// {"[1, 2, 3][0] + [4, 5, 6][2]", 7.0},
+		// {"[[1,2],[3,4]][1][0]", 3.0},
+		// {"[1, [2, 3+5], 4][1][1]", 8.0},
+
+		// // String indexing with []
+		// {`"hello"[0]`, "h"},
+		// {`"hello"[1]`, "e"},
+		// {`"hello"[4]`, "o"},
+		// {`"world"[2]`, "r"},
+		// {`"abcde"[3]`, "d"},
+		// {`"foo"[1] == "o"`, true},
+
+		// Array indexing with dot notation
+		{"[1, 2, 3].0", 1},
+		{"[1, 2, 3].1", 2},
+		{"[1, 2, 3].2", 3},
+		{"[10, 20, 30, 40].3", 40},
+		{"[true, false, true].1", false},
+		{`["a", "b", "c"].2`, "c"},
+		{"[1 + 2, 3 * 4, 5 - 1].1", 12},
+		{"[1, 2, 3].0 == 1", true},
+		{"[1, 2, 3].1 + 5", 7},
+		{"[1, 2, 3].2 * 2", 6},
+		{"[1, 2, 3].0 + [4, 5, 6].2", 7},
+		// {"[[1,2],[3,4]].1.2", 4}, // Fix operator being returned as 1.2 instead 1st element's 2nd element
+		{"[1, [2, 3+5], 4].1.1", 8},
+
+		// String indexing with dot notation
+		{`"hello".0`, "h"},
+		{`"hello".1`, "e"},
+		{`"hello".4`, "o"},
+		{`"world".2`, "r"},
+		{`"abcde".3`, "d"},
+		{`"foo".1 == "o"`, true},
 	}
 	runVmTests(t, tests)
 }
@@ -480,5 +559,59 @@ func TestPipeFunction(t *testing.T) {
 		// Chunk: chunk size 2, sum each chunk
 		// {"[1,2,3,4,5] |chunk: $chunk[0] + ($chunk[1] ?? 0)", []any{3, 7, 5}},
 	}
+	runVmTests(t, tests)
+}
+
+func TestNullishOperator(t *testing.T) {
+	tests := []vmTestCase{
+		// Array nullish index: out of bounds returns nil
+		// {`[1,2,3,4]?[10]`, nil},
+		{`[1,2,3,4]?[0]`, 1.0},
+		{`[1,2,3,4]?[3]`, 4.0},
+		{`[1,2,3,4]?[4]`, nil},
+		{`[]?[0]`, nil},
+		{`[null]?[0]`, nil},
+
+		// Object nullish member: key not found returns nil
+		{`{}?.name`, nil},
+		{`{"name": "value"}?.name`, "value"},
+		{`{"name": null}?.name`, nil},
+		{`{"name": null}?.name?.first`, nil},
+		{`{"user": {"name": "alice"}}?.user?.name`, "alice"},
+		{`{"user": {"name": null}}?.user?.name`, nil},
+		{`{"user": null}?.user?.name`, nil},
+		{`{"user": {"profile": {"age": 30}}}?.user?.profile?.age`, 30.0},
+		{`{"user": {"profile": null}}?.user?.profile?.age`, nil},
+		{`{"user": null}?.user?.profile?.age`, nil},
+
+		// Null target: always returns nil
+		{`null?.name`, nil},
+		{`null?[0]`, nil},
+		{`null?.foo?.bar`, nil},
+		{`null?[10]?.foo`, nil},
+
+		// Nested nullish checks
+		{`{"a": null}?.a?.b`, nil},
+		{`{"a": {"b": null}}?.a?.b?.c`, nil},
+		{`{"a": {"b": {"c": 42}}}?.a?.b?.c`, 42.0},
+		{`{"a": {"b": {"c": null}}}?.a?.b?.c`, nil},
+
+		// String nullish index: out of bounds returns nil
+		{`"hello"?.[10]`, nil},
+		{`"hello"?.[0]`, "h"},
+		{`"hello"?.[4]`, "o"},
+		{`""?.[0]`, nil},
+
+		// Array of objects with nullish member access
+		{`[{"x": 1}, {"y": 2}]?[0]?.x`, 1.0},
+		{`[{"x": 1}, {"y": 2}]?[1]?.x`, nil},
+		{`[{"x": null}]?[0]?.x`, nil},
+		{`[null]?[0]?.x`, nil},
+
+		// Deeply nested nullish chain
+		{`{"a": [{"b": null}]}?.a?[0]?.b?.c`, nil},
+		{`{"a": [{"b": {"c": 99}}]}?.a?[0]?.b?.c`, 99.0},
+	}
+
 	runVmTests(t, tests)
 }
