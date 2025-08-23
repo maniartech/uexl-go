@@ -7,6 +7,7 @@
 - [Variables and Identifiers](variables-identifiers.md)
 - [Operators](operators/overview.md)
   - [Operator Precedence](operators/precedence.md)
+  - [Optional and Nullish Quick Reference](operators/nullish-and-optional-quickref.md)
 - [Expressions](expressions.md)
 - [Glossary](glossary.md)
 - [Mutability and Purity](mutability.md)
