@@ -18,9 +18,12 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 - Nullish coalescing (`a ?? b`) only falls back when `a` is null. It does not treat valid “falsy” values (0, "", false, empty array/object) as missing.
 - Logical operators (`||`, `&&`, `!`) work on truthiness. They’re for control flow, not for data defaulting.
 
-3) No implicit softening
-- `a.b ?? c` does not guard the member access. If `a.b` would error, it still errors before `??` is considered.
-- To permit softer behavior for missing keys/indices, use explicit helpers or checks provided by the host (future helpers may be introduced). UExL won’t silently convert missing to null.
+3) Safe mode with nullish coalescing
+- Only the immediate property/index access on the left of `??` is evaluated in “safe” mode.
+- Example: `x.a.b ?? c` softens only the final access of `b` in `a`.
+  - If `b` exists in `a` but is null → use `c`.
+  - If `b` doesn’t exist in `a` at all → use `c`.
+  - If `a` doesn’t exist in `x` (or any prior link fails) → still an error. Earlier links remain strict.
 
 4) Short‑circuiting without side effects
 - `a && b` evaluates `b` only if `a` is truthy; `a || b` evaluates `b` only if `a` is falsy.
@@ -33,7 +36,8 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 - Separate nullish from falsy:
   - Use `a ?? b` to default only when `a` is null; it preserves valid falsy like `0`, `""`, `false`.
   - Use `||`, `&&`, and `!` for truthiness-based control flow, not for data defaulting.
-- No implicit softening on the left of `??`: `a.b ?? c` still evaluates `a.b` strictly and will error if that access fails; `??` is considered only after the left expression produces a value.
+- Safe mode with nullish coalescing: `??` provides safety for the immediate property/index access only
+  - `x.a.b ?? c` is safe for accessing `b` in `a`, but not for accessing `a` in `x`
 - Short-circuit evaluation without side effects: `a?.[i]` does not evaluate `i` when `a` is nullish; logical ops only evaluate the right side when needed.
 
 ## Practical guidance and examples
@@ -42,14 +46,17 @@ UExL is deliberately explicit about how values are accessed and how defaults are
   - `count ?? 0` → use a default only when `count` is truly null.
 - Avoid using `||` for defaults when falsy values are meaningful:
   - `count || 0` would replace 0 with 0 again (fine) but also replace "" or false, and can be wrong in other contexts.
+- Safe property access with nullish coalescing (immediate access only):
+  - `user.name ?? "Anonymous"` → provides fallback when `name` property is missing or null in `user`
+  - `data.user.name ?? "Anonymous"` → safe for `name` in `user`, but `user` must exist in `data`
 - Optional access guards only the base being nullish, not missing members:
   - `(user?.address).city` can still error if `user` exists but `address` is missing.
   - Use explicit checks or host helpers for existence if you want to treat missing as acceptable.
 
 ## Precedence notes
 
-- Access (`.`, `[ ]`, `?.`, `?[ ]`) binds tighter than `??`, `||`, and `&&`.
-- In UExL, `??` binds tighter than `||` and `&&`. Parenthesize for readability when mixing.
+- Access operators (`.`, `[ ]`, `?.`, `?[ ]`) bind tighter than `??`, `||`, and `&&`.
+- `??` binds tighter than `||` and `&&`. Parenthesize for readability when mixing.
 
 ## Related reading
 
