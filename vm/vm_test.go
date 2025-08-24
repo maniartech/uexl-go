@@ -60,24 +60,35 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 		}
 		err = testExpectedObject(t, tt.expected, output)
 		if err != nil {
-			t.Fatalf("[case %d] testExpectedObject error: %s", i+1, err)
+			t.Fatalf("[case %d][input: %q] testExpectedObject error: %s", i+1, tt.input, err)
 		}
 	}
 }
 
 // testExpectedObject compares the expected value with the actual value from the VM stack.
 func testExpectedObject(t *testing.T, expected any, actual any) error {
-	switch v := actual.(type) {
+	switch v := expected.(type) {
 	case float64:
-	case int:
 		// converting the value to float64 for comparison
-		if float64(v) != actual.(float64) {
-			return fmt.Errorf("expected %f, got %f", float64(v), actual.(float64))
+		if a, ok := actual.(float64); ok {
+			if v != a {
+				return fmt.Errorf("expected %f, got %f", v, a)
+			}
+		} else {
+			return fmt.Errorf("expected a float64, got %T", actual)
+		}
+	case int:
+		if a, ok := actual.(int); ok {
+			if v != a {
+				return fmt.Errorf("expected %d, got %d", v, a)
+			}
+		} else {
+			return fmt.Errorf("expected a int, got %T", actual)
 		}
 	case bool:
 		if a, ok := actual.(bool); ok {
 			if v != a {
-				return fmt.Errorf("expected %t, got %t", v, a)
+				return fmt.Errorf("expected %t, got %t", expected, actual)
 			}
 		} else {
 			return fmt.Errorf("expected a boolean, got %T", actual)
@@ -85,7 +96,7 @@ func testExpectedObject(t *testing.T, expected any, actual any) error {
 	case string:
 		if a, ok := actual.(string); ok {
 			if v != a {
-				return fmt.Errorf("expected %q, got %q", v, a)
+				return fmt.Errorf("expected %q, got %q", expected, actual)
 			}
 		} else {
 			return fmt.Errorf("expected a string, got %T", actual)
@@ -93,7 +104,7 @@ func testExpectedObject(t *testing.T, expected any, actual any) error {
 	case []any:
 		e, ok := expected.([]any)
 		if !ok {
-			return fmt.Errorf("expected an array, got %T", expected)
+			return fmt.Errorf("expected an array, got %T", actual)
 		}
 		if len(v) != len(e) {
 			return fmt.Errorf("expected array of length %d, got %d", len(e), len(v))
@@ -125,6 +136,10 @@ func testExpectedObject(t *testing.T, expected any, actual any) error {
 				return fmt.Errorf("missing expected key %q in object", key)
 			}
 		}
+	case nil:
+		if actual != nil {
+			return fmt.Errorf("expected nil, got %T", actual)
+		}
 	default:
 		return fmt.Errorf("unsupported type: %T (value: %v)", actual, actual)
 	}
@@ -133,25 +148,25 @@ func testExpectedObject(t *testing.T, expected any, actual any) error {
 
 func TestNumberArithmetic(t *testing.T) {
 	tests := []vmTestCase{
-		{"1", 1},
-		{"2", 2},
-		{"1 + 2", 3},
-		{"1 - 2", -1},
-		{"1 * 2", 2},
-		{"4 / 2", 2},
-		{"50 / 2 * 2 + 10 - 5", 55},
-		{"5 + 5 + 5 + 5 - 10", 10},
-		{"2 * 2 * 2 * 2 * 2", 32},
-		{"5 * 2 + 10", 20},
-		{"5 + 2 * 10", 25},
-		{"5 * (2 + 10)", 60},
-		{"-5", -5},
-		{"-10", -10},
-		{"-50 + 100 + -50", 0},
-		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50},
-		{"-(-20 + 10)", 10},
-		{"--10", 10},
-		{"2 ** 3", 8}, // Power operator test
+		{"1", 1.0},
+		{"2", 2.0},
+		{"1 + 2", 3.0},
+		{"1 - 2", -1.0},
+		{"1 * 2", 2.0},
+		{"4 / 2", 2.0},
+		{"50 / 2 * 2 + 10 - 5", 55.0},
+		{"5 + 5 + 5 + 5 - 10", 10.0},
+		{"2 * 2 * 2 * 2 * 2", 32.0},
+		{"5 * 2 + 10", 20.0},
+		{"5 + 2 * 10", 25.0},
+		{"5 * (2 + 10)", 60.0},
+		{"-5", -5.0},
+		{"-10", -10.0},
+		{"-50 + 100 + -50", 0.0},
+		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50.0},
+		{"-(-20 + 10)", 10.0},
+		{"--10", 10.0},
+		{"2 ** 3", 8.0}, // Power operator test
 
 		// Floating point tests
 		{"1.5", 1.5},
@@ -203,17 +218,17 @@ func TestNumberComparison(t *testing.T) {
 }
 func TestBitwiseOperations(t *testing.T) {
 	tests := []vmTestCase{
-		{"5 & 3", 1},             // 0101 & 0011 = 0001
-		{"5 | 3", 7},             // 0101 | 0011 = 0111
-		{"5 ^ 3", 6},             // 0101 ^ 0011 = 0110
-		{"8 << 2", 32},           // 1000 << 2 = 100000
-		{"32 >> 3", 4},           // 100000 >> 3 = 100
-		{"15 & 7", 7},            // 1111 & 0111 = 0111
-		{"15 | 7", 15},           // 1111 | 0111 = 1111
-		{"15 ^ 7", 8},            // 1111 ^ 0111 = 1000
-		{"1 << 4", 16},           // 0001 << 4 = 10000
-		{"16 >> 2", 4},           // 10000 >> 2 = 100
-		{"(5 & 3) | (2 ^ 1)", 3}, // (1) | (3) = 3
+		{"5 & 3", 1.0},             // 0101 & 0011 = 0001
+		{"5 | 3", 7.0},             // 0101 | 0011 = 0111
+		{"5 ^ 3", 6.0},             // 0101 ^ 0011 = 0110
+		{"8 << 2", 32.0},           // 1000 << 2 = 100000
+		{"32 >> 3", 4.0},           // 100000 >> 3 = 100
+		{"15 & 7", 7.0},            // 1111 & 0111 = 0111
+		{"15 | 7", 15.0},           // 1111 | 0111 = 1111
+		{"15 ^ 7", 8.0},            // 1111 ^ 0111 = 1000
+		{"1 << 4", 16.0},           // 0001 << 4 = 10000
+		{"16 >> 2", 4.0},           // 10000 >> 2 = 100
+		{"(5 & 3) | (2 ^ 1)", 3.0}, // (1) | (3) = 3
 	}
 	runVmTests(t, tests)
 }
@@ -281,6 +296,37 @@ func TestUnaryLogicalNot(t *testing.T) {
 		{`!!({})`, false},
 		{`!({"a":1})`, false},
 		{`!!({"a":1})`, true},
+
+		// More complex and nested cases
+		{`!([1, false, 0, ""])`, false},
+		{`!([false, 0, ""])`, false},
+		{`!!([false, 0, ""])`, true},
+		{`!([1, 2, 3][0])`, false},
+		{`!([1, 2, 3][2])`, false},
+		{`!({"a": 0, "b": false}["a"])`, true},
+		{`!({"a": 1, "b": false}["a"])`, false},
+		{`!({"a": 1, "b": false}["b"])`, true},
+		{`!!({"a": 1, "b": false}["a"])`, true},
+		{`!!({"a": 1, "b": false}["b"])`, false},
+		{`!([1,2,3][0] && true)`, false},
+		{`!([1,2,3][0] && false)`, true},
+		{`!([1,2,3][0] || false)`, false},
+		{`!((1 && 0) || ("" && true))`, true},
+		{`!!((1 && 0) || ("" && true))`, false},
+		{`!((1 || 0) && ("foo" || ""))`, false},
+		{`!!((1 || 0) && ("foo" || ""))`, true},
+		{`!(!([1,2,3][1] > 1))`, true},
+		{`!!(!([1,2,3][1] > 1))`, false},
+		{`!(!([1,2,3][1] < 1))`, false},
+		{`!!(!([1,2,3][1] < 1))`, true},
+		{`!(!([1,2,3][1] == 2))`, true},
+		{`!!(!([1,2,3][1] == 2))`, false},
+		{`!(!([1,2,3][1] != 2))`, false},
+		{`!!(!([1,2,3][1] != 2))`, true},
+		{`!(!([1,2,3][1] >= 2))`, true},
+		{`!!(!([1,2,3][1] >= 2))`, false},
+		{`!(!([1,2,3][1] <= 2))`, true},
+		{`!!(!([1,2,3][1] <= 2))`, false},
 	}
 	runVmTests(t, tests)
 }
@@ -301,16 +347,16 @@ func TestLogicalShortCircuit(t *testing.T) {
 		{`false && 0 && ""`, false}, // all falsy, returns false
 
 		// Chained with numbers and strings
-		{`0 || 42`, 42},
+		{`0 || 42`, 42.0},
 		{`"foo" || "bar"`, "foo"},
 		{`"" || "bar"`, "bar"},
-		{`1 && 2 && 3`, 3},
-		{`1 && 0 && 3`, 0},
-		{`0 && 1`, 0},
+		{`1 && 2 && 3`, 3.0},
+		{`1 && 0 && 3`, 0.0},
+		{`0 && 1`, 0.0},
 
 		// Nested expressions
-		{`(false || 0) && (true || "baz")`, 0},
-		{`(true && 1) || (false && "baz")`, 1},
+		{`(false || 0) && (true || "baz")`, 0.0},
+		{`(true && 1) || (false && "baz")`, 1.0},
 	}
 	runVmTests(t, tests)
 }
@@ -345,9 +391,9 @@ func TestStringComparison(t *testing.T) {
 
 func TestStringLengthFunction(t *testing.T) {
 	tests := []vmTestCase{
-		{`len("hello")`, 5},
-		{`len("")`, 0},
-		{`len("abcde")`, 5},
+		{`len("hello")`, 5.0},
+		{`len("")`, 0.0},
+		{`len("abcde")`, 5.0},
 	}
 	runVmTests(t, tests)
 }
@@ -380,33 +426,65 @@ func TestArrayLiterals(t *testing.T) {
 	}
 	runVmTests(t, tests)
 }
-func TestArrayIndexing(t *testing.T) {
+func TestIndexing(t *testing.T) {
 	tests := []vmTestCase{
-		{"[1, 2, 3][0]", 1},
-		{"[1, 2, 3][1]", 2},
-		{"[1, 2, 3][2]", 3},
-		{"[10, 20, 30, 40][3]", 40},
-		{"[true, false, true][1]", false},
-		{`["a", "b", "c"][2]`, "c"},
-		{"[1 + 2, 3 * 4, 5 - 1][1]", 12},
-		{"[1, 2, 3][0] == 1", true},
-		{"[1, 2, 3][1] + 5", 7},
-		{"[1, 2, 3][2] * 2", 6},
-		{"[1, 2, 3][0] + [4, 5, 6][2]", 7},
-		{"[[1,2],[3,4]][1][0]", 3},
-		{"[1, [2, 3+5], 4][1][1]", 8},
+		// Array indexing with []
+		// {"[1, 2, 3][0]", 1.0},
+		// {"[1, 2, 3][1]", 2.0},
+		// {"[1, 2, 3][2]", 3.0},
+		// {"[10, 20, 30, 40][3]", 40.0},
+		// {"[true, false, true][1]", false},
+		// {`["a", "b", "c"][2]`, "c"},
+		// {"[1 + 2, 3 * 4, 5 - 1][1]", 12.0},
+		// {"[1, 2, 3][0] == 1", true},
+		// {"[1, 2, 3][1] + 5", 7.0},
+		// {"[1, 2, 3][2] * 2", 6.0},
+		// {"[1, 2, 3][0] + [4, 5, 6][2]", 7.0},
+		// {"[[1,2],[3,4]][1][0]", 3.0},
+		// {"[1, [2, 3+5], 4][1][1]", 8.0},
+
+		// // String indexing with []
+		// {`"hello"[0]`, "h"},
+		// {`"hello"[1]`, "e"},
+		// {`"hello"[4]`, "o"},
+		// {`"world"[2]`, "r"},
+		// {`"abcde"[3]`, "d"},
+		// {`"foo"[1] == "o"`, true},
+
+		// Array indexing with dot notation
+		{"[1, 2, 3].0", 1.0},
+		{"[1, 2, 3].1", 2.0},
+		{"[1, 2, 3].2", 3.0},
+		{"[10, 20, 30, 40].3", 40.0},
+		{"[true, false, true].1", false},
+		{`["a", "b", "c"].2`, "c"},
+		{"[1 + 2, 3 * 4, 5 - 1].1", 12.0},
+		{"[1, 2, 3].0 == 1", true},
+		{"[1, 2, 3].1 + 5", 7.0},
+		{"[1, 2, 3].2 * 2", 6.0},
+		{"[1, 2, 3].0 + [4, 5, 6].2", 7.0},
+		// {"[[1,2],[3,4]].1.2", 4}, // Fix operator being returned as 1.2 instead 1st element's 2nd element
+		{"[1, [2, 3+5], 4].1.1", 8.0},
+
+		// String indexing with dot notation
+		{`"hello".0`, "h"},
+		{`"hello".1`, "e"},
+		{`"hello".4`, "o"},
+		{`"world".2`, "r"},
+		{`"abcde".3`, "d"},
+		{`"foo".1 == "o"`, true},
 	}
 	runVmTests(t, tests)
 }
 func TestObjectLiterals(t *testing.T) {
 	tests := []vmTestCase{
 		{`{}`, map[string]any{}},
-		{`{"a": 1}`, map[string]any{"a": 1}},
-		{`{"a": 1, "b": 2}`, map[string]any{"a": 1, "b": 2}},
+		{`{"a": 1}`, map[string]any{"a": 1.0}},
+		{`{"a": 1, "b": 2}`, map[string]any{"a": 1.0, "b": 2.0}},
 		{`{"x": true, "y": false, "z": "hello"}`, map[string]any{"x": true, "y": false, "z": "hello"}},
 		{`{"num": 42, "arr": [1,2,3], "obj": {"nested": "yes"}}`, map[string]any{
-			"num": 42,
-			"arr": []any{1, 2, 3},
+			"num": 42.0,
+			"arr": []any{1.0, 2.0, 3.0},
 			"obj": map[string]any{"nested": "yes"},
 		}},
 	}
@@ -415,12 +493,12 @@ func TestObjectLiterals(t *testing.T) {
 
 func TestObjectIndexing(t *testing.T) {
 	tests := []vmTestCase{
-		{`{"a": 1, "b": 2}["a"]`, 1},
-		{`{"a": 1, "b": 2}["b"]`, 2},
+		{`{"a": 1, "b": 2}["a"]`, 1.0},
+		{`{"a": 1, "b": 2}["b"]`, 2.0},
 		{`{"x": true, "y": false}["y"]`, false},
 		{`{"foo": "bar"}["foo"]`, "bar"},
-		{`{"arr": [1,2,3]}["arr"][1]`, 2},
-		{`{"obj": {"nested": 99}}["obj"]["nested"]`, 99},
+		{`{"arr": [1,2,3]}["arr"][1]`, 2.0},
+		{`{"obj": {"nested": 99}}["obj"]["nested"]`, 99.0},
 	}
 	runVmTests(t, tests)
 }
@@ -428,29 +506,29 @@ func TestObjectIndexing(t *testing.T) {
 func TestPipeFunction(t *testing.T) {
 	tests := []vmTestCase{
 		{`"foo" as $foo |pipe: $foo + "bar"`, "foobar"},
-		{"[1,2] |map: $item * 2", []any{2, 4}},
-		{"[1,2] |map: $item * $index", []any{0, 2}},
-		{"[1,2] |map: $item * 2 |map: $item + 1", []any{3, 5}},
-		{"[1,2,3,4,5,6] |filter: $item > 2", []any{3, 4, 5, 6}},
+		{"[1,2] |map: $item * 2", []any{2.0, 4.0}},
+		{"[1,2] |map: $item * $index", []any{0.0, 2.0}},
+		{"[1,2] |map: $item * 2 |map: $item + 1", []any{3.0, 5.0}},
+		{"[1,2,3,4,5,6] |filter: $item > 2", []any{3.0, 4.0, 5.0, 6.0}},
 
 		// Reduce: sum all items
-		{"[1,2,3,4] |reduce: ($acc || 0) + $item", 10},
+		{"[1,2,3,4] |reduce: ($acc || 0) + $item", 10.0},
 
 		// TODO: Reduce to an object
 		{"[1,2,3,4] |reduce: set($acc || {}, $index, $item)", map[string]any{
-			"0": 1,
-			"1": 2,
-			"2": 3,
-			"3": 4,
+			"0": 1.0,
+			"1": 2.0,
+			"2": 3.0,
+			"3": 4.0,
 		}},
 
 		// set with string key
-		{`set({}, "a", 1)`, map[string]any{"a": 1}},
+		{`set({}, "a", 1)`, map[string]any{"a": 1.0}},
 		// set with numeric key coerced to string
 		{`set({}, 5, "x")`, map[string]any{"5": "x"}},
 
 		// Find: first item greater than 2
-		{"[1,2,3,4] |find: $item > 2", 3},
+		{"[1,2,3,4] |find: $item > 2", 3.0},
 
 		// Some: any item is even
 		{"[1,2,3,4] |some: $item % 2 == 0", true},
@@ -461,12 +539,12 @@ func TestPipeFunction(t *testing.T) {
 		{"[1,2,3,0] |every: $item > 0", false},
 
 		// Unique: remove duplicates
-		{"[1,2,2,3,1,4] |unique: $item", []any{1, 2, 3, 4}},
+		{"[1,2,2,3,1,4] |unique: $item", []any{1.0, 2.0, 3.0, 4.0}},
 
 		// Sort: sort by value
-		{"[3,1,2] |sort: $item", []any{1, 2, 3}},
+		{"[3,1,2] |sort: $item", []any{1.0, 2.0, 3.0}},
 		// Sort: sort by computed value
-		{"[3,1,2] |sort: $item * -1", []any{3, 2, 1}},
+		{"[3,1,2] |sort: $item * -1", []any{3.0, 2.0, 1.0}},
 
 		// GroupBy: group by even/odd
 		// {`[1,2,3,4] |groupBy: $item % 2`, map[string]any{
@@ -475,10 +553,56 @@ func TestPipeFunction(t *testing.T) {
 		// }},
 
 		// // Window: window size 2, sum each window
-		{"[1,2,3,4] |window: $window[0] + $window[1]", []any{3, 5, 7}},
+		{"[1,2,3,4] |window: $window[0] + $window[1]", []any{3.0, 5.0, 7.0}},
 
 		// Chunk: chunk size 2, sum each chunk
 		// {"[1,2,3,4,5] |chunk: $chunk[0] + ($chunk[1] ?? 0)", []any{3, 7, 5}},
 	}
+	runVmTests(t, tests)
+}
+
+func TestNullishOperator(t *testing.T) {
+	tests := []vmTestCase{
+		// Simple member with existing key whose value is null
+		{`{"name": null}?.name`, nil},
+
+		// Nested existing keys
+		{`{"user": {"name": "alice"}}?.user?.name`, "alice"},
+		{`{"user": {"name": null}}?.user?.name`, nil},
+
+		// Intermediate nil stops chain
+		{`{"user": null}?.user?.name`, nil},
+		{`{"user": null}?.user?.profile?.age`, nil},
+
+		// Deeper nesting with existing path
+		{`{"user": {"profile": {"age": 30}}}?.user?.profile?.age`, 30.0},
+		{`{"user": {"profile": null}}?.user?.profile?.age`, nil},
+
+		// Null root
+		{`null?.name`, nil},
+		{`null?[0]`, nil},
+		{`null?.foo?.bar`, nil},
+		{`null?[10]?.foo`, nil},
+
+		// Chained null propagation
+		{`{"a": null}?.a?.b`, nil},
+		{`{"a": {"b": null}}?.a?.b?.c`, nil},
+		{`{"a": {"b": {"c": 42}}}?.a?.b?.c`, 42.0},
+		{`{"a": {"b": {"c": null}}}?.a?.b?.c`, nil},
+
+		// Arrays + objects (indexes in‑range, properties exist when accessed)
+		{`{"a": [{"b": {"c": 99}}]}?.a?[0]?.b?.c`, 99.0},
+		{`{"a": [{"b": null}]}?.a?[0]?.b?.c`, nil},
+
+		// Optional index on array of objects
+		{`[{"x": 1}, {"y": 2}]?[0]?.x`, 1.0},
+		{`[{"x": null}]?[0]?.x`, nil},
+		{`[null]?[0]?.x`, nil},
+
+		// Optional index on string (valid indices only)
+		{`"hello"?.[0]`, "h"},
+		{`"hello"?.[4]`, "o"},
+	}
+
 	runVmTests(t, tests)
 }

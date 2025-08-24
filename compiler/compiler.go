@@ -31,6 +31,12 @@ type InstructionBlock struct {
 	Instructions code.Instructions
 }
 
+type accessStep struct {
+	isMember   bool
+	property   any
+	isOptional bool
+}
+
 func (c *Compiler) Compile(node parser.Node) error {
 	switch node := node.(type) {
 	case *parser.BinaryExpression:
@@ -179,16 +185,41 @@ func (c *Compiler) Compile(node parser.Node) error {
 			c.emit(code.OpPipe, pipeTypeIdx, aliasIdx, blockIdx)
 
 		}
-
-	case *parser.IndexAccess:
-		if err := c.Compile(node.Target); err != nil {
+	case *parser.MemberAccess, *parser.IndexAccess:
+		base, steps := flattenAccessChain(node)
+		// Compile base once
+		if err := c.Compile(base); err != nil {
 			return err
 		}
-		if err := c.Compile(node.Index); err != nil {
-			return err
-		}
-		c.emit(code.OpIndex)
 
+		// Collect jump placeholders for every optional step; each JumpIfNil
+		// skips the remainder of the chain (including future index/property eval).
+		var jumpPositions []int
+		for _, step := range steps {
+			if step.isOptional {
+				pos := len(c.currentInstructions())
+				c.emit(code.OpJumpIfNil, 0) // placeholder (uint16 address)
+				jumpPositions = append(jumpPositions, pos)
+			}
+			if step.isMember {
+				// Push property name constant
+				propIdx := c.addConstant(step.property)
+				c.emit(code.OpConstant, propIdx)
+				// Perform member access (consumes receiver + property)
+				c.emit(code.OpMemberAccess)
+			} else {
+				// Compile index expression only if not short-circuited
+				if err := c.Compile(step.property.(parser.Node)); err != nil {
+					return err
+				}
+				c.emit(code.OpIndex)
+			}
+		}
+		end := len(c.currentInstructions())
+		for _, jp := range jumpPositions {
+			c.replaceOperand(jp+1, end)
+		}
+		return nil
 	case *parser.ObjectLiteral:
 		// Ensure deterministic order by sorting keys
 		keys := make([]string, 0, len(node.Properties))
@@ -218,6 +249,8 @@ func (c *Compiler) Compile(node parser.Node) error {
 	case *parser.StringLiteral:
 		// Add the string literal to constants
 		c.emit(code.OpConstant, c.addConstant(node.Value))
+	case *parser.NullLiteral:
+		c.emit(code.OpNull)
 	case *parser.Identifier:
 		// Identifiers are variables passed via go's environment context. They are "Constant" in a sense that they are not computed at runtime.
 		// If identifer begins with a dollar sign, it is a local variable in the pipe context.

@@ -119,6 +119,15 @@ func (vm *VM) run() error {
 			} else {
 				frame.ip += 3
 			}
+		case code.OpJumpIfNil:
+			// Operand is uint16 target address
+			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			// Peek (do not pop) so subsequent access still has receiver
+			if vm.sp > 0 && vm.stack[vm.sp-1] == nil {
+				frame.ip = int(pos)
+				continue
+			}
+			frame.ip += 3
 		case code.OpTrue:
 			err := vm.Push(true)
 			if err != nil {
@@ -127,6 +136,12 @@ func (vm *VM) run() error {
 			frame.ip += 1
 		case code.OpFalse:
 			err := vm.Push(false)
+			if err != nil {
+				return err
+			}
+			frame.ip += 1
+		case code.OpNull:
+			err := vm.Push(nil)
 			if err != nil {
 				return err
 			}
@@ -152,9 +167,15 @@ func (vm *VM) run() error {
 			frame.ip += 3
 		case code.OpIndex:
 			index := vm.Pop()
-			array := vm.Pop()
-			err := vm.executeIndex(array, index)
-			if err != nil {
+			target := vm.Pop()
+			if err := vm.executeIndex(target, index); err != nil {
+				return err
+			}
+			frame.ip += 1
+		case code.OpMemberAccess:
+			prop := vm.Pop()
+			target := vm.Pop()
+			if err := vm.executeMemberAccess(target, prop); err != nil {
 				return err
 			}
 			frame.ip += 1
@@ -166,7 +187,6 @@ func (vm *VM) run() error {
 				return err
 			}
 			frame.ip += 5
-
 		case code.OpPipe:
 			pipeTypeIdx := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			aliasIdx := code.ReadUint16(frame.instructions[frame.ip+3 : frame.ip+5])

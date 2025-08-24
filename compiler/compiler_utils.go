@@ -127,3 +127,33 @@ func flattenLogicalChain(n parser.Node, op string, out *[]parser.Node) {
 	flattenLogicalChain(be.Left, op, out)
 	flattenLogicalChain(be.Right, op, out)
 }
+
+func flattenAccessChain(n parser.Node) (base parser.Node, steps []accessStep) {
+	var rev []accessStep
+	cur := n
+	for {
+		switch v := cur.(type) {
+		case *parser.MemberAccess:
+			rev = append(rev, accessStep{
+				isMember:   true,
+				property:   v.Property, // assume already a string
+				isOptional: v.Optional,
+			})
+			cur = v.Target
+		case *parser.IndexAccess:
+			rev = append(rev, accessStep{
+				isMember:   false,
+				property:   v.Index, // parser.Node to be compiled later
+				isOptional: v.Optional,
+			})
+			cur = v.Target
+		default:
+			base = cur
+			// reverse order
+			for i := len(rev) - 1; i >= 0; i-- {
+				steps = append(steps, rev[i])
+			}
+			return
+		}
+	}
+}

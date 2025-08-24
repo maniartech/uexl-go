@@ -21,6 +21,7 @@ const (
 	OpPow
 	OpDiv
 	OpMod
+	OpNullish
 	OpMinus
 	OpBang
 	OpTrue
@@ -40,11 +41,14 @@ const (
 	OpJump
 	OpJumpIfTruthy
 	OpJumpIfFalsy
+	OpJumpIfNil
 	OpArray
 	OpIndex
+	OpMemberAccess
 	OpObject
 	OpCallFunction
 	OpPipe
+	OpNull
 )
 
 func (op Opcode) String() string {
@@ -91,11 +95,14 @@ var definations = map[Opcode]*Definition{
 	OpJump:               {"OpJump", []int{2}},
 	OpJumpIfTruthy:       {"OpJumpIfTruthy", []int{2}},
 	OpJumpIfFalsy:        {"OpJumpIfFalsy", []int{2}},
+	OpJumpIfNil:          {"OpJumpIfNil", []int{2}},
 	OpArray:              {"OpArray", []int{2}},
-	OpObject:             {"OpHash", []int{2}},
 	OpIndex:              {"OpIndex", []int{}},
+	OpMemberAccess:       {"OpMemberAccess", []int{}},
+	OpObject:             {"OpObject", []int{2}},
 	OpCallFunction:       {"OpCallFunction", []int{2, 2}},
 	OpPipe:               {"OpPipe", []int{2, 2, 2}}, // pipeTypeIdx, aliasIdx, blockIdx
+	OpNull:               {"OpNull", []int{}},
 }
 
 func Lookup(op byte) (*Definition, error) {
