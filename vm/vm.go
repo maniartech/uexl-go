@@ -68,8 +68,7 @@ func (vm *VM) run() error {
 				return err
 			}
 			frame.ip += 3
-		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod, code.OpPow, code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight,
-			code.OpLogicalAnd, code.OpLogicalOr:
+		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod, code.OpPow, code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight, code.OpLogicalAnd, code.OpLogicalOr:
 			right := vm.Pop()
 			left := vm.Pop()
 			err := vm.executeBinaryExpression(opcode, left, right)
@@ -119,10 +118,19 @@ func (vm *VM) run() error {
 			} else {
 				frame.ip += 3
 			}
-		case code.OpJumpIfNil:
-			// Operand is uint16 target address
+		case code.OpJumpIfNotNullish:
 			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			// Peek (do not pop) so subsequent access still has receiver
+			value := vm.Pop()
+			if !isNullish(value) {
+				if err := vm.Push(value); err != nil {
+					return err
+				}
+				frame.ip = int(pos)
+			} else {
+				frame.ip += 3
+			}
+		case code.OpJumpIfNullish:
+			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			if vm.sp > 0 && vm.stack[vm.sp-1] == nil {
 				frame.ip = int(pos)
 				continue
@@ -169,14 +177,26 @@ func (vm *VM) run() error {
 			index := vm.Pop()
 			target := vm.Pop()
 			if err := vm.executeIndex(target, index); err != nil {
-				return err
+				if vm.safeMode {
+					if perr := vm.Push(nil); perr != nil {
+						return perr
+					}
+				} else {
+					return err
+				}
 			}
 			frame.ip += 1
 		case code.OpMemberAccess:
 			prop := vm.Pop()
 			target := vm.Pop()
 			if err := vm.executeMemberAccess(target, prop); err != nil {
-				return err
+				if vm.safeMode {
+					if perr := vm.Push(nil); perr != nil {
+						return perr
+					}
+				} else {
+					return err
+				}
 			}
 			frame.ip += 1
 		case code.OpCallFunction:
@@ -210,6 +230,12 @@ func (vm *VM) run() error {
 				return err
 			}
 			frame.ip += 7
+		case code.OpSafeModeOn:
+			vm.safeMode = true
+			frame.ip += 1
+		case code.OpSafeModeOff:
+			vm.safeMode = false
+			frame.ip += 1
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, frame.ip)
 		}

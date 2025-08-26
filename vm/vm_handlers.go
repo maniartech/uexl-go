@@ -350,30 +350,6 @@ func isTruthy(val any) bool {
 	}
 }
 
-func normalizeFalsyToFalse(val any) any {
-	switch v := val.(type) {
-	case bool:
-		return v
-	case float64:
-		if v == 0 {
-			return false
-		}
-	case int:
-		if v == 0 {
-			return false
-		}
-	case string:
-		if v == "" {
-			return false
-		}
-	case []any:
-		if len(v) == 0 {
-			return false
-		}
-	case map[string]any:
-		if len(v) == 0 {
-			return false
-		}
-	}
-	return val
+func isNullish(val any) bool {
+	return val == nil
 }
