@@ -58,12 +58,8 @@ func (c *Compiler) addConstant(node any) int {
 }
 
 func (c *Compiler) addContextVar(node any) int {
-	ident, ok := node.(*parser.Identifier)
-	if !ok {
-		panic("addContextVar: node is not *parser.Identifier")
-	}
 	for i, existing := range c.contextVars {
-		if exIdent, ok := existing.(*parser.Identifier); ok && exIdent.Name == ident.Name {
+		if existing == node {
 			return i // Return the index of the existing variable by name
 		}
 	}

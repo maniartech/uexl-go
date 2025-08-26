@@ -610,3 +610,67 @@ func TestPipeExpression(t *testing.T) {
 	}
 	runCompilerTestCases(t, cases)
 }
+
+func TestTernaryOperatorCompilation(t *testing.T) {
+	cases := []compilerTestCase{
+		{
+			`true ? 1 : 2`,
+			[]any{1.0, 2.0},
+			[]code.Instructions{
+				code.Make(code.OpTrue),            // 0
+				code.Make(code.OpJumpIfFalsy, 10), // 1..3 (elsePos=10)
+				code.Make(code.OpConstant, 0),     // 4..6 (consequent 1)
+				code.Make(code.OpJump, 14),        // 7..9 (endPos=14)
+				code.Make(code.OpPop),             // 10 (discard falsy cond when jumping)
+				code.Make(code.OpConstant, 1),     // 11..13 (alternate 2)
+			},
+		},
+		{
+			`false ? 1 : 2`,
+			[]any{1.0, 2.0},
+			[]code.Instructions{
+				code.Make(code.OpFalse),           // 0
+				code.Make(code.OpJumpIfFalsy, 10), // 1..3
+				code.Make(code.OpConstant, 0),     // 4..6
+				code.Make(code.OpJump, 14),        // 7..9
+				code.Make(code.OpPop),             // 10
+				code.Make(code.OpConstant, 1),     // 11..13
+			},
+		},
+		{
+			`(true ? 5 : 10) + 3`,
+			[]any{5.0, 10.0, 3.0},
+			[]code.Instructions{
+				code.Make(code.OpTrue),            // 0
+				code.Make(code.OpJumpIfFalsy, 10), // 1..3
+				code.Make(code.OpConstant, 0),     // 4..6 (5)
+				code.Make(code.OpJump, 14),        // 7..9
+				code.Make(code.OpPop),             // 10
+				code.Make(code.OpConstant, 1),     // 11..13 (10)
+				code.Make(code.OpConstant, 2),     // 14..16 (3)
+				code.Make(code.OpAdd),             // 17
+			},
+		},
+		{
+			`false ? 1 : true ? 2 : 3`,
+			[]any{1.0, 2.0, 3.0},
+			[]code.Instructions{
+				// Outer condition
+				code.Make(code.OpFalse),           // 0
+				code.Make(code.OpJumpIfFalsy, 10), // 1..3 (outer elsePos=10)
+				code.Make(code.OpConstant, 0),     // 4..6 (outer consequent 1)
+				code.Make(code.OpJump, 25),        // 7..9 (outer endPos=25)
+				code.Make(code.OpPop),             // 10 (discard falsy outer cond)
+
+				// Inner condition (starts at 11)
+				code.Make(code.OpTrue),            // 11
+				code.Make(code.OpJumpIfFalsy, 21), // 12..14 (inner elsePos=21)
+				code.Make(code.OpConstant, 1),     // 15..17 (inner consequent 2)
+				code.Make(code.OpJump, 25),        // 18..20 (inner endPos=25)
+				code.Make(code.OpPop),             // 21 (discard falsy inner cond)
+				code.Make(code.OpConstant, 2),     // 22..24 (inner alternate 3)
+			},
+		},
+	}
+	runCompilerTestCases(t, cases)
+}

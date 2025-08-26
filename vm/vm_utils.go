@@ -47,6 +47,7 @@ type VM struct {
 	sp        int
 	frames    []*Frame
 	framesIdx int
+	safeMode  bool
 }
 
 func New(libCtx LibContext) *VM {

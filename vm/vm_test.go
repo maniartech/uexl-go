@@ -514,7 +514,6 @@ func TestPipeFunction(t *testing.T) {
 		// Reduce: sum all items
 		{"[1,2,3,4] |reduce: ($acc || 0) + $item", 10.0},
 
-		// TODO: Reduce to an object
 		{"[1,2,3,4] |reduce: set($acc || {}, $index, $item)", map[string]any{
 			"0": 1.0,
 			"1": 2.0,
@@ -604,5 +603,106 @@ func TestNullishOperator(t *testing.T) {
 		{`"hello"?.[4]`, "o"},
 	}
 
+	runVmTests(t, tests)
+}
+
+func TestNullishCoalescing(t *testing.T) {
+	tests := []vmTestCase{
+		// Basic fallback
+		{`null ?? 42`, 42.0},
+		// {`undefinedVar ?? "default"`, "default"}, // undefined identifier should resolve to null TODO: TEST THIS LATER
+
+		// Left side is not nullish
+		{`0 ?? 99`, 0.0},
+		{`false ?? true`, false},
+		{`"" ?? "fallback"`, ""},
+
+		// Chained ?? operators
+		{`null ?? null ?? "x"`, "x"},
+		{`null ?? 0 ?? "y"`, 0.0},
+		{`null ?? false ?? "z"`, false},
+		{`null ?? null ?? null ?? "last"`, "last"},
+		{`1 ?? 2 ?? 3`, 1.0},
+
+		// Array out-of-bounds and missing keys (safe mode)
+		{`[1,2,3][10] ?? 99`, 99.0},
+		{`{"a": 1}["b"] ?? "missing"`, "missing"},
+		{`{"a": null}["a"] ?? "fallback"`, "fallback"},
+
+		// Nested property/index with ?? fallback
+		{`{"user": {"name": null}}.user.name ?? "anon"`, "anon"},
+		{`{"user": {}}.user.name ?? "anon"`, "anon"},
+		{`{"user": {"name": "alice"}}.user.name ?? "anon"`, "alice"},
+
+		// Optional chaining + ??
+		{`{"user": null}?.user?.name ?? "anon"`, "anon"},
+		{`{"user": {"name": null}}?.user?.name ?? "anon"`, "anon"},
+		{`{"user": {"name": "bob"}}?.user?.name ?? "anon"`, "bob"},
+
+		// Right side should not be evaluated if left is not nullish
+		{`1 ?? (2/0)`, 1.0}, // Should not error or panic
+
+		// Chained with other operators
+		{`(null ?? 5) + 2`, 7.0},
+		{`(null ?? 0) + 2`, 2.0},
+		{`(null ?? "") + "x"`, "x"},
+		{`(null ?? "foo") + "bar"`, "foobar"},
+	}
+	runVmTests(t, tests)
+}
+
+func TestTernaryOperator(t *testing.T) {
+	tests := []vmTestCase{
+		{`true ? 1 : 2`, 1.0},
+		{`false ? 1 : 2`, 2.0},
+		{`1 ? 10 : 20`, 10.0},
+		{`0 ? 10 : 20`, 20.0},
+		{`null ? 1 : 2`, 2.0},
+
+		// Numeric / boolean expressions as condition
+		{`(1 + 1 == 2) ? 5 * 2 : 3 + 4`, 10.0},
+		{`(1 + 1 == 3) ? 5 * 2 : 3 + 4`, 7.0},
+		{`(2 * 3 > 5) ? 100 : 200`, 100.0},
+		{`(2 * 3 < 5) ? 100 : 200`, 200.0},
+
+		// Nested ternaries
+		{`true ? (false ? 1 : 2) : 3`, 2.0},
+		{`false ? 1 : (true ? 2 : 3)`, 2.0},
+		{`false ? 1 : false ? 2 : 3`, 3.0}, // right‑associative: false ? 1 : (false ? 2 : 3)
+
+		// Mixed with other operators (parenthesized for clarity)
+		{`(true && false) ? 1 : 2`, 2.0},
+		{`(true || false) ? 1 : 2`, 1.0},
+		{`(null ?? 5) ? 1 : 2`, 1.0},
+		{`(0 || 5) ? 1 : 2`, 1.0},
+		{`(0 && 5) ? 1 : 2`, 2.0},
+
+		// Consequent / alternate as complex expressions
+		{`true ? {"a": 1} : {"b": 2}`, map[string]any{"a": 1.0}},
+		{`false ? {"a": 1} : {"b": 2}`, map[string]any{"b": 2.0}},
+		{`true ? [1,2] : [3,4]`, []any{1.0, 2.0}},
+		{`false ? [1,2] : [3,4]`, []any{3.0, 4.0}},
+		{`true ? [1, 1+1, 3*2] : 0`, []any{1.0, 2.0, 6.0}},
+		{`false ? 0 : [1, 1+1, 3*2]`, []any{1.0, 2.0, 6.0}},
+
+		// Nested inside other expressions
+		{`(true ? 5 : 10) + 3`, 8.0},
+		{`(false ? 5 : 10) + 3`, 13.0},
+		{`(false ? 5 : 10) * (true ? 2 : 4)`, 20.0},
+
+		// Ternary inside array / object
+		{`[true ? 1 : 2, false ? 3 : 4].1`, 4.0},
+		{`{"x": true ? 1 : 2, "y": false ? 3 : 4}["y"]`, 4.0},
+
+		// Chaining with nullish and logical
+		{`(null ?? 0) ? 1 : 2`, 2.0},
+		{`(null ?? null) ? 1 : 2`, 2.0},
+		{`(false || null) ? 1 : 2`, 2.0},
+		{`(false || 7) ? 1 : 2`, 1.0},
+
+		// Deep nesting
+		{`true ? (1 ? (0 ? 10 : 20) : 30) : 40`, 20.0},
+		{`false ? (1 ? (0 ? 10 : 20) : 30) : (0 ? 50 : 60)`, 60.0},
+	}
 	runVmTests(t, tests)
 }
