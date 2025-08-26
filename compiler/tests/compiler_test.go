@@ -102,15 +102,17 @@ func TestBooleanLiteralsAndOperations(t *testing.T) {
 			code.Make(code.OpFalse),
 			code.Make(code.OpBang),
 		}},
+		// Short-circuit AND compiled via jump instead of OpLogicalAnd
 		{"true && false", []any{}, []code.Instructions{
 			code.Make(code.OpTrue),
+			code.Make(code.OpJumpIfFalsy, 5), // jump past second operand if first falsy
 			code.Make(code.OpFalse),
-			code.Make(code.OpLogicalAnd),
 		}},
+		// Short-circuit OR compiled via jump instead of OpLogicalOr
 		{"true || false", []any{}, []code.Instructions{
 			code.Make(code.OpTrue),
+			code.Make(code.OpJumpIfTruthy, 5), // skip second operand if first truthy
 			code.Make(code.OpFalse),
-			code.Make(code.OpLogicalOr),
 		}},
 		{"true == false", []any{}, []code.Instructions{
 			code.Make(code.OpTrue),
@@ -130,8 +132,8 @@ func TestBooleanLiteralsAndOperations(t *testing.T) {
 		}},
 		{"!(true && false)", []any{}, []code.Instructions{
 			code.Make(code.OpTrue),
+			code.Make(code.OpJumpIfFalsy, 5), // short-circuit point
 			code.Make(code.OpFalse),
-			code.Make(code.OpLogicalAnd),
 			code.Make(code.OpBang),
 		}},
 		{"1 < 2", []any{2.0, 1.0}, []code.Instructions{
@@ -326,10 +328,11 @@ func TestContextVariables(t *testing.T) {
 			code.Make(code.OpContextVar, 0),
 			code.Make(code.OpMinus),
 		}},
+		// Updated AND short-circuit expectation uses jump-based sequence
 		{"foo && bar", []any{}, []code.Instructions{
 			code.Make(code.OpContextVar, 0),
+			code.Make(code.OpJumpIfFalsy, 9), // skip right if left falsy
 			code.Make(code.OpContextVar, 1),
-			code.Make(code.OpLogicalAnd),
 		}},
 		{"foo == bar", []any{}, []code.Instructions{
 			code.Make(code.OpContextVar, 0),
@@ -580,32 +583,21 @@ func TestFunctionCalls(t *testing.T) {
 
 func TestPipeExpression(t *testing.T) {
 	cases := []compilerTestCase{
-		// Access property by string literal
-		{`[1,2] |map: $item * 2`, []any{1, 2, "pipe", 2, "map"}, []code.Instructions{
-			code.Make(code.OpConstant, 0), // "a"
-			code.Make(code.OpConstant, 1), // 1.0
-			code.Make(code.OpArray, 2),
-			code.Make(code.OpPipe, 2, 3),
-			code.Make(code.OpIdentifier, 0), // $item
-			code.Make(code.OpConstant, 4),   // 2
-			code.Make(code.OpMul),
-			code.Make(code.OpPipe, 5, 6),
+		// Single pipe expression: only one OpPipe emitted; predicate captured in InstructionBlock constant
+		{`[1,2] |map: $item * 2`, []any{1.0, 2.0, "map", 2.0, nil}, []code.Instructions{
+			code.Make(code.OpConstant, 0), // 1.0
+			code.Make(code.OpConstant, 1), // 2.0
+			code.Make(code.OpArray, 2),    // build initial array
+			code.Make(code.OpPipe, 2, 0, 4), // pipeTypeIdx=2 ("map"), aliasIdx=0 (""), blockIdx=4 (InstructionBlock)
 		}},
-		// Multiple pipes with different operators
-		{`[1,2,3] |filter: $item > 1 |map: $item * 2`, []any{1.0, 2.0, 3.0, 1.0, 2.0, 1, "filter", "", 2, "map", ""}, []code.Instructions{
+		// Multiple pipes: two OpPipe instructions, each with its own block constants
+		{`[1,2,3] |filter: $item > 1 |map: $item * 2`, []any{1.0, 2.0, 3.0, "filter", 1.0, nil, "map", 2.0, nil}, []code.Instructions{
 			code.Make(code.OpConstant, 0), // 1.0
 			code.Make(code.OpConstant, 1), // 2.0
 			code.Make(code.OpConstant, 2), // 3.0
 			code.Make(code.OpArray, 3),
-			code.Make(code.OpPipe, 3, 4),
-			code.Make(code.OpIdentifier, 0), // $item
-			code.Make(code.OpConstant, 5),   // 1.0
-			code.Make(code.OpGreaterThan),
-			code.Make(code.OpPipe, 6, 7),
-			code.Make(code.OpIdentifier, 0), // $item
-			code.Make(code.OpConstant, 8),   // 2.0
-			code.Make(code.OpMul),
-			code.Make(code.OpPipe, 9, 10),
+			code.Make(code.OpPipe, 3, 0, 5), // filter pipe: pipeTypeIdx=3, aliasIdx=0, blockIdx=5
+			code.Make(code.OpPipe, 6, 2, 8), // map pipe: pipeTypeIdx=6, aliasIdx=2 (second empty alias), blockIdx=8
 		}},
 	}
 	runCompilerTestCases(t, cases)
