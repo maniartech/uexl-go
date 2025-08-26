@@ -20,11 +20,25 @@ type Token struct {
 	IsSingleQuoted bool // Only set for constants.TokenString
 }
 
+// Pre-allocated common single character strings to avoid allocations
+var charStrings [128]string
+
+func init() {
+	for i := 0; i < 128; i++ {
+		charStrings[i] = string(rune(i))
+	}
+}
+
 type Tokenizer struct {
 	input  string
 	pos    int
 	line   int
 	column int
+	// cache of current rune to avoid repeated utf8.DecodeRuneInString calls
+	curRune rune
+	curSize int
+	// reusable buffer for string unescaping to avoid allocations
+	strBuf []byte
 }
 
 func (t Token) String() string {
@@ -32,12 +46,15 @@ func (t Token) String() string {
 }
 
 func NewTokenizer(input string) *Tokenizer {
-	return &Tokenizer{
+	tz := &Tokenizer{
 		input:  input,
 		pos:    0,
 		line:   1,
 		column: 1,
+		strBuf: make([]byte, 0, 256), // preallocate buffer for string processing
 	}
+	tz.setCur()
+	return tz
 }
 
 func (t *Tokenizer) NextToken() (Token, error) {
@@ -104,58 +121,127 @@ func (t *Tokenizer) readNumber() (Token, error) {
 	startColumn := t.column
 
 	// Read integer part (mandatory when entering here)
-	for t.pos < len(t.input) && isDigit(t.current()) {
-		t.advance()
+	// ASCII fast path: digits 0-9
+	for t.pos < len(t.input) {
+		c := t.input[t.pos]
+		if c >= '0' && c <= '9' {
+			t.pos++
+			t.column++
+			continue
+		}
+		break
 	}
 
+	intEnd := t.pos
+	hasDot := false
+
 	// Read optional fractional part: only if '.' is followed by a digit
-	if t.pos < len(t.input) && t.current() == '.' {
+	if t.pos < len(t.input) && t.input[t.pos] == '.' {
 		// Peek next rune to ensure it's a digit; otherwise, treat '.' as a separate token (e.g., member access)
 		if t.pos+1 < len(t.input) {
-			nextRune, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
-			if isDigit(nextRune) {
+			next := t.input[t.pos+1]
+			if next >= '0' && next <= '9' {
 				// consume '.'
-				t.advance()
+				t.pos++
+				t.column++
 				// consume fractional digits
-				for t.pos < len(t.input) && isDigit(t.current()) {
-					t.advance()
+				hasDot = true
+				for t.pos < len(t.input) {
+					c := t.input[t.pos]
+					if c >= '0' && c <= '9' {
+						t.pos++
+						t.column++
+						continue
+					}
+					break
 				}
 			}
 		}
 	}
 
 	// Check for scientific notation - only if followed by proper exponent
-	if t.pos < len(t.input) && (t.current() == 'e' || t.current() == 'E') {
+	hasExp := false
+	if t.pos < len(t.input) && (t.input[t.pos] == 'e' || t.input[t.pos] == 'E') {
 		// Look ahead to see if this is a valid exponent
 		savedPos := t.pos
 		savedColumn := t.column
-		t.advance() // consume 'e' or 'E'
+		t.pos++ // consume 'e' or 'E'
+		t.column++
 
 		// Optional sign
-		if t.pos < len(t.input) && (t.current() == '+' || t.current() == '-') {
-			t.advance()
+		if t.pos < len(t.input) && (t.input[t.pos] == '+' || t.input[t.pos] == '-') {
+			t.pos++
+			t.column++
 		}
 
 		// Must have at least one digit after e/E or optional sign
-		if t.pos >= len(t.input) || !isDigit(t.current()) {
+		if t.pos >= len(t.input) || !(t.input[t.pos] >= '0' && t.input[t.pos] <= '9') {
 			// Not a valid scientific notation, backtrack
 			t.pos = savedPos
 			t.column = savedColumn
+			t.setCur()
 		} else {
 			// Valid scientific notation, consume all digits
-			for t.pos < len(t.input) && isDigit(t.current()) {
-				t.advance()
+			for t.pos < len(t.input) {
+				c := t.input[t.pos]
+				if c >= '0' && c <= '9' {
+					t.pos++
+					t.column++
+					continue
+				}
+				break
 			}
+			hasExp = true
 		}
 	}
 
 	originalToken := t.input[start:t.pos]
+	// Fast path: no exponent, parse simple int or decimal manually to avoid allocations
+	if !hasExp {
+		s := originalToken
+		// Determine boundaries for int and frac parts
+		intPart := s[:intEnd-start]
+		var fracPart string
+		if hasDot {
+			fracPart = s[len(intPart)+1:]
+		}
+
+		// Limit digits to avoid overflow; fallback to strconv for very long parts
+		if len(intPart) <= 18 && len(fracPart) <= 18 {
+			var u uint64
+			for i := 0; i < len(intPart); i++ {
+				c := intPart[i]
+				if c < '0' || c > '9' {
+					// Shouldn't happen; fallback
+					goto stdparse
+				}
+				u = u*10 + uint64(c-'0')
+			}
+			fv := float64(u)
+			if len(fracPart) > 0 {
+				var fu uint64
+				for i := 0; i < len(fracPart); i++ {
+					c := fracPart[i]
+					if c < '0' || c > '9' {
+						goto stdparse
+					}
+					fu = fu*10 + uint64(c-'0')
+				}
+				fv += float64(fu) / pow10[len(fracPart)]
+			}
+			t.setCur()
+			return Token{Type: constants.TokenNumber, Value: fv, Token: originalToken, Line: t.line, Column: startColumn}, nil
+		}
+	}
+
+stdparse:
 	value, err := strconv.ParseFloat(originalToken, 64)
 	if err != nil {
 		// Invalid number format - return error
 		errMsg := errors.GetErrorMessage(errors.ErrInvalidNumber)
 		return Token{}, errors.NewParserError(errors.ErrInvalidNumber, t.line, startColumn, fmt.Sprintf("%s: '%s'", errMsg, originalToken))
 	}
+	t.setCur()
 	return Token{Type: constants.TokenNumber, Value: value, Token: originalToken, Line: t.line, Column: startColumn}, nil
 }
 
@@ -164,16 +250,39 @@ func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 	startColumn := t.column
 
 	// Allow the first character to be a letter, underscore, or dollar sign
-	if isLetter(t.current()) || t.current() == '_' || t.current() == '$' {
-		t.advance()
+	r := t.current()
+	if isLetter(r) || r == '_' || r == '$' {
+		// ASCII fast path for subsequent chars
+		if t.pos < len(t.input) && t.input[t.pos] < 0x80 {
+			// consume first ASCII char
+			t.pos++
+			t.column++
+			for t.pos < len(t.input) {
+				c := t.input[t.pos]
+				if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '$' {
+					t.pos++
+					t.column++
+					continue
+				}
+				break
+			}
+			t.setCur()
+		} else {
+			t.advance()
+		}
 	}
 
 	// Continue reading alphanumeric characters, underscores, and dollar signs
 	// NO dot handling - dots will be separate tokens
 	for t.pos < len(t.input) {
 		ch := t.current()
-
 		if isLetter(ch) || isDigit(ch) || ch == '_' || ch == '$' {
+			// ASCII fast path
+			if t.pos < len(t.input) && t.input[t.pos] < 0x80 {
+				t.pos++
+				t.column++
+				continue
+			}
 			t.advance()
 		} else {
 			break
@@ -201,38 +310,69 @@ func (t *Tokenizer) readString() (Token, error) {
 	if t.pos < len(t.input) && t.input[t.pos] == 'r' {
 		rawString = true
 		// Advance past 'r'
-		t.advance()
+		t.pos++
+		t.column++
+		t.setCur()
 	}
 
 	// Get the quote character and advance past it
 	quote := t.current()
-	t.advance() // consume opening quote
+	t.pos++
+	t.column++
+	if quote == '\n' {
+		t.line++
+		t.column = 1
+	}
+	t.setCur()
 
 	// Read until closing quote
 	if rawString {
 		// Raw string: handle doubled quotes for escaping the delimiter
 		for t.pos < len(t.input) {
-			if t.current() == quote {
+			if t.input[t.pos] == byte(quote) {
 				// Check if it's a doubled quote (escaped delimiter)
-				if t.pos+1 < len(t.input) && rune(t.input[t.pos+1]) == quote {
+				if t.pos+1 < len(t.input) && t.input[t.pos+1] == byte(quote) {
 					// Skip both quotes (this is an escaped delimiter)
-					t.advance()
-					t.advance()
+					t.pos += 2
+					t.column += 2
 				} else {
 					// Single quote - this is the end of the string
 					break
 				}
 			} else {
-				t.advance()
+				if t.input[t.pos] == '\n' {
+					t.line++
+					t.column = 1
+				} else {
+					t.column++
+				}
+				t.pos++
 			}
 		}
 	} else {
 		// Regular string: handle backslash escapes
-		for t.pos < len(t.input) && t.current() != quote {
-			if t.current() == '\\' {
-				t.advance() // skip escape character
+		for t.pos < len(t.input) && t.input[t.pos] != byte(quote) {
+			if t.input[t.pos] == '\\' {
+				t.pos++ // skip escape character
+				t.column++
+				if t.pos < len(t.input) {
+					if t.input[t.pos] == '\n' {
+						t.line++
+						t.column = 1
+					} else {
+						t.column++
+					}
+					t.pos++
+				}
+			} else {
+				if t.input[t.pos] == '\n' {
+					t.line++
+					t.column = 1
+				} else {
+					t.column++
+				}
+				t.pos++
 			}
-			t.advance()
 		}
 	}
 
@@ -244,54 +384,58 @@ func (t *Tokenizer) readString() (Token, error) {
 	}
 
 	if t.pos < len(t.input) {
-		t.advance() // consume closing quote
+		t.pos++ // consume closing quote
+		t.column++
+		if t.input[t.pos-1] == '\n' {
+			t.line++
+			t.column = 1
+		}
 	}
+	t.setCur()
 
 	originalToken := t.input[start:t.pos]
 	var value string
 	isSingleQuoted := false
 	if rawString {
 		// For raw strings, extract content between quotes and handle doubled quotes
-		// Avoid strings.ReplaceAll to reduce allocations.
 		content := originalToken[2 : len(originalToken)-1] // Remove 'r' prefix and quotes
-		var b strings.Builder
-		b.Grow(len(content))
 		if quote == '"' {
-			for i := 0; i < len(content); {
-				if content[i] == '"' && i+1 < len(content) && content[i+1] == '"' {
-					b.WriteByte('"')
-					i += 2
-				} else {
-					b.WriteByte(content[i])
-					i++
-				}
+			// Fast path: check if any doubled quotes exist first
+			if !containsDoubledQuote(content, '"') {
+				value = content
+			} else {
+				value = t.unescapeRawString(content, '"')
 			}
-			value = b.String()
 		} else {
 			isSingleQuoted = true
-			for i := 0; i < len(content); {
-				if content[i] == '\'' && i+1 < len(content) && content[i+1] == '\'' {
-					b.WriteByte('\'')
-					i += 2
-				} else {
-					b.WriteByte(content[i])
-					i++
-				}
+			// Fast path: check if any doubled quotes exist first
+			if !containsDoubledQuote(content, '\'') {
+				value = content
+			} else {
+				value = t.unescapeRawString(content, '\'')
 			}
-			value = b.String()
 		}
 	} else if quote == '"' {
-		quoted := originalToken
-		unescaped, err := strconv.Unquote(quoted)
-		if err != nil {
-			errMsg := errors.GetErrorMessage(errors.ErrInvalidString)
-			return Token{}, errors.NewParserError(errors.ErrInvalidString, t.line, startColumn, errMsg+": '"+originalToken+"'")
+		content := originalToken[1 : len(originalToken)-1] // Remove quotes
+		if !containsEscape(content) {
+			value = content
+		} else {
+			quoted := originalToken
+			unescaped, err := strconv.Unquote(quoted)
+			if err != nil {
+				errMsg := errors.GetErrorMessage(errors.ErrInvalidString)
+				return Token{}, errors.NewParserError(errors.ErrInvalidString, t.line, startColumn, errMsg+": '"+originalToken+"'")
+			}
+			value = unescaped
 		}
-		value = unescaped
 	} else if quote == '\'' {
 		isSingleQuoted = true
 		content := originalToken[1 : len(originalToken)-1]
-		value = t.unescapeString(content)
+		if !containsEscape(content) {
+			value = content
+		} else {
+			value = t.unescapeStringFast(content)
+		}
 	}
 	return Token{Type: constants.TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn, IsSingleQuoted: isSingleQuoted}, nil
 }
@@ -501,24 +645,30 @@ func (t *Tokenizer) readQuestionOrNullish() (Token, error) {
 }
 
 func (t *Tokenizer) singleCharToken(tokenType constants.TokenType) (Token, error) {
-	charValue := string(t.current())
+	ch := t.current()
+	var charValue string
+	if ch < 128 {
+		charValue = charStrings[ch]
+	} else {
+		charValue = string(ch)
+	}
 	token := Token{Type: tokenType, Value: charValue, Token: charValue, Line: t.line, Column: t.column}
 	t.advance()
 	return token, nil
 }
 
 func (t *Tokenizer) current() rune {
-	if t.pos >= len(t.input) {
-		return 0
-	}
-	r, _ := utf8.DecodeRuneInString(t.input[t.pos:])
-	return r
+	return t.curRune
 }
 
 // peek the next character without advancing the position
 func (t *Tokenizer) peekNext() rune {
 	if t.pos+1 >= len(t.input) {
 		return 0
+	}
+	b := t.input[t.pos+1]
+	if b < 0x80 {
+		return rune(b)
 	}
 	r, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
 	return r
@@ -528,8 +678,8 @@ func (t *Tokenizer) advance() {
 	if t.pos >= len(t.input) {
 		return
 	}
-	// Decode the current rune once
-	r, size := utf8.DecodeRuneInString(t.input[t.pos:])
+	r := t.curRune
+	size := t.curSize
 	if r == '\n' {
 		t.line++
 		t.column = 1
@@ -537,19 +687,42 @@ func (t *Tokenizer) advance() {
 		t.column++
 	}
 	t.pos += size
+	t.setCur()
 }
 
 func (t *Tokenizer) skipWhitespace() {
-	for t.pos < len(t.input) && unicode.IsSpace(t.current()) {
-		t.advance()
+	// Fast path for common ASCII whitespace
+	for t.pos < len(t.input) {
+		if t.pos >= len(t.input) {
+			return
+		}
+		c := t.input[t.pos]
+		if c == ' ' || c == '\n' || c == '\t' || c == '\r' {
+			t.advance()
+			continue
+		}
+		// Fallback for non-ASCII spaces
+		if t.current() != 0 && unicode.IsSpace(t.current()) {
+			t.advance()
+			continue
+		}
+		break
 	}
 }
 
 func isDigit(r rune) bool {
+	if r <= 127 {
+		return r >= '0' && r <= '9'
+	}
 	return unicode.IsDigit(r)
 }
 
 func isLetter(r rune) bool {
+	if r <= 127 {
+		// ASCII letter or underscore
+		rr := r | 32 // fold case for [A-Za-z]
+		return (rr >= 'a' && rr <= 'z') || r == '_'
+	}
 	return unicode.IsLetter(r) || r == '_'
 }
 
@@ -566,8 +739,134 @@ func (t *Tokenizer) peek() rune {
 	if t.pos+1 >= len(t.input) {
 		return 0
 	}
+	b := t.input[t.pos+1]
+	if b < 0x80 {
+		return rune(b)
+	}
 	r, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
 	return r
+}
+
+// setCur decodes and caches the rune at current position.
+func (t *Tokenizer) setCur() {
+	if t.pos >= len(t.input) {
+		t.curRune = 0
+		t.curSize = 0
+		return
+	}
+	// ASCII fast path
+	if t.input[t.pos] < 0x80 {
+		t.curRune = rune(t.input[t.pos])
+		t.curSize = 1
+		return
+	}
+	r, size := utf8.DecodeRuneInString(t.input[t.pos:])
+	t.curRune = r
+	t.curSize = size
+}
+
+// containsEscape checks if a string contains backslash escapes without allocating
+func containsEscape(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' {
+			return true
+		}
+	}
+	return false
+}
+
+// containsDoubledQuote checks if a string contains doubled quotes without allocating
+func containsDoubledQuote(s string, quote byte) bool {
+	for i := 0; i < len(s)-1; i++ {
+		if s[i] == quote && s[i+1] == quote {
+			return true
+		}
+	}
+	return false
+}
+
+// unescapeRawString handles doubled quotes in raw strings using the internal buffer
+func (t *Tokenizer) unescapeRawString(content string, quote byte) string {
+	t.strBuf = t.strBuf[:0] // reset buffer
+	for i := 0; i < len(content); {
+		if content[i] == quote && i+1 < len(content) && content[i+1] == quote {
+			t.strBuf = append(t.strBuf, quote)
+			i += 2
+		} else {
+			t.strBuf = append(t.strBuf, content[i])
+			i++
+		}
+	}
+	return string(t.strBuf)
+}
+
+// unescapeStringFast handles common escape sequences using the internal buffer
+func (t *Tokenizer) unescapeStringFast(s string) string {
+	// Try to use strconv.Unquote by converting single-quoted to double-quoted
+	if s != "" {
+		if unquoted, err := strconv.Unquote("\"" + strings.ReplaceAll(s, "\"", "\\\"") + "\""); err == nil {
+			return unquoted
+		}
+	}
+
+	// Fallback: manual unescaping using internal buffer
+	t.strBuf = t.strBuf[:0] // reset buffer
+	i := 0
+	for i < len(s) {
+		if s[i] == '\\' && i+1 < len(s) {
+			switch s[i+1] {
+			case '\'':
+				t.strBuf = append(t.strBuf, '\'')
+				i += 2
+			case '"':
+				t.strBuf = append(t.strBuf, '"')
+				i += 2
+			case '\\':
+				t.strBuf = append(t.strBuf, '\\')
+				i += 2
+			case 'n':
+				t.strBuf = append(t.strBuf, '\n')
+				i += 2
+			case 't':
+				t.strBuf = append(t.strBuf, '\t')
+				i += 2
+			case 'r':
+				t.strBuf = append(t.strBuf, '\r')
+				i += 2
+			case 'b':
+				t.strBuf = append(t.strBuf, '\b')
+				i += 2
+			case 'f':
+				t.strBuf = append(t.strBuf, '\f')
+				i += 2
+			case 'a':
+				t.strBuf = append(t.strBuf, '\a')
+				i += 2
+			case 'v':
+				t.strBuf = append(t.strBuf, '\v')
+				i += 2
+			case '/':
+				t.strBuf = append(t.strBuf, '/')
+				i += 2
+			default:
+				// Unknown escape sequence, keep the backslash and next char
+				t.strBuf = append(t.strBuf, s[i])
+				t.strBuf = append(t.strBuf, s[i+1])
+				i += 2
+			}
+		} else {
+			t.strBuf = append(t.strBuf, s[i])
+			i++
+		}
+	}
+	return string(t.strBuf)
+}
+
+// Precomputed powers of 10 for fast decimal parsing
+var pow10 = [...]float64{
+	1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
+	10000000000, 100000000000, 1000000000000, 10000000000000, 100000000000000,
+	1000000000000000, 10000000000000000, 100000000000000000, 1000000000000000000,
 }
 
 // PreloadTokens preloads all tokens in the input string.
@@ -603,93 +902,4 @@ func (t *Tokenizer) PrintTokens() {
 	for i, t := range t.PreloadTokens() {
 		fmt.Printf("%d: %s\n", i, t)
 	}
-}
-
-// unescapeString manually handles common escape sequences
-// This is a fallback when strconv.Unquote fails
-func (t *Tokenizer) unescapeString(s string) string {
-	// Try to use strconv.Unquote by converting single-quoted to double-quoted
-	// This allows us to use Go's robust unescaping for most cases
-	if s != "" {
-		if unquoted, err := strconv.Unquote("\"" + strings.ReplaceAll(s, "\"", "\\\"") + "\""); err == nil {
-			return unquoted
-		}
-	}
-
-	// Fallback: manual unescaping for Python-style single-quoted strings
-	var result strings.Builder
-	i := 0
-	for i < len(s) {
-		if s[i] == '\\' && i+1 < len(s) {
-			switch s[i+1] {
-			case '\'':
-				result.WriteByte('\'')
-				i += 2
-			case '"':
-				result.WriteByte('"')
-				i += 2
-			case '\\':
-				result.WriteByte('\\')
-				i += 2
-			case 'n':
-				result.WriteByte('\n')
-				i += 2
-			case 't':
-				result.WriteByte('\t')
-				i += 2
-			case 'r':
-				result.WriteByte('\r')
-				i += 2
-			case 'b':
-				result.WriteByte('\b')
-				i += 2
-			case 'f':
-				result.WriteByte('\f')
-				i += 2
-			case 'a':
-				result.WriteByte('\a')
-				i += 2
-			case 'v':
-				result.WriteByte('\v')
-				i += 2
-			case '/':
-				result.WriteByte('/')
-				i += 2
-			case 'u':
-				// Unicode escape sequence \uXXXX
-				if i+5 < len(s) {
-					hexStr := s[i+2 : i+6]
-					if codePoint, err := strconv.ParseUint(hexStr, 16, 16); err == nil {
-						result.WriteRune(rune(codePoint))
-						i += 6
-						continue
-					}
-				}
-				// If unicode parsing fails, keep the escape sequence as-is
-				result.WriteByte(s[i])
-				i++
-			case 'U':
-				// Unicode escape sequence \UXXXXXXXX
-				if i+9 < len(s) {
-					hexStr := s[i+2 : i+10]
-					if codePoint, err := strconv.ParseUint(hexStr, 16, 32); err == nil {
-						result.WriteRune(rune(codePoint))
-						i += 10
-						continue
-					}
-				}
-				result.WriteByte(s[i])
-				i++
-			default:
-				// Unknown escape sequence, keep the backslash and next char
-				result.WriteByte(s[i])
-				result.WriteByte(s[i+1])
-				i += 2
-			}
-		} else {
-			result.WriteByte(s[i])
-			i++
-		}
-	}
-	return result.String()
 }
