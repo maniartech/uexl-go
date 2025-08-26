@@ -514,7 +514,6 @@ func TestPipeFunction(t *testing.T) {
 		// Reduce: sum all items
 		{"[1,2,3,4] |reduce: ($acc || 0) + $item", 10.0},
 
-		// TODO: Reduce to an object
 		{"[1,2,3,4] |reduce: set($acc || {}, $index, $item)", map[string]any{
 			"0": 1.0,
 			"1": 2.0,
@@ -604,5 +603,50 @@ func TestNullishOperator(t *testing.T) {
 		{`"hello"?.[4]`, "o"},
 	}
 
+	runVmTests(t, tests)
+}
+
+func TestNullishCoalescing(t *testing.T) {
+	tests := []vmTestCase{
+		// Basic fallback
+		{`null ?? 42`, 42.0},
+		// {`undefinedVar ?? "default"`, "default"}, // undefined identifier should resolve to null TODO: TEST THIS LATER
+
+		// Left side is not nullish
+		{`0 ?? 99`, 0.0},
+		{`false ?? true`, false},
+		{`"" ?? "fallback"`, ""},
+
+		// Chained ?? operators
+		{`null ?? null ?? "x"`, "x"},
+		{`null ?? 0 ?? "y"`, 0.0},
+		{`null ?? false ?? "z"`, false},
+		{`null ?? null ?? null ?? "last"`, "last"},
+		{`1 ?? 2 ?? 3`, 1.0},
+
+		// Array out-of-bounds and missing keys (safe mode)
+		{`[1,2,3][10] ?? 99`, 99.0},
+		{`{"a": 1}["b"] ?? "missing"`, "missing"},
+		{`{"a": null}["a"] ?? "fallback"`, "fallback"},
+
+		// Nested property/index with ?? fallback
+		{`{"user": {"name": null}}.user.name ?? "anon"`, "anon"},
+		{`{"user": {}}.user.name ?? "anon"`, "anon"},
+		{`{"user": {"name": "alice"}}.user.name ?? "anon"`, "alice"},
+
+		// Optional chaining + ??
+		{`{"user": null}?.user?.name ?? "anon"`, "anon"},
+		{`{"user": {"name": null}}?.user?.name ?? "anon"`, "anon"},
+		{`{"user": {"name": "bob"}}?.user?.name ?? "anon"`, "bob"},
+
+		// Right side should not be evaluated if left is not nullish
+		{`1 ?? (2/0)`, 1.0}, // Should not error or panic
+
+		// Chained with other operators
+		{`(null ?? 5) + 2`, 7.0},
+		{`(null ?? 0) + 2`, 2.0},
+		{`(null ?? "") + "x"`, "x"},
+		{`(null ?? "foo") + "bar"`, "foobar"},
+	}
 	runVmTests(t, tests)
 }
