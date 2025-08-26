@@ -51,6 +51,9 @@ func testConstants(
 			len(actual), len(expected))
 	}
 	for i, constant := range expected {
+		if constant == nil { // sentinel: skip validation for this constant (e.g., InstructionBlock)
+			continue
+		}
 		switch constant := constant.(type) {
 		case float64:
 		case int:
@@ -69,10 +72,21 @@ func testConstants(
 }
 
 func testNumerLiteral(expected float64, actual any) error {
-	if num, ok := actual.(*parser.NumberLiteral); ok {
-		if num.Value != expected {
-			return fmt.Errorf("wrong number literal. got=%v, want=%v",
-				num.Value, expected)
+	// Accept either a *parser.NumberLiteral (old representation) or a raw float64 (current representation)
+	switch v := actual.(type) {
+	case *parser.NumberLiteral:
+		if v.Value != expected {
+			return fmt.Errorf("wrong number literal. got=%v, want=%v", v.Value, expected)
+		}
+		return nil
+	case float64:
+		if v != expected {
+			return fmt.Errorf("wrong number literal. got=%v, want=%v", v, expected)
+		}
+		return nil
+	case int:
+		if float64(v) != expected {
+			return fmt.Errorf("wrong number literal. got=%v, want=%v", v, expected)
 		}
 		return nil
 	}
@@ -80,10 +94,16 @@ func testNumerLiteral(expected float64, actual any) error {
 }
 
 func testStringLiteral(expected string, actual any) error {
-	if str, ok := actual.(*parser.StringLiteral); ok {
-		if str.Value != expected {
-			return fmt.Errorf("wrong string literal. got=%q, want=%q",
-				str.Value, expected)
+	// Accept either a *parser.StringLiteral (old) or raw string (current)
+	switch v := actual.(type) {
+	case *parser.StringLiteral:
+		if v.Value != expected {
+			return fmt.Errorf("wrong string literal. got=%q, want=%q", v.Value, expected)
+		}
+		return nil
+	case string:
+		if v != expected {
+			return fmt.Errorf("wrong string literal. got=%q, want=%q", v, expected)
 		}
 		return nil
 	}
