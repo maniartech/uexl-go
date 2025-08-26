@@ -22,8 +22,8 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 - Only the immediate property/index access on the left of `??` is evaluated in “safe” mode.
 - Example: `x.a.b ?? c` softens only the final access of `b` in `a`.
   - If `b` exists in `a` but is null → use `c`.
-  - If `b` doesn’t exist in `a` at all → use `c`.
-  - If `a` doesn’t exist in `x` (or any prior link fails) → still an error. Earlier links remain strict.
+  - If `b` doesn’t exist in `a` at all → still an error.
+  - If `a` doesn’t exist in `x` or is nullish (or any prior link fails) → still an error. Earlier links remain strict.
 
 4) Short‑circuiting without side effects
 - `a && b` evaluates `b` only if `a` is truthy; `a || b` evaluates `b` only if `a` is falsy.
