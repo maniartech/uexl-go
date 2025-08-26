@@ -136,6 +136,9 @@ func (vm *VM) run() error {
 				continue
 			}
 			frame.ip += 3
+		case code.OpPop:
+			vm.Pop()
+			frame.ip += 1
 		case code.OpTrue:
 			err := vm.Push(true)
 			if err != nil {
