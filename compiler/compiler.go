@@ -153,6 +153,34 @@ func (c *Compiler) Compile(node parser.Node) error {
 		}
 		fnIdx := c.addConstant(node.Function.(*parser.Identifier).Name)
 		c.emit(code.OpCallFunction, fnIdx, len(node.Arguments))
+	case *parser.ConditionalExpression:
+		// condition ? consequent : alternate
+		// Compile condition
+		if err := c.Compile(node.Condition); err != nil {
+			return err
+		}
+		// Jump to else (alternate) if condition is falsy
+		jumpIfFalsyPos := len(c.currentInstructions())
+		c.emit(code.OpJumpIfFalsy, 0) // placeholder
+		// Compile consequent
+		if err := c.Compile(node.Consequent); err != nil {
+			return err
+		}
+		// After consequent, jump to end
+		jumpToEndPos := len(c.currentInstructions())
+		c.emit(code.OpJump, 0) // placeholder
+		// Patch first jump to here (start of alternate)
+		elsePos := len(c.currentInstructions())
+		c.replaceOperand(jumpIfFalsyPos+1, elsePos)
+		// Remove the re-pushed falsy condition value
+		c.emit(code.OpPop)
+		// Compile alternate
+		if err := c.Compile(node.Alternate); err != nil {
+			return err
+		}
+		// Patch end jump
+		endPos := len(c.currentInstructions())
+		c.replaceOperand(jumpToEndPos+1, endPos)
 	case *parser.ProgramNode:
 		// First expression is the entry point will just be normal expression from which we get the result
 		// We will just compile it like a normal expression
