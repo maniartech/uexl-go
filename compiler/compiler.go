@@ -37,6 +37,25 @@ type accessStep struct {
 	isOptional bool
 }
 
+func (c *Compiler) compileShortCircuitChain(terms []parser.Node, jumpOpcode code.Opcode) error {
+	jumpPositions := make([]int, 0, len(terms))
+	for i, term := range terms {
+		if err := c.Compile(term); err != nil {
+			return err
+		}
+		if i < len(terms)-1 {
+			pos := len(c.currentInstructions())
+			c.emit(jumpOpcode, 0) // placeholder to END
+			jumpPositions = append(jumpPositions, pos)
+		}
+	}
+	end := len(c.currentInstructions())
+	for _, p := range jumpPositions {
+		c.replaceOperand(p+1, end)
+	}
+	return nil
+}
+
 func (c *Compiler) Compile(node parser.Node) error {
 	switch node := node.(type) {
 	case *parser.BinaryExpression:
@@ -51,47 +70,21 @@ func (c *Compiler) Compile(node parser.Node) error {
 		}
 
 		// Short-circuit logical operators (flattened chains + single backpatch)
-		if operator == "||" || operator == "&&" {
+		if operator == "||" || operator == "&&" || operator == "??" {
 			terms := make([]parser.Node, 0, 4)
 			flattenLogicalChain(node, operator, &terms)
-
-			jumpPositions := make([]int, 0, len(terms))
 			switch operator {
 			case "||":
-				for i, term := range terms {
-					if err := c.Compile(term); err != nil {
-						return err
-					}
-					if i < len(terms)-1 {
-						pos := len(c.currentInstructions())
-						c.emit(code.OpJumpIfTruthy, 0) // placeholder to END
-						jumpPositions = append(jumpPositions, pos)
-					}
-				}
-				end := len(c.currentInstructions())
-				for _, p := range jumpPositions {
-					c.replaceOperand(p+1, end)
-				}
+				return c.compileShortCircuitChain(terms, code.OpJumpIfTruthy)
 			case "&&":
-				if len(terms) == 0 {
-					return nil
-				}
-				for i := 0; i < len(terms)-1; i++ {
-					if err := c.Compile(terms[i]); err != nil {
-						return err
-					}
-					pos := len(c.currentInstructions())
-					c.emit(code.OpJumpIfFalsy, 0) // placeholder to END
-					jumpPositions = append(jumpPositions, pos)
-				}
-				// Compile last term
-				if err := c.Compile(terms[len(terms)-1]); err != nil {
+				return c.compileShortCircuitChain(terms, code.OpJumpIfFalsy)
+			case "??":
+				c.emit(code.OpSafeModeOn)
+				err := c.compileShortCircuitChain(terms, code.OpJumpIfNotNullish)
+				if err != nil {
 					return err
 				}
-				end := len(c.currentInstructions())
-				for _, p := range jumpPositions {
-					c.replaceOperand(p+1, end)
-				}
+				c.emit(code.OpSafeModeOff)
 			}
 			return nil
 		}
@@ -198,7 +191,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 		for _, step := range steps {
 			if step.isOptional {
 				pos := len(c.currentInstructions())
-				c.emit(code.OpJumpIfNil, 0) // placeholder (uint16 address)
+				c.emit(code.OpJumpIfNullish, 0) // placeholder (uint16 address)
 				jumpPositions = append(jumpPositions, pos)
 			}
 			if step.isMember {
