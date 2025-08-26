@@ -79,12 +79,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 			case "&&":
 				return c.compileShortCircuitChain(terms, code.OpJumpIfFalsy)
 			case "??":
-				c.emit(code.OpSafeModeOn)
-				err := c.compileShortCircuitChain(terms, code.OpJumpIfNotNullish)
-				if err != nil {
-					return err
-				}
-				c.emit(code.OpSafeModeOff)
+				return c.compileNullishChain(terms)
 			}
 			return nil
 		}
@@ -207,40 +202,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 
 		}
 	case *parser.MemberAccess, *parser.IndexAccess:
-		base, steps := flattenAccessChain(node)
-		// Compile base once
-		if err := c.Compile(base); err != nil {
-			return err
-		}
-
-		// Collect jump placeholders for every optional step; each JumpIfNil
-		// skips the remainder of the chain (including future index/property eval).
-		var jumpPositions []int
-		for _, step := range steps {
-			if step.isOptional {
-				pos := len(c.currentInstructions())
-				c.emit(code.OpJumpIfNullish, 0) // placeholder (uint16 address)
-				jumpPositions = append(jumpPositions, pos)
-			}
-			if step.isMember {
-				// Push property name constant
-				propIdx := c.addConstant(step.property)
-				c.emit(code.OpConstant, propIdx)
-				// Perform member access (consumes receiver + property)
-				c.emit(code.OpMemberAccess)
-			} else {
-				// Compile index expression only if not short-circuited
-				if err := c.Compile(step.property.(parser.Node)); err != nil {
-					return err
-				}
-				c.emit(code.OpIndex)
-			}
-		}
-		end := len(c.currentInstructions())
-		for _, jp := range jumpPositions {
-			c.replaceOperand(jp+1, end)
-		}
-		return nil
+		return c.compileAccessNode(node, false)
 	case *parser.ObjectLiteral:
 		// Ensure deterministic order by sorting keys
 		keys := make([]string, 0, len(node.Properties))
