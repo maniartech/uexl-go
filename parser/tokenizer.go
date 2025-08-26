@@ -2,8 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"math"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -163,6 +161,7 @@ func (t *Tokenizer) readNumber() (Token, error) {
 
 func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 	start := t.pos
+	startColumn := t.column
 
 	// Allow the first character to be a letter, underscore, or dollar sign
 	if isLetter(t.current()) || t.current() == '_' || t.current() == '$' {
@@ -184,13 +183,13 @@ func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 	originalToken := t.input[start:t.pos]
 	switch originalToken {
 	case "true", "false":
-		return Token{Type: constants.TokenBoolean, Value: originalToken == "true", Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
+		return Token{Type: constants.TokenBoolean, Value: originalToken == "true", Token: originalToken, Line: t.line, Column: startColumn}, nil
 	case "null":
-		return Token{Type: constants.TokenNull, Value: nil, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
+		return Token{Type: constants.TokenNull, Value: nil, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	case "as":
-		return Token{Type: constants.TokenAs, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
+		return Token{Type: constants.TokenAs, Value: originalToken, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	default:
-		return Token{Type: constants.TokenIdentifier, Value: originalToken, Token: originalToken, Line: t.line, Column: t.column - (t.pos - start)}, nil
+		return Token{Type: constants.TokenIdentifier, Value: originalToken, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	}
 }
 func (t *Tokenizer) readString() (Token, error) {
@@ -253,13 +252,33 @@ func (t *Tokenizer) readString() (Token, error) {
 	isSingleQuoted := false
 	if rawString {
 		// For raw strings, extract content between quotes and handle doubled quotes
+		// Avoid strings.ReplaceAll to reduce allocations.
 		content := originalToken[2 : len(originalToken)-1] // Remove 'r' prefix and quotes
-		// Replace doubled quotes with single quotes
+		var b strings.Builder
+		b.Grow(len(content))
 		if quote == '"' {
-			value = strings.ReplaceAll(content, `""`, `"`)
+			for i := 0; i < len(content); {
+				if content[i] == '"' && i+1 < len(content) && content[i+1] == '"' {
+					b.WriteByte('"')
+					i += 2
+				} else {
+					b.WriteByte(content[i])
+					i++
+				}
+			}
+			value = b.String()
 		} else {
-			value = strings.ReplaceAll(content, `''`, `'`)
 			isSingleQuoted = true
+			for i := 0; i < len(content); {
+				if content[i] == '\'' && i+1 < len(content) && content[i+1] == '\'' {
+					b.WriteByte('\'')
+					i += 2
+				} else {
+					b.WriteByte(content[i])
+					i++
+				}
+			}
+			value = b.String()
 		}
 	} else if quote == '"' {
 		quoted := originalToken
@@ -277,41 +296,48 @@ func (t *Tokenizer) readString() (Token, error) {
 	return Token{Type: constants.TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn, IsSingleQuoted: isSingleQuoted}, nil
 }
 
-// Ref: https://regex101.com/r/w6qtHq/1
-var pipePattern = regexp.MustCompile(`(?m)^(?P<pipe>[a-zA-Z]+)?:`)
-
 func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
-	start := t.pos
+	startColumn := t.column
 	t.advance() // consume first '|'
 	if t.current() == '|' {
 		t.advance() // consume second '|'
 		operator := "||"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: t.column - (t.pos - start)}, nil
+		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	if t.current() == ':' {
 		t.advance() // consume ':'
 		pipeValue := ":"
-		return Token{Type: constants.TokenPipe, Value: pipeValue, Token: pipeValue, Line: t.line, Column: t.column - (t.pos - start)}, nil
+		return Token{Type: constants.TokenPipe, Value: pipeValue, Token: pipeValue, Line: t.line, Column: startColumn}, nil
 	}
 
-	// Fetch the next 10 characters or the rest of the input if less than 10 characters are available
-	nextChars := t.input[t.pos:int(
-		math.Min(float64(t.pos+10), float64(len(t.input))),
-	)]
-
-	pipeMatch := pipePattern.FindStringSubmatch(nextChars)
-	if len(pipeMatch) > 1 && pipeMatch[1] != "" {
-		pipeName := pipeMatch[1]
-		for range pipeName {
+	// Manual scan for optional [A-Za-z]+ followed by ':'
+	// We only accept ASCII letters for pipe names as before.
+	i := t.pos
+	for i < len(t.input) {
+		r, size := utf8.DecodeRuneInString(t.input[i:])
+		if r == utf8.RuneError && size == 1 {
+			break
+		}
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			i += size
+			continue
+		}
+		break
+	}
+	// If at least one letter and next char is ':' then it's a named pipe
+	if i > t.pos && i < len(t.input) && t.input[i] == ':' {
+		pipeName := t.input[t.pos:i]
+		// Advance over the name and ':' without allocating
+		for t.pos < i {
 			t.advance()
 		}
 		t.advance() // consume ':'
-		return Token{Type: constants.TokenPipe, Value: pipeName, Token: pipeName, Line: t.line, Column: t.column - (t.pos - start)}, nil
+		return Token{Type: constants.TokenPipe, Value: pipeName, Token: pipeName, Line: t.line, Column: startColumn}, nil
 	}
 
 	operator := "|"
-	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: t.column - (t.pos - start)}, nil
+	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
 }
 
 func (t *Tokenizer) readOperator() (Token, error) {
@@ -502,13 +528,15 @@ func (t *Tokenizer) advance() {
 	if t.pos >= len(t.input) {
 		return
 	}
-	if t.pos < len(t.input) && t.input[t.pos] == '\n' {
+	// Decode the current rune once
+	r, size := utf8.DecodeRuneInString(t.input[t.pos:])
+	if r == '\n' {
 		t.line++
 		t.column = 1
 	} else {
 		t.column++
 	}
-	t.pos += utf8.RuneLen(t.current())
+	t.pos += size
 }
 
 func (t *Tokenizer) skipWhitespace() {
@@ -526,7 +554,12 @@ func isLetter(r rune) bool {
 }
 
 func isOperatorChar(r rune) bool {
-	return strings.ContainsRune("+-*/%<>=!&|^?", r)
+	switch r {
+	case '+', '-', '*', '/', '%', '<', '>', '=', '!', '&', '|', '^', '?':
+		return true
+	default:
+		return false
+	}
 }
 
 func (t *Tokenizer) peek() rune {
