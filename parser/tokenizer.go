@@ -71,7 +71,7 @@ func (t *Tokenizer) NextToken() (Token, error) {
 	case ch == '"' || ch == '\'':
 		return t.readString()
 	case ch == 'r':
-		if t.peekNext() == '"' || t.peekNext() == '\'' {
+		if t.peek() == '"' || t.peek() == '\'' {
 			return t.readString()
 		}
 		fallthrough
@@ -669,17 +669,7 @@ func (t *Tokenizer) current() rune {
 }
 
 // peek the next character without advancing the position
-func (t *Tokenizer) peekNext() rune {
-	if t.pos+1 >= len(t.input) {
-		return 0
-	}
-	b := t.input[t.pos+1]
-	if b < 0x80 {
-		return rune(b)
-	}
-	r, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
-	return r
-}
+// (peekNext removed; use peek())
 
 func (t *Tokenizer) advance() {
 	if t.pos >= len(t.input) {

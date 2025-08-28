@@ -1,63 +1,39 @@
 # Tokenizer Upgrade Plan
 
-This document tracks the performance refactor of `parser/tokenizer.go` toward lower latency and allocations without changing public behavior.
+## Review findings (2025-08-28)
 
-## Goals
+### Strengths
 
-- Keep semantic value parsing (numbers, strings, booleans, null) intact.
-- Minimize allocations in hot paths (numbers, identifiers, strings, pipes).
-- Ensure race-safety and deterministic behavior.
-- Provide benchmarks to quantify improvements.
+- Allocation-aware hot paths: ASCII fast paths, cached rune/size, reusable `strBuf`, no regex.
+- Manual string unescape for double/single quotes with `\u`/`\U` support; fallback only on invalid sequences.
+- Fast number parsing without exponent; precomputed `pow10` table; correct line/column tracking.
+- Clean operator and pipe handling; per-instance state only (race-safe).
 
-## Constraints
+### Recommended improvements (priority order)
 
-- No API breaking changes for `Tokenizer` and `Token`.
-- Maintain error messages, positions (Line/Column), and tokenization semantics.
+1. Unify `peek` and `peekNext` (keep one helper) to reduce duplication and drift.
+1. Make pipe name scan truly byte-only in `readPipeOrBitwiseOr` (ASCII `[A-Za-z]+:`) to avoid rune decodes.
+1. Provide a way to avoid retaining large input via `Token.Token`:
+	- Store start/end offsets and derive lexeme on demand, or
+	- Offer a configurable “no-retain” mode for long-lived token streams.
+1. Identifier scanning: extend the ASCII byte loop, fallback to `advance()` only for non-ASCII to shave more cost.
+1. Add `Reset(input string)` to reuse a `Tokenizer` instance and keep buffers hot.
+1. Tests: add coverage for mixed `\u`/`\U`, invalid surrogate cases, `\U0010FFFF` boundary, and raw-strings with many doubled quotes.
+1. Minor nits: remove redundant inner bound check in `skipWhitespace`; add brief doc comments to exported types/helpers; document policy for `.5` (dot-leading) numeric literals in `LANGUAGE.md`.
 
-## Phases & TODOs
+### Notes and expectations
 
-1. Strings fast path and unescape
+- Escaped string literals inherently allocate once to materialize the final string; recent changes minimize extra temporaries. Further reductions require lazy-string representations or different semantics.
+- `isDigit` is ASCII-only by design for speed; non-ASCII digits are treated as non-digits.
+- Unary sign separation and exponent-in-number behavior are enforced by tests.
 
-- [ ] Add manual double-quoted unescape (ASCII fast path; handle `\\`, `\"`, `\n`, `\t`, `\r`, `\uXXXX`, `\UXXXXXXXX`).
-- [ ] Only fall back to `strconv.Unquote` for rare/invalid cases.
-- [ ] Keep raw-string doubled-quote collapse using single pass with reusable buffer.
+### Actionable checklist
 
-1. Pipe scanning and operators
-
-- [ ] Ensure `readPipeOrBitwiseOr` uses pure byte scan for `[A-Za-z]+:` (no rune decode) and returns correct columns.
-- [ ] Validate `?., ?[, ??` and operator pairs remain correct; add testcases if missing.
-
-1. Number parsing
-
-- [ ] Retain manual parse for ints/decimals without exponent; fallback to `ParseFloat` otherwise.
-- [ ] Ensure column/rune cache updated correctly after ASCII fast path loops.
-- [x] Unary signs are not part of numeric tokens: `-123` → `-` and `123`, `+456` → `+` and `456`.
-- [x] Exponent signs are part of numbers: `1e-5` is a single number token.
-	- Acceptance tests live in `parser/tokenizer_signs_test.go`.
-
-1. Whitespace and identifier scan
-
-- [ ] Keep ASCII fast path; fallback to unicode for non-ASCII.
-- [ ] Confirm `$` identifiers and underscores remain valid.
-
-1. Benchmarks & acceptance criteria
-
-- [ ] Add/keep comprehensive benchmarks in `parser/bench_tokenizer_test.go` covering:
-	- Scalars/ops, identifiers, strings, pipes, nullish/optional, unicode heavy, long numbers.
-- [ ] Target improvements (Windows dev box as reference):
-	- identifiers 64B: ≤ 500ns/op, ≤ 8 allocs/op
-	- strings 128B: ≤ 1.2µs/op, ≤ 18 allocs/op
-	- pipes 128B: ≤ 0.85µs/op, ≤ 15 allocs/op
-	- numbers 64B: ≤ 600ns/op, ≤ 9 allocs/op
-- [ ] All parser tests and vm tests pass; parser tests pass with `-race`.
-
-## Notes
-
-- Prefer ASCII byte loops where possible; update cached rune via `setCur()` only when position advanced by rune-size.
-- Avoid regex and large temporary strings in hot paths.
-
-## Done (to update as we progress)
-
-- [x] Rune caching and ASCII fast paths.
-- [x] Manual pipe parsing (no regex).
-- [x] Unary sign separation policy and tests.
+- [x] Remove `peekNext` and update call sites to `peek`.
+- [ ] Switch pipe-name scan to a pure byte loop.
+- [ ] Add a token lexeme-retention strategy (offsets or configurable no-retain mode).
+- [ ] Expand ASCII-first identifier loop; fallback only on non-ASCII.
+- [ ] Add `Reset(input string)` method on `Tokenizer`.
+- [ ] Add tests for `\u`/`\U` mix, invalid surrogates, `\U0010FFFF`, and dense doubled quotes in raw strings.
+- [ ] Trim redundant check in `skipWhitespace` and add doc comments.
+- [ ] Clarify the `.5` numeric literal policy in documentation.
