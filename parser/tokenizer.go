@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -281,6 +280,8 @@ func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 			if t.pos < len(t.input) && t.input[t.pos] < 0x80 {
 				t.pos++
 				t.column++
+				// keep cached rune in sync to avoid mid-sequence decode on next iteration
+				t.setCur()
 				continue
 			}
 			t.advance()
@@ -420,13 +421,19 @@ func (t *Tokenizer) readString() (Token, error) {
 		if !containsEscape(content) {
 			value = content
 		} else {
-			quoted := originalToken
-			unescaped, err := strconv.Unquote(quoted)
-			if err != nil {
-				errMsg := errors.GetErrorMessage(errors.ErrInvalidString)
-				return Token{}, errors.NewParserError(errors.ErrInvalidString, t.line, startColumn, errMsg+": '"+originalToken+"'")
+			// Manual fast-path unescape for common escapes and \u/\U unicode forms.
+			if unescaped, ok := t.unescapeDoubleQuoted(content); ok {
+				value = unescaped
+			} else {
+				// Fallback to strconv on rare/invalid sequences
+				quoted := originalToken
+				unescaped, err := strconv.Unquote(quoted)
+				if err != nil {
+					errMsg := errors.GetErrorMessage(errors.ErrInvalidString)
+					return Token{}, errors.NewParserError(errors.ErrInvalidString, t.line, startColumn, errMsg+": '"+originalToken+"'")
+				}
+				value = unescaped
 			}
-			value = unescaped
 		}
 	} else if quote == '\'' {
 		isSingleQuoted = true
@@ -711,10 +718,7 @@ func (t *Tokenizer) skipWhitespace() {
 }
 
 func isDigit(r rune) bool {
-	if r <= 127 {
-		return r >= '0' && r <= '9'
-	}
-	return unicode.IsDigit(r)
+	return r >= '0' && r <= '9'
 }
 
 func isLetter(r rune) bool {
@@ -802,14 +806,7 @@ func (t *Tokenizer) unescapeRawString(content string, quote byte) string {
 
 // unescapeStringFast handles common escape sequences using the internal buffer
 func (t *Tokenizer) unescapeStringFast(s string) string {
-	// Try to use strconv.Unquote by converting single-quoted to double-quoted
-	if s != "" {
-		if unquoted, err := strconv.Unquote("\"" + strings.ReplaceAll(s, "\"", "\\\"") + "\""); err == nil {
-			return unquoted
-		}
-	}
-
-	// Fallback: manual unescaping using internal buffer
+	// Manual unescaping using internal buffer (single-quoted strings)
 	t.strBuf = t.strBuf[:0] // reset buffer
 	i := 0
 	for i < len(s) {
@@ -848,10 +845,34 @@ func (t *Tokenizer) unescapeStringFast(s string) string {
 			case '/':
 				t.strBuf = append(t.strBuf, '/')
 				i += 2
+			case 'u':
+				// \uXXXX
+				rr, next, ok := parseUnicodeEscape(s, i+2, 4)
+				if !ok || !utf8.ValidRune(rr) {
+					// keep the backslash and next char as-is
+					t.strBuf = append(t.strBuf, s[i], s[i+1])
+					i += 2
+					break
+				}
+				var tmp [utf8.UTFMax]byte
+				n := utf8.EncodeRune(tmp[:], rr)
+				t.strBuf = append(t.strBuf, tmp[:n]...)
+				i = next
+			case 'U':
+				// \UXXXXXXXX
+				rr, next, ok := parseUnicodeEscape(s, i+2, 8)
+				if !ok || !utf8.ValidRune(rr) {
+					t.strBuf = append(t.strBuf, s[i], s[i+1])
+					i += 2
+					break
+				}
+				var tmp [utf8.UTFMax]byte
+				n := utf8.EncodeRune(tmp[:], rr)
+				t.strBuf = append(t.strBuf, tmp[:n]...)
+				i = next
 			default:
 				// Unknown escape sequence, keep the backslash and next char
-				t.strBuf = append(t.strBuf, s[i])
-				t.strBuf = append(t.strBuf, s[i+1])
+				t.strBuf = append(t.strBuf, s[i], s[i+1])
 				i += 2
 			}
 		} else {
@@ -860,6 +881,114 @@ func (t *Tokenizer) unescapeStringFast(s string) string {
 		}
 	}
 	return string(t.strBuf)
+}
+
+// hexVal converts a hex ASCII byte to its value, or -1 if invalid.
+func hexVal(b byte) int {
+	switch {
+	case b >= '0' && b <= '9':
+		return int(b - '0')
+	case b >= 'a' && b <= 'f':
+		return int(b-'a') + 10
+	case b >= 'A' && b <= 'F':
+		return int(b-'A') + 10
+	default:
+		return -1
+	}
+}
+
+// parseUnicodeEscape parses a unicode escape sequence of length n (4 or 8) starting at s[i:].
+// Returns the rune and the new index after the consumed digits. ok=false if invalid.
+func parseUnicodeEscape(s string, i int, n int) (rune, int, bool) {
+	if i+n > len(s) {
+		return 0, i, false
+	}
+	var code uint32
+	for j := 0; j < n; j++ {
+		v := hexVal(s[i+j])
+		if v < 0 {
+			return 0, i, false
+		}
+		code = (code << 4) | uint32(v)
+	}
+	return rune(code), i + n, true
+}
+
+// unescapeDoubleQuoted handles common escapes for double-quoted strings, including unicode escapes.
+// Returns ok=false if an invalid escape is encountered.
+func (t *Tokenizer) unescapeDoubleQuoted(s string) (string, bool) {
+	t.strBuf = t.strBuf[:0]
+	i := 0
+	for i < len(s) {
+		c := s[i]
+		if c != '\\' {
+			t.strBuf = append(t.strBuf, c)
+			i++
+			continue
+		}
+		// c == '\\'
+		if i+1 >= len(s) {
+			return "", false
+		}
+		switch s[i+1] {
+		case '"':
+			t.strBuf = append(t.strBuf, '"')
+			i += 2
+		case '\\':
+			t.strBuf = append(t.strBuf, '\\')
+			i += 2
+		case 'n':
+			t.strBuf = append(t.strBuf, '\n')
+			i += 2
+		case 't':
+			t.strBuf = append(t.strBuf, '\t')
+			i += 2
+		case 'r':
+			t.strBuf = append(t.strBuf, '\r')
+			i += 2
+		case 'b':
+			t.strBuf = append(t.strBuf, '\b')
+			i += 2
+		case 'f':
+			t.strBuf = append(t.strBuf, '\f')
+			i += 2
+		case 'a':
+			t.strBuf = append(t.strBuf, '\a')
+			i += 2
+		case 'v':
+			t.strBuf = append(t.strBuf, '\v')
+			i += 2
+		case '/':
+			t.strBuf = append(t.strBuf, '/')
+			i += 2
+		case 'u':
+			// \uXXXX
+			var rr rune
+			var ok bool
+			rr, i, ok = parseUnicodeEscape(s, i+2, 4)
+			if !ok || !utf8.ValidRune(rr) {
+				return "", false
+			}
+			var tmp [utf8.UTFMax]byte
+			n := utf8.EncodeRune(tmp[:], rr)
+			t.strBuf = append(t.strBuf, tmp[:n]...)
+		case 'U':
+			// \UXXXXXXXX
+			var rr rune
+			var ok bool
+			rr, i, ok = parseUnicodeEscape(s, i+2, 8)
+			if !ok || !utf8.ValidRune(rr) {
+				return "", false
+			}
+			var tmp [utf8.UTFMax]byte
+			n := utf8.EncodeRune(tmp[:], rr)
+			t.strBuf = append(t.strBuf, tmp[:n]...)
+		default:
+			// Unknown escape; treat as invalid to allow fallback
+			return "", false
+		}
+	}
+	return string(t.strBuf), true
 }
 
 // Precomputed powers of 10 for fast decimal parsing
