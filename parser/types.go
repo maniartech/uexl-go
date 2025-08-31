@@ -15,6 +15,7 @@ const (
 	NodeTypeObjectLiteral    NodeType = "ObjectLiteral"
 	NodeTypeFunctionCall     NodeType = "FunctionCall"
 	NodeTypeMemberAccess     NodeType = "MemberAccess"
+	NodeTypeSliceExpression  NodeType = "SliceExpression"
 	NodeTypePipeExpression   NodeType = "PipeExpression"
 	NodeTypeProgram          NodeType = "Program"
 )
@@ -159,6 +160,20 @@ type MemberAccess struct {
 func (ma *MemberAccess) expressionNode()      {}
 func (ma *MemberAccess) Type() NodeType       { return NodeTypeMemberAccess }
 func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
+
+// SliceExpression represents a slicing operation on a sequence (array or string).
+type SliceExpression struct {
+	Target Expression // The sequence being sliced
+	Start  Expression // The start index (optional, can be nil)
+	End    Expression // The end index (optional, can be nil)
+	Step   Expression // The step value (optional, can be nil)
+	Line   int
+	Column int
+}
+
+func (se *SliceExpression) expressionNode()      {}
+func (se *SliceExpression) Type() NodeType       { return NodeTypeSliceExpression }
+func (se *SliceExpression) Position() (int, int) { return se.Line, se.Column }
 
 // IndexAccess represents array index access expressions
 type IndexAccess struct {

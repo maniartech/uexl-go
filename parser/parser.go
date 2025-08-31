@@ -351,40 +351,9 @@ func (p *Parser) parseMemberAccess() Expression {
 	expr := p.parsePrimary()
 
 	for {
-		// Handle array index access
+		// Handle array index/slice access
 		if p.current.Type == constants.TokenLeftBracket || p.current.Type == constants.TokenQuestionLeftBracket {
-			bracket := p.current
-			p.advance() // consume '['
-
-			// Save previous state
-			wasInParenthesis := p.inParenthesis
-			wasSubExpressionActive := p.subExpressionActive
-
-			// Allow expressions within array index
-			p.inParenthesis = true
-			p.subExpressionActive = true
-
-			// Parse the index expression
-			indexExpr := p.parseExpression()
-
-			if p.current.Type != constants.TokenRightBracket {
-				p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']' after array index", "]")
-			} else {
-				p.advance() // consume ']'
-			}
-
-			// Restore previous state
-			p.inParenthesis = wasInParenthesis
-			p.subExpressionActive = wasSubExpressionActive
-
-			// Create an index access expression
-			expr = &IndexAccess{
-				Target:   expr,
-				Index:    indexExpr,
-				Optional: bracket.Type == constants.TokenQuestionLeftBracket,
-				Line:     bracket.Line,
-				Column:   bracket.Column,
-			}
+			expr = p.parseIndexOrSliceExpression(expr)
 			continue // check for more member access operations
 		}
 
@@ -562,6 +531,107 @@ func (p *Parser) parseMemberAccess() Expression {
 	}
 
 	return expr
+}
+
+func (p *Parser) parseIndexOrSliceExpression(target Expression) Expression {
+	bracket := p.current
+	p.advance() // consume '[' or '?['
+
+	// Save previous state
+	wasInParenthesis := p.inParenthesis
+	wasSubExpressionActive := p.subExpressionActive
+
+	// Allow expressions within array index/slice
+	p.inParenthesis = true
+	p.subExpressionActive = true
+
+	// Peek ahead to see if this is a slice. A slice must contain at least one ':'.
+	// We can't just check p.current, because it could be `[1:2]`.
+	// A simple way is to check if there is a colon before the closing bracket.
+	// This requires a lookahead in the tokenizer. Since we don't have that,
+	// we will parse based on what we see.
+
+	var start, end, step Expression
+
+	// Check for the end of the slice/index right away
+	if p.current.Type == constants.TokenRightBracket {
+		p.addErrorWithExpected(errors.ErrUnclosedArray, "expected expression or ':' in slice/index", "expression or ':'")
+		p.advance() // consume ']' to avoid infinite loops
+		return nil
+	}
+
+	// It's a slice if the first token is a colon, e.g., `[:end]`
+	if p.current.Type == constants.TokenColon {
+		p.advance() // consume first ':'
+		// `start` is nil
+		if p.current.Type != constants.TokenRightBracket && p.current.Type != constants.TokenColon {
+			end = p.parseExpression()
+		}
+
+		if p.current.Type == constants.TokenColon {
+			p.advance() // consume second ':'
+			if p.current.Type != constants.TokenRightBracket {
+				step = p.parseExpression()
+			}
+		}
+	} else {
+		// It could be an index `[index]` or a slice `[start:...]`
+		start = p.parseExpression()
+
+		if p.current.Type == constants.TokenColon {
+			// It's a slice
+			p.advance() // consume first ':'
+
+			if p.current.Type != constants.TokenRightBracket && p.current.Type != constants.TokenColon {
+				end = p.parseExpression()
+			}
+
+			if p.current.Type == constants.TokenColon {
+				p.advance() // consume second ':'
+				if p.current.Type != constants.TokenRightBracket {
+					step = p.parseExpression()
+				}
+			}
+		} else {
+			// It's a simple index access
+			if p.current.Type != constants.TokenRightBracket {
+				p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']' after array index", "]")
+			} else {
+				p.advance() // consume ']'
+			}
+
+			// Restore previous state
+			p.inParenthesis = wasInParenthesis
+			p.subExpressionActive = wasSubExpressionActive
+
+			return &IndexAccess{
+				Target:   target,
+				Index:    start,
+				Optional: bracket.Type == constants.TokenQuestionLeftBracket,
+				Line:     bracket.Line,
+				Column:   bracket.Column,
+			}
+		}
+	}
+
+	if p.current.Type != constants.TokenRightBracket {
+		p.addErrorWithExpected(errors.ErrUnclosedArray, "expected ']' after slice", "]")
+	} else {
+		p.advance() // consume ']'
+	}
+
+	// Restore previous state
+	p.inParenthesis = wasInParenthesis
+	p.subExpressionActive = wasSubExpressionActive
+
+	return &SliceExpression{
+		Target: target,
+		Start:  start,
+		End:    end,
+		Step:   step,
+		Line:   bracket.Line,
+		Column: bracket.Column,
+	}
 }
 
 func (p *Parser) parsePrimary() Expression {
