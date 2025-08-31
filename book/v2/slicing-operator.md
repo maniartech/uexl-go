@@ -64,6 +64,22 @@ A negative step value reverses the direction of the slicing.
 - `str[::-1]` → `"LxEU"`
 - `arr[4:1:-1]` → `[50, 40, 30]`
 
+### Optional Slicing
+
+UExL supports optional slicing using the `?[]` syntax. This feature, also known as safe navigation, prevents runtime errors when attempting to slice a `null` value. If the target of the slicing operation is `null`, the expression will return `null` instead of throwing an error.
+
+- `null_var?[1:3]` → `null` (where `null_var` is a variable holding a null value)
+
+### Chained and Complex Expressions
+
+The slicing operator has the same high precedence as member access (`.`) and index access (`[]`), allowing for powerful and complex expressions.
+
+- **Chained Slicing**: `arr[1:10][1:5]` (slices the result of the first slice)
+- **Index Access on a Slice**: `arr[1:5][0]` (gets the first element of the slice `[20, 30, 40, 50]`, resulting in `20`)
+- **Slicing after Member Access**: `data.items[2:4]`
+- **Optional Slicing after Member Access**: `data.items.?[0:2]`
+- **Slicing Array Literals**: `[1, 2, 3, 4, 5][1:3]` → `[2, 3]`
+
 ## Edge Cases
 
 - If `start` or `end` are out of bounds, they are clamped to the valid range of indices for the sequence.
@@ -83,11 +99,12 @@ The proposed structure for the `SliceExpression` node is as follows:
 ```go
 // SliceExpression represents a slicing operation on a sequence (array or string).
 type SliceExpression struct {
-    Target Expression // The sequence being sliced
-    Start  Expression // The start index (optional, can be nil)
-    End    Expression // The end index (optional, can be nil)
-    Step   Expression // The step value (optional, can be nil)
-    Line   int
+    Target   Expression // The sequence being sliced
+    Start    Expression // The start index (optional, can be nil)
+    End      Expression // The end index (optional, can be nil)
+    Step     Expression // The step value (optional, can be nil)
+    Optional bool       // True if the optional slicing operator `?[]` is used
+    Line     int
     Column   int
 }
 ```
@@ -98,9 +115,9 @@ This new node will be added to the `ast/expressions.go` file.
 
 The parser will be updated to distinguish between a simple index access (`[index]`) and a slice expression (`[start:end:step]`). This logic will be implemented within the `parseMemberAccess` function in `parser/parser.go`.
 
-When the parser encounters a `[` token, it will look ahead for a `:` token to determine whether it is parsing an index or a slice.
+When the parser encounters a `[` or `?[` token, it will look ahead for a `:` token to determine whether it is parsing an index or a slice.
 
-- If a `:` is present, the parser will proceed to parse the `start`, `end`, and `step` expressions. It will correctly handle cases where any of these expressions are omitted.
+- If a `:` is present, the parser will proceed to parse the `start`, `end`, and `step` expressions, creating a `SliceExpression` node.
 - If no `:` is present before the closing `]`, the expression will be parsed as a standard `IndexAccess` node.
 
 This approach ensures that the new slicing syntax is integrated smoothly with the existing array and string access logic, maintaining backward compatibility while extending the language's capabilities.
