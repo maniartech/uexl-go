@@ -250,6 +250,37 @@ func (c *Compiler) Compile(node parser.Node) error {
 			}
 		}
 		c.emit(code.OpArray, len(node.Elements))
+	case *parser.SliceExpression:
+		if err := c.Compile(node.Target); err != nil {
+			return err
+		}
+		if node.Start != nil {
+			if err := c.Compile(node.Start); err != nil {
+				return err
+			}
+		} else {
+			c.emit(code.OpNull)
+		}
+		if node.End != nil {
+			if err := c.Compile(node.End); err != nil {
+				return err
+			}
+		} else {
+			c.emit(code.OpNull)
+		}
+		if node.Step != nil {
+			if err := c.Compile(node.Step); err != nil {
+				return err
+			}
+		} else {
+			c.emit(code.OpNull)
+		}
+
+		optional := 0
+		if node.Optional {
+			optional = 1
+		}
+		c.emit(code.OpSlice, optional)
 	}
 	return nil
 }
