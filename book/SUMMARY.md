@@ -32,3 +32,4 @@
   - [Migration and Design Notes](v2/migration-and-design.md)
   - [Nullish Coalescing Operator](v2/nullish-coalescing-operator.md)
   - [Null Chaining Operator](v2/null-chaining-operator.md)
+  - [Slicing Operator](v2/slicing-operator.md)

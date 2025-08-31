@@ -7,12 +7,14 @@ The centerpiece of v2 is Dynamic Pipe Expressions — authoring new pipes purely
 Status: Experimental (subject to change). Contributions and feedback are welcome.
 
 ## Goals
+
 - Author reusable pipe logic entirely in UExL (no Go code required)
 - Keep pipeline syntax consistent (`|name:`) and ergonomic
 - Allow predicate expressions to be passed unevaluated and used inside the macro
 - Preserve current pipe semantics (`$last`, `$item`, `$index`, `$acc`, etc.)
 
 ## Highlights
+
 - Register dynamic pipe expressions by name with a UExL pipeline fragment
 - Predicate capture via `$PRED` placeholder in templates
 - Strict usage rules: macros that require `$PRED` must be called with a predicate
