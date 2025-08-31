@@ -149,6 +149,85 @@ func TestParser_Slicing(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: "arr[1:10][1:5]",
+			expected: &parser.SliceExpression{
+				Target: &parser.SliceExpression{
+					Target: &parser.Identifier{Name: "arr"},
+					Start:  &parser.NumberLiteral{Value: 1},
+					End:    &parser.NumberLiteral{Value: 10},
+				},
+				Start: &parser.NumberLiteral{Value: 1},
+				End:   &parser.NumberLiteral{Value: 5},
+			},
+		},
+		{
+			input: "arr[1:5][0]",
+			expected: &parser.IndexAccess{
+				Target: &parser.SliceExpression{
+					Target: &parser.Identifier{Name: "arr"},
+					Start:  &parser.NumberLiteral{Value: 1},
+					End:    &parser.NumberLiteral{Value: 5},
+				},
+				Index: &parser.NumberLiteral{Value: 0},
+			},
+		},
+		{
+			input: "data.items[2:4]",
+			expected: &parser.SliceExpression{
+				Target: &parser.MemberAccess{
+					Target:   &parser.Identifier{Name: "data"},
+					Property: "items",
+				},
+				Start: &parser.NumberLiteral{Value: 2},
+				End:   &parser.NumberLiteral{Value: 4},
+			},
+		},
+		{
+			input: "getArr()[start(1):end(5)*2:step()]",
+			expected: &parser.SliceExpression{
+				Target: &parser.FunctionCall{
+					Function:  &parser.Identifier{Name: "getArr"},
+					Arguments: []parser.Expression{},
+				},
+				Start: &parser.FunctionCall{
+					Function: &parser.Identifier{Name: "start"},
+					Arguments: []parser.Expression{
+						&parser.NumberLiteral{Value: 1},
+					},
+				},
+				End: &parser.BinaryExpression{
+					Left: &parser.FunctionCall{
+						Function: &parser.Identifier{Name: "end"},
+						Arguments: []parser.Expression{
+							&parser.NumberLiteral{Value: 5},
+						},
+					},
+					Operator: "*",
+					Right:    &parser.NumberLiteral{Value: 2},
+				},
+				Step: &parser.FunctionCall{
+					Function:  &parser.Identifier{Name: "step"},
+					Arguments: []parser.Expression{},
+				},
+			},
+		},
+		{
+			input: "[1, 2, 3, 4, 5][1:3]",
+			expected: &parser.SliceExpression{
+				Target: &parser.ArrayLiteral{
+					Elements: []parser.Expression{
+						&parser.NumberLiteral{Value: 1},
+						&parser.NumberLiteral{Value: 2},
+						&parser.NumberLiteral{Value: 3},
+						&parser.NumberLiteral{Value: 4},
+						&parser.NumberLiteral{Value: 5},
+					},
+				},
+				Start: &parser.NumberLiteral{Value: 1},
+				End:   &parser.NumberLiteral{Value: 3},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -176,6 +255,20 @@ func TestParser_Slicing(t *testing.T) {
 					compareExpr(exp.Start, act.Start)
 					compareExpr(exp.End, act.End)
 					compareExpr(exp.Step, act.Step)
+				case *parser.IndexAccess:
+					act := actual.(*parser.IndexAccess)
+					compareExpr(exp.Target, act.Target)
+					compareExpr(exp.Index, act.Index)
+				case *parser.MemberAccess:
+					act := actual.(*parser.MemberAccess)
+					compareExpr(exp.Target, act.Target)
+					assert.Equal(t, exp.Property, act.Property)
+				case *parser.ArrayLiteral:
+					act := actual.(*parser.ArrayLiteral)
+					assert.Equal(t, len(exp.Elements), len(act.Elements))
+					for i := range exp.Elements {
+						compareExpr(exp.Elements[i], act.Elements[i])
+					}
 				case *parser.Identifier:
 					act := actual.(*parser.Identifier)
 					assert.Equal(t, exp.Name, act.Name)
