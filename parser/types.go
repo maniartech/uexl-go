@@ -160,6 +160,19 @@ func (ma *MemberAccess) expressionNode()      {}
 func (ma *MemberAccess) Type() NodeType       { return NodeTypeMemberAccess }
 func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
 
+// IndexAccess represents array index access expressions
+type IndexAccess struct {
+	Target   Expression
+	Index    Expression
+	Optional bool
+	Line     int
+	Column   int
+}
+
+func (ia *IndexAccess) expressionNode()      {}
+func (ia *IndexAccess) Position() (int, int) { return ia.Line, ia.Column }
+func (ia *IndexAccess) Type() NodeType       { return NodeType("IndexAccess") }
+
 type PipeExpression struct {
 	Expression Expression // The pipe's predicate expression block
 	PipeType   string

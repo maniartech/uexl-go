@@ -24,19 +24,6 @@ type Parser struct {
 	inParenthesis       bool
 }
 
-// IndexAccess represents array index access expressions
-type IndexAccess struct {
-	Target   Expression
-	Index    Expression
-	Optional bool
-	Line     int
-	Column   int
-}
-
-func (ia *IndexAccess) expressionNode()      {}
-func (ia *IndexAccess) Position() (int, int) { return ia.Line, ia.Column }
-func (ia *IndexAccess) Type() NodeType       { return NodeType("IndexAccess") }
-
 // NewParser creates a new parser instance with the given input
 // This function maintains backward compatibility and does not return errors
 func NewParser(input string) *Parser {
