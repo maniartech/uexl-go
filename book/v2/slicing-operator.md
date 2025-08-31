@@ -121,3 +121,39 @@ When the parser encounters a `[` or `?[` token, it will look ahead for a `:` tok
 - If no `:` is present before the closing `]`, the expression will be parsed as a standard `IndexAccess` node.
 
 This approach ensures that the new slicing syntax is integrated smoothly with the existing array and string access logic, maintaining backward compatibility while extending the language's capabilities.
+
+### Compiler and Virtual Machine
+
+The compiled bytecode and the virtual machine (VM) are the final pieces of the implementation.
+
+#### Compiler
+
+The compiler will be updated to recognize the `SliceExpression` AST node. It will introduce a new bytecode instruction, `OpSlice`, to handle the slicing operation.
+
+When the compiler encounters a `SliceExpression`, it will:
+1.  Compile the `Target` expression (the array or string to be sliced).
+2.  Compile the `Start`, `End`, and `Step` expressions. If any of these are not present in the AST node, the compiler will push a `null` value onto the stack.
+3.  Emit the `OpSlice` instruction.
+
+For example, for the expression `arr[1:5]`, the stack will be prepared as follows before the `OpSlice` instruction is executed:
+
+| Stack Top | Value    | From       |
+| :-------- | :------- | :--------- |
+| 3         | `null`   | (Step)     |
+| 2         | `5`      | (End)      |
+| 1         | `1`      | (Start)    |
+| 0         | `arr`    | (Target)   |
+
+The `Optional` flag from the `SliceExpression` node will be encoded as an operand to the `OpSlice` instruction.
+
+#### Virtual Machine
+
+The VM will be updated to handle the new `OpSlice` instruction. When it encounters this opcode, it will:
+1.  Read the `Optional` flag from the instruction's operand.
+2.  Pop the `Step`, `End`, `Start`, and `Target` values from the stack.
+3.  If `Optional` is true and the `Target` is `null`, it will push `null` back onto the stack and stop.
+4.  Otherwise, it will perform the slicing logic on the `Target` (which must be an array or string). This logic includes:
+    - Handling default values for `Start`, `End`, and `Step` if they are `null`.
+    - Correctly calculating indices for negative values.
+    - Clamping out-of-bounds indices.
+5.  Push the resulting new array or string back onto the stack.
