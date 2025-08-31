@@ -502,6 +502,11 @@ func (p *Parser) parseMemberAccess() Expression {
 				}
 				continue
 
+			case constants.TokenQuestionLeftBracket:
+				// This handles cases like `obj.?[index]`
+				expr = p.parseIndexOrSliceExpression(expr)
+				continue
+
 			default:
 				// Unexpected token after '.'
 				// For optional dot access, only identifier is valid per spec

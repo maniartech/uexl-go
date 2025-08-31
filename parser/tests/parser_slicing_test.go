@@ -275,6 +275,18 @@ func TestParser_Slicing(t *testing.T) {
 				End:   &parser.NumberLiteral{Value: 5},
 			},
 		},
+		{
+			input: "arr2d.0.?[1:5]",
+			expected: &parser.SliceExpression{
+				Target: &parser.MemberAccess{
+					Target:   &parser.Identifier{Name: "arr2d"},
+					Property: 0,
+				},
+				Start:    &parser.NumberLiteral{Value: 1},
+				End:      &parser.NumberLiteral{Value: 5},
+				Optional: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -312,6 +324,13 @@ func TestParser_Slicing(t *testing.T) {
 				case *parser.MemberAccess:
 					act := actual.(*parser.MemberAccess)
 					compareExpr(exp.Target, act.Target)
+					// Convert property to int for comparison if it's a float64
+					if p, ok := exp.Property.(float64); ok {
+						exp.Property = int(p)
+					}
+					if p, ok := act.Property.(float64); ok {
+						act.Property = int(p)
+					}
 					assert.Equal(t, exp.Property, act.Property)
 				case *parser.ArrayLiteral:
 					act := actual.(*parser.ArrayLiteral)
