@@ -228,6 +228,53 @@ func TestParser_Slicing(t *testing.T) {
 				End:   &parser.NumberLiteral{Value: 3},
 			},
 		},
+		{
+			input: "null?[0:5]",
+			expected: &parser.SliceExpression{
+				Target:   &parser.NullLiteral{},
+				Start:    &parser.NumberLiteral{Value: 0},
+				End:      &parser.NumberLiteral{Value: 5},
+				Optional: true,
+			},
+		},
+		{
+			input: "arr2d[0][1:5]",
+			expected: &parser.SliceExpression{
+				Target: &parser.IndexAccess{
+					Target: &parser.Identifier{Name: "arr2d"},
+					Index:  &parser.NumberLiteral{Value: 0},
+				},
+				Start: &parser.NumberLiteral{Value: 1},
+				End:   &parser.NumberLiteral{Value: 5},
+			},
+		},
+		{
+			input: "arr2d[1:5][0]",
+			expected: &parser.IndexAccess{
+				Target: &parser.SliceExpression{
+					Target: &parser.Identifier{Name: "arr2d"},
+					Start:  &parser.NumberLiteral{Value: 1},
+					End:    &parser.NumberLiteral{Value: 5},
+				},
+				Index: &parser.NumberLiteral{Value: 0},
+			},
+		},
+		{
+			input: "arr3d[0][10:20:20][0:5]",
+			expected: &parser.SliceExpression{
+				Target: &parser.SliceExpression{
+					Target: &parser.IndexAccess{
+						Target: &parser.Identifier{Name: "arr3d"},
+						Index:  &parser.NumberLiteral{Value: 0},
+					},
+					Start: &parser.NumberLiteral{Value: 10},
+					End:   &parser.NumberLiteral{Value: 20},
+					Step:  &parser.NumberLiteral{Value: 20},
+				},
+				Start: &parser.NumberLiteral{Value: 0},
+				End:   &parser.NumberLiteral{Value: 5},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -251,6 +298,7 @@ func TestParser_Slicing(t *testing.T) {
 				switch exp := expected.(type) {
 				case *parser.SliceExpression:
 					act := actual.(*parser.SliceExpression)
+					assert.Equal(t, exp.Optional, act.Optional)
 					compareExpr(exp.Target, act.Target)
 					compareExpr(exp.Start, act.Start)
 					compareExpr(exp.End, act.End)
@@ -259,6 +307,8 @@ func TestParser_Slicing(t *testing.T) {
 					act := actual.(*parser.IndexAccess)
 					compareExpr(exp.Target, act.Target)
 					compareExpr(exp.Index, act.Index)
+				case *parser.NullLiteral:
+					// Nothing to compare
 				case *parser.MemberAccess:
 					act := actual.(*parser.MemberAccess)
 					compareExpr(exp.Target, act.Target)

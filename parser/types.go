@@ -163,12 +163,13 @@ func (ma *MemberAccess) Position() (int, int) { return ma.Line, ma.Column }
 
 // SliceExpression represents a slicing operation on a sequence (array or string).
 type SliceExpression struct {
-	Target Expression // The sequence being sliced
-	Start  Expression // The start index (optional, can be nil)
-	End    Expression // The end index (optional, can be nil)
-	Step   Expression // The step value (optional, can be nil)
-	Line   int
-	Column int
+	Target   Expression // The sequence being sliced
+	Start    Expression // The start index (optional, can be nil)
+	End      Expression // The end index (optional, can be nil)
+	Step     Expression // The step value (optional, can be nil)
+	Optional bool
+	Line     int
+	Column   int
 }
 
 func (se *SliceExpression) expressionNode()      {}

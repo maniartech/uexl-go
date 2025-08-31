@@ -625,12 +625,13 @@ func (p *Parser) parseIndexOrSliceExpression(target Expression) Expression {
 	p.subExpressionActive = wasSubExpressionActive
 
 	return &SliceExpression{
-		Target: target,
-		Start:  start,
-		End:    end,
-		Step:   step,
-		Line:   bracket.Line,
-		Column: bracket.Column,
+		Target:   target,
+		Start:    start,
+		End:      end,
+		Step:     step,
+		Optional: bracket.Type == constants.TokenQuestionLeftBracket,
+		Line:     bracket.Line,
+		Column:   bracket.Column,
 	}
 }
 
