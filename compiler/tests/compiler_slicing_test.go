@@ -133,7 +133,7 @@ func TestCompileSliceExpressions(t *testing.T) {
 				code.Make(code.OpNull),
 				code.Make(code.OpSlice, 0),
 				code.Make(code.OpConstant, 2),
-				code.Make(code.OpIndex),
+				code.Make(code.OpIndex, 0),
 			},
 		},
 	}

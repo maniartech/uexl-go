@@ -65,6 +65,38 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 	}
 }
 
+func runVmErrorTests(t *testing.T, tests []vmTestCase) {
+	t.Helper()
+	for i, tt := range tests {
+		program := parse(tt.input)
+		comp := compiler.New()
+		err := comp.Compile(program)
+		if err != nil {
+			t.Fatalf("[case %d] compiler error: %s", i+1, err)
+		}
+
+		vm := vm.New(vm.LibContext{
+			Functions:    vm.Builtins,
+			PipeHandlers: vm.DefaultPipeHandlers,
+		})
+		bytecode := comp.ByteCode()
+		_, err = vm.Run(bytecode)
+
+		if err == nil {
+			t.Fatalf("[case %d] expected VM error but got none for input: %s", i+1, tt.input)
+		}
+
+		expectedErr, ok := tt.expected.(string)
+		if !ok {
+			t.Fatalf("[case %d] expected error message to be a string, got %T", i+1, tt.expected)
+		}
+
+		if err.Error() != expectedErr {
+			t.Fatalf("[case %d] wrong VM error: want=%q, got=%q", i+1, expectedErr, err.Error())
+		}
+	}
+}
+
 // testExpectedObject compares the expected value with the actual value from the VM stack.
 func testExpectedObject(t *testing.T, expected any, actual any) error {
 	switch v := expected.(type) {

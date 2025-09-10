@@ -402,12 +402,12 @@ func TestArrayBracketIndexAccess(t *testing.T) {
 			code.Make(code.OpConstant, 2),
 			code.Make(code.OpArray, 3),
 			code.Make(code.OpConstant, 3),
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 		}},
 		{"arr[1]", []any{1.0}, []code.Instructions{
 			code.Make(code.OpContextVar, 0),
 			code.Make(code.OpConstant, 0),
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 		}},
 		{"[1, 2, 3][2]", []any{1.0, 2.0, 3.0, 2.0}, []code.Instructions{
 			code.Make(code.OpConstant, 0),
@@ -415,15 +415,15 @@ func TestArrayBracketIndexAccess(t *testing.T) {
 			code.Make(code.OpConstant, 2),
 			code.Make(code.OpArray, 3),
 			code.Make(code.OpConstant, 3),
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 		}},
 		{"arr[0] + arr[1]", []any{0.0, 1.0}, []code.Instructions{
 			code.Make(code.OpContextVar, 0),
 			code.Make(code.OpConstant, 0),
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 			code.Make(code.OpContextVar, 0),
 			code.Make(code.OpConstant, 1),
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 			code.Make(code.OpAdd),
 		}},
 		{"[foo, bar][0]", []any{0.0}, []code.Instructions{
@@ -431,7 +431,7 @@ func TestArrayBracketIndexAccess(t *testing.T) {
 			code.Make(code.OpContextVar, 1),
 			code.Make(code.OpArray, 2),
 			code.Make(code.OpConstant, 0),
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 		}},
 	}
 	runCompilerTestCases(t, cases)
@@ -522,13 +522,13 @@ func TestObjectBracketIndexAccess(t *testing.T) {
 			code.Make(code.OpConstant, 1), // 1.0
 			code.Make(code.OpObject, 2),
 			code.Make(code.OpConstant, 2), // "a"
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 		}},
 		// Access property by context variable
 		{`obj["key"]`, []any{"key"}, []code.Instructions{
 			code.Make(code.OpContextVar, 0), // obj
 			code.Make(code.OpConstant, 0),   // "key"
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 		}},
 		// Nested object property access
 		{`{"a": {"b": 2}}["a"]["b"]`, []any{"a", "b", 2.0, "a", "b"}, []code.Instructions{
@@ -538,9 +538,9 @@ func TestObjectBracketIndexAccess(t *testing.T) {
 			code.Make(code.OpObject, 2),
 			code.Make(code.OpObject, 2),
 			code.Make(code.OpConstant, 3), // "a"
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 			code.Make(code.OpConstant, 4), // "b"
-			code.Make(code.OpIndex),
+			code.Make(code.OpIndex, 0),
 		}},
 	}
 	runCompilerTestCases(t, cases)

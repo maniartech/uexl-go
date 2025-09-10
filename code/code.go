@@ -102,7 +102,7 @@ var definations = map[Opcode]*Definition{
 	OpJumpIfNullish:      {"OpJumpIfNullish", []int{2}},
 	OpJumpIfNotNullish:   {"OpJumpIfNotNullish", []int{2}},
 	OpArray:              {"OpArray", []int{2}},
-	OpIndex:              {"OpIndex", []int{}},
+	OpIndex:              {"OpIndex", []int{1}}, // 1 for optional indexing, 0 for regular
 	OpMemberAccess:       {"OpMemberAccess", []int{}},
 	OpObject:             {"OpObject", []int{2}},
 	OpCallFunction:       {"OpCallFunction", []int{2, 2}},

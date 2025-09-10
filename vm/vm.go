@@ -177,9 +177,19 @@ func (vm *VM) run() error {
 			}
 			frame.ip += 3
 		case code.OpIndex:
+			// Bounds check to prevent index out of range panics
+			if frame.ip+1 >= len(frame.instructions) {
+				return fmt.Errorf("instruction pointer out of bounds: OpIndex requires 1-byte operand")
+			}
+			optional := frame.instructions[frame.ip+1] == 1
 			index := vm.Pop()
-			target := vm.Pop()
-			if err := vm.executeIndex(target, index); err != nil {
+			left := vm.Pop()
+			if err := vm.executeIndexExpression(left, index, optional); err != nil {
+				// TODO: Only skip errors related to nullish base when in safe mode
+				// e.g. if left is not indexable type, should still raise error even in safe mode
+				// Currently, all errors are skipped in safe mode
+				// This requires error type checking in executeIndexExpression and executeMemberAccess
+				// which is not implemented yet.
 				if vm.safeMode {
 					if perr := vm.Push(nil); perr != nil {
 						return perr
@@ -188,11 +198,31 @@ func (vm *VM) run() error {
 					return err
 				}
 			}
-			frame.ip += 1
+			frame.ip += 2
+		case code.OpSlice:
+			// Bounds check to prevent index out of range panics
+			if frame.ip+1 >= len(frame.instructions) {
+				return fmt.Errorf("instruction pointer out of bounds: OpSlice requires 1-byte operand")
+			}
+			optional := frame.instructions[frame.ip+1] == 1
+			step := vm.Pop()
+			end := vm.Pop()
+			start := vm.Pop()
+			target := vm.Pop()
+
+			if err := vm.executeSliceExpression(target, start, end, step, optional); err != nil {
+				return err
+			}
+			frame.ip += 2
 		case code.OpMemberAccess:
 			prop := vm.Pop()
 			target := vm.Pop()
 			if err := vm.executeMemberAccess(target, prop); err != nil {
+				// TODO: Only skip errors related to nullish base when in safe mode
+				// e.g. if left is not indexable type, should still raise error even in safe mode
+				// Currently, all errors are skipped in safe mode
+				// This requires error type checking in executeIndexExpression and executeMemberAccess
+				// which is not implemented yet.
 				if vm.safeMode {
 					if perr := vm.Push(nil); perr != nil {
 						return perr

@@ -227,7 +227,7 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 					return err
 				}
 				c.emit(code.OpSafeModeOn)
-				c.emit(code.OpIndex)
+				c.emit(code.OpIndex, 1) // optional = true
 				c.emit(code.OpSafeModeOff)
 				jEndPos := len(c.currentInstructions())
 				c.emit(code.OpJump, 0) // -> END
@@ -238,7 +238,7 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 				if err := c.Compile(idxExpr); err != nil {
 					return err
 				}
-				c.emit(code.OpIndex)
+				c.emit(code.OpIndex, 0) // optional = false
 
 				// END label
 				endPos := len(c.currentInstructions())
@@ -247,7 +247,7 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 				if err := c.Compile(idxExpr); err != nil {
 					return err
 				}
-				c.emit(code.OpIndex)
+				c.emit(code.OpIndex, 0) // optional = false
 			}
 		}
 	}
