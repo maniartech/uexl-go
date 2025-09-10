@@ -275,3 +275,116 @@ Expected effort: mechanical refactors across a limited set of choke points (toke
 
 - Tokenizer correctness and speed-ups (UTF-8-aware peek, fewer line/col inconsistencies, retained ASCII fast paths) with double-digit improvements on larger inputs.
 - Package docs and review notes updated with measurable wins and quality gates.
+
+---
+
+## Exact impact points in compiler (files and anchors)
+
+These references use current repository structure and common code paths observed; adjust line numbers as code evolves.
+
+- `compiler/compiler.go`
+    - access step representation (near top of file):
+        - Today uses `property any` to carry either a string (member) or `parser.Node` (index expression).
+        - Action: replace with typed fields:
+            - `propertyStr string` for member names
+            - `propertyExpr parser.Node` for bracket/index expressions
+    - Case handling of `*parser.MemberAccess` and `*parser.IndexAccess` (around emit/compile phases):
+        - Member: read `v.Property` via new `Property` type (`if v.Property.IsString() { v.Property.S }`).
+        - Index: use `v.Index` as before (expression), assign to `propertyExpr`.
+
+- `compiler/compiler_utils.go`
+    - Building access chains (functions that linearize member/index access):
+        - Previously: `property: v.Property // any`
+        - After: `propertyStr: v.Property.S` or `propertyExpr: v.Index`.
+    - Emitting constants for member names:
+        - Previously: `propIdx := c.addConstant(step.property)` (where `property` was any/string)
+        - After: `propIdx := c.addConstant(step.propertyStr)`
+    - Removing type assertions:
+        - Previously: `idxExpr, ok := step.property.(parser.Node)` → After: use `step.propertyExpr` directly.
+
+- `compiler/tests/help_test.go`
+    - Parser construction:
+        - If `NewParser` remains, no change.
+        - Otherwise use: `parser.NewParserWithOptions(input, parser.DefaultOptions())`.
+
+Notes:
+- The compiler compiles from AST, not tokens; the `TokenValue` change does not directly affect compiler code.
+
+### Compiler migration snippet (illustrative)
+
+```go
+// Before
+type accessStep struct {
+        safe     bool
+        property any // string or parser.Node
+}
+
+// After
+type accessStep struct {
+        safe         bool
+        propertyStr  string      // member name
+        propertyExpr parser.Node // index expression
+}
+
+// When building steps
+switch v := node.(type) {
+case *parser.MemberAccess:
+        if v.Property.IsString() {
+                steps = append(steps, accessStep{safe: v.Optional, propertyStr: v.Property.S})
+        } else {
+                steps = append(steps, accessStep{safe: v.Optional, propertyExpr: &parser.NumberLiteral{Value: float64(v.Property.I)}})
+        }
+case *parser.IndexAccess:
+        steps = append(steps, accessStep{safe: v.Optional, propertyExpr: v.Index})
+}
+
+// When emitting
+if step.propertyStr != "" {
+        propIdx := c.addConstant(step.propertyStr)
+        c.emit(code.OpConstant, propIdx)
+        c.emit(code.OpMemberAccess)
+} else if step.propertyExpr != nil {
+        if err := c.Compile(step.propertyExpr); err != nil { return err }
+        c.emit(code.OpIndexAccess)
+}
+```
+
+---
+
+## Exact impact points in VM (files and anchors)
+
+VM predominantly consumes bytecode and runtime values; it does not depend on parser tokens or AST internals.
+
+- `vm/vm_test.go`, `vm/nullish_semantics_errors_test.go`
+    - Parser construction in tests:
+        - If `NewParser` remains: no changes.
+        - If not: switch to `NewParserWithOptions(input, parser.DefaultOptions())`.
+
+- `vm/vm.go`, `vm/vm_handlers.go`
+    - Opcode semantics unaffected:
+        - `OpMemberAccess` expects member name as a string constant on the stack (pushed by compiler).
+        - `OpIndexAccess` evaluates the index expression (emitted by compiler) and uses existing handlers.
+    - No changes required to handler signatures or behavior.
+
+---
+
+## Grep checklist to drive migration
+
+Use these to locate and update all relevant sites:
+
+```bash
+# Compiler: removal of any-based property
+grep -RIn "property\s\+any" compiler
+
+# Compiler: places that handle MemberAccess / IndexAccess
+grep -RIn "MemberAccess\|IndexAccess" compiler
+
+# Compiler: pushing property constants
+grep -RIn "addConstant\(step\.property" compiler
+
+# Parser construction in tests (compiler + vm)
+grep -RIn "NewParser\(" compiler vm
+
+# VM handlers for awareness (no changes expected)
+grep -RIn "OpMemberAccess\|executeMemberAccess\|OpIndexAccess" vm
+```
