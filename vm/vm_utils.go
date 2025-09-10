@@ -35,13 +35,14 @@ type Frame struct {
 }
 
 type VM struct {
-	constants       []any
-	contextVars     []any
-	systemVars      []any
-	aliasVars       map[string]any
-	functionContext VMFunctions
-	pipeHandlers    PipeHandlers     // Add pipe handlers registry
-	pipeScopes      []map[string]any // Add scope stack for pipe variables
+	constants         []any
+	contextVars       []string
+	contextVarsValues map[string]any
+	systemVars        []any
+	aliasVars         map[string]any
+	functionContext   VMFunctions
+	pipeHandlers      PipeHandlers     // Add pipe handlers registry
+	pipeScopes        []map[string]any // Add scope stack for pipe variables
 
 	stack     []any
 	sp        int

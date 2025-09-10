@@ -7,7 +7,7 @@ import (
 type ByteCode struct {
 	Instructions code.Instructions
 	Constants    []any
-	ContextVars  []any
+	ContextVars  []string
 	SystemVars   []any
 }
 

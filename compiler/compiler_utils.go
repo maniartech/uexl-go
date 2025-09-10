@@ -43,7 +43,7 @@ func New() *Compiler {
 		constants:   []any{},
 		scopes:      []CompilationScope{mainScope},
 		scopeIndex:  0,
-		contextVars: []any{},
+		contextVars: []string{},
 	}
 }
 
@@ -58,7 +58,7 @@ func (c *Compiler) addConstant(node any) int {
 	return len(c.constants) - 1
 }
 
-func (c *Compiler) addContextVar(node any) int {
+func (c *Compiler) addContextVar(node string) int {
 	for i, existing := range c.contextVars {
 		if existing == node {
 			return i // Return the index of the existing variable by name

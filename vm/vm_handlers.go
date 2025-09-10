@@ -7,6 +7,17 @@ import (
 	"github.com/maniartech/uexl_go/code"
 )
 
+func (vm *VM) getContextValue(name string) (any, error) {
+	if vm.contextVarsValues == nil {
+		return nil, fmt.Errorf("context variables not set")
+	}
+	value, exists := vm.contextVarsValues[name]
+	if !exists {
+		return nil, fmt.Errorf("context variable %q not found", name)
+	}
+	return value, nil
+}
+
 // executeBinaryExpression evaluates the binary expression by popping the top two elements from the stack, applying the operator, and pushing the result back onto the stack.
 func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) error {
 	switch leftVal := left.(type) {
