@@ -320,10 +320,6 @@ func (t *Tokenizer) readString() (Token, error) {
 	quote := t.current()
 	t.pos++
 	t.column++
-	if quote == '\n' {
-		t.line++
-		t.column = 1
-	}
 	t.setCur()
 
 	// Read until closing quote
@@ -387,10 +383,6 @@ func (t *Tokenizer) readString() (Token, error) {
 	if t.pos < len(t.input) {
 		t.pos++ // consume closing quote
 		t.column++
-		if t.input[t.pos-1] == '\n' {
-			t.line++
-			t.column = 1
-		}
 	}
 	t.setCur()
 
@@ -730,14 +722,16 @@ func isOperatorChar(r rune) bool {
 }
 
 func (t *Tokenizer) peek() rune {
-	if t.pos+1 >= len(t.input) {
+	// Determine next index using size of current rune to handle multibyte UTF-8 correctly
+	next := t.pos + t.curSize
+	if next >= len(t.input) {
 		return 0
 	}
-	b := t.input[t.pos+1]
+	b := t.input[next]
 	if b < 0x80 {
 		return rune(b)
 	}
-	r, _ := utf8.DecodeRuneInString(t.input[t.pos+1:])
+	r, _ := utf8.DecodeRuneInString(t.input[next:])
 	return r
 }
 
