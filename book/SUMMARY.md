@@ -24,6 +24,11 @@
 - [Examples](examples.md)
 - [Using UExL in Golang](golang/overview.md)
 
+## Internals
+
+- [Tokenizer internals](internals/tokenizer-internals.md)
+- [Parser internals](internals/parser-internals.md)
+
 ## v2 (Experimental)
 
 - [Overview](v2/overview.md)
