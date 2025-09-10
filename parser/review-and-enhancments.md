@@ -492,3 +492,33 @@ The core error handling requirements have been successfully implemented and vali
 - **Risk Level**: Low to Medium
 
 The parser already demonstrates good fundamental architecture, making these enhancements primarily about cleanup, optimization, and adding production-ready features rather than fundamental rewrites.
+
+## Benchmark snapshot (post-optimizations)
+
+- Environment: Windows, AMD Ryzen 7 5700G, go1.22 (as in CI)
+- Scope: tokenizer micro-benchmarks from `parser/bench_tokenizer_test.go`
+
+Highlights vs previous baseline:
+- Unicode-heavy input: ~35-40% faster (e.g., 8KB case ~66.9ms → ~45.0ms)
+- Identifier-heavy input: ~35% faster (8KB case ~98.9ms → ~63.4ms)
+- Long numbers/sci: ~37% faster (8KB case ~111.6ms → ~69.7ms)
+- Whitespace-heavy: ~37% faster (8KB case ~113.5ms → ~71.5ms)
+- Short inputs and scalar ops saw incremental wins, allocations unchanged (already tight)
+
+Changes that drove the gains:
+- Correct UTF-8 aware lookahead (peek) using cached rune size
+- Removed redundant newline accounting when consuming quotes
+- Retained and documented ASCII fast paths and cached-current-rune design
+
+## Quality gates status
+
+- Tests: PASS (unit + parser suites)
+- Benchmarks: PASS (no functional regressions; speed-ups observed)
+- Vet: PASS
+- Race: PASS
+
+## Next steps (small, high-value)
+
+- Parser micro-allocations: consider small struct pooling for AST nodes created in hot paths (guarded by benchmarks)
+- Token.Value typing: replace `any` with narrow types (custom sum type or union-like pattern) to reduce type assertions
+- Parser options: introduce `Options{}` to eliminate boolean state flags and clarify modes
