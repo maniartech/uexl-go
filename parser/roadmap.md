@@ -248,6 +248,7 @@ Expected effort: mechanical refactors across a limited set of choke points (toke
 - Branching: perform changes on a feature branch `feat/parser-typed-api`.
 - CI gates: require `go test ./...`, race, and benchmarks for parser/compiler/vm to pass.
 - Versioning: bump major version in go.mod to signal breaking changes.
+ - Versioning: keep current module path; use semantic version tags and clear release notes to signal breaking changes.
 - Changelog: document migration snippets similar to examples above.
 
 ## Risks and mitigations
