@@ -10,7 +10,7 @@ import (
 
 type Compiler struct {
 	constants   []any
-	contextVars []any
+	contextVars []string
 	SystemVars  []any
 	scopes      []CompilationScope
 	scopeIndex  int
