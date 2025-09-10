@@ -1,14 +1,15 @@
-package main
+package parser_test
 
 import (
 	"fmt"
 	"log"
+	"testing"
 
 	"github.com/maniartech/uexl_go/internal/utils"
 	"github.com/maniartech/uexl_go/parser"
 )
 
-func main() {
+func TestBooleanExpressions(t *testing.T) {
 	expressions := []string{
 		"true",
 		"false",
