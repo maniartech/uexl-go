@@ -292,6 +292,10 @@ These references use current repository structure and common code paths observed
         - Member: read `v.Property` via new `Property` type (`if v.Property.IsString() { v.Property.S }`).
         - Index: use `v.Index` as before (expression), assign to `propertyExpr`.
 
+    Anchors (as of this snapshot):
+    - `compiler/compiler.go:36` — `property   any`
+    - `compiler/compiler.go:204` — `case *parser.MemberAccess, *parser.IndexAccess:`
+
 - `compiler/compiler_utils.go`
     - Building access chains (functions that linearize member/index access):
         - Previously: `property: v.Property // any`
@@ -301,6 +305,13 @@ These references use current repository structure and common code paths observed
         - After: `propIdx := c.addConstant(step.propertyStr)`
     - Removing type assertions:
         - Previously: `idxExpr, ok := step.property.(parser.Node)` → After: use `step.propertyExpr` directly.
+
+    Anchors (as of this snapshot):
+    - `compiler/compiler_utils.go:133` — `case *parser.MemberAccess:`
+    - `compiler/compiler_utils.go:140` — `case *parser.IndexAccess:`
+    - `compiler/compiler_utils.go:179` — `propIdx := c.addConstant(step.property)`
+    - `compiler/compiler_utils.go:196,205,212` — `c.emit(code.OpMemberAccess)`
+    - `compiler/compiler_utils.go:274` — `case *parser.MemberAccess, *parser.IndexAccess:`
 
 - `compiler/tests/help_test.go`
     - Parser construction:
@@ -360,11 +371,19 @@ VM predominantly consumes bytecode and runtime values; it does not depend on par
         - If `NewParser` remains: no changes.
         - If not: switch to `NewParserWithOptions(input, parser.DefaultOptions())`.
 
+    Anchors (as of this snapshot):
+    - `vm/vm_test.go:15` — `p := parser.NewParser(input)`
+    - `vm/nullish_semantics_errors_test.go:15` — `p := parser.NewParser(input)`
+
 - `vm/vm.go`, `vm/vm_handlers.go`
     - Opcode semantics unaffected:
         - `OpMemberAccess` expects member name as a string constant on the stack (pushed by compiler).
         - `OpIndexAccess` evaluates the index expression (emitted by compiler) and uses existing handlers.
     - No changes required to handler signatures or behavior.
+
+    Anchors (as of this snapshot):
+    - `vm/vm.go:222-229` — `case code.OpMemberAccess:` and `vm.executeMemberAccess(...)`
+    - `vm/vm_handlers.go:261` — `func (vm *VM) executeMemberAccess(container, index any) error`
 
 ---
 
