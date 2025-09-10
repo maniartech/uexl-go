@@ -1,5 +1,74 @@
 package parser
 
+// TokenValueKind represents the type of value stored in a TokenValue
+type TokenValueKind uint8
+
+const (
+	TVKNone TokenValueKind = iota
+	TVKNumber
+	TVKString
+	TVKBoolean
+	TVKNull
+	TVKIdentifier
+	TVKOperator
+)
+
+// TokenValue provides strongly typed token payloads via a tagged union struct
+type TokenValue struct {
+	Kind TokenValueKind
+	Num  float64
+	Str  string
+	Bool bool
+}
+
+// PropertyKind represents the type of property in member access
+type PropertyKind uint8
+
+const (
+	PropString PropertyKind = iota
+	PropInt
+)
+
+// Property represents a property that can be either a string or int
+type Property struct {
+	Kind PropertyKind
+	S    string
+	I    int
+}
+
+// PropS creates a string property
+func PropS(s string) Property { return Property{Kind: PropString, S: s} }
+
+// PropI creates an int property
+func PropI(i int) Property { return Property{Kind: PropInt, I: i} }
+
+// IsString returns true if the property is a string
+func (p Property) IsString() bool { return p.Kind == PropString }
+
+// IsInt returns true if the property is an int
+func (p Property) IsInt() bool { return p.Kind == PropInt }
+
+// Options represents parser configuration options
+type Options struct {
+	// Language feature toggles
+	EnableNullish          bool
+	EnableOptionalChaining bool
+	EnablePipes            bool
+
+	// Limits & safety
+	MaxDepth int // 0 => unlimited
+}
+
+// DefaultOptions returns the default parser options
+func DefaultOptions() Options {
+	return Options{
+		EnableNullish:          true,
+		EnableOptionalChaining: true,
+		EnablePipes:            true,
+		MaxDepth:               0, // unlimited
+	}
+}
+
 type NodeType string
 
 const (
@@ -151,7 +220,7 @@ func (fc *FunctionCall) Position() (int, int) { return fc.Line, fc.Column }
 
 type MemberAccess struct {
 	Target   Expression
-	Property any
+	Property Property
 	Optional bool
 	Line     int
 	Column   int

@@ -22,13 +22,20 @@ type Parser struct {
 	pos                 int
 	subExpressionActive bool
 	inParenthesis       bool
+	options             Options
 }
 
 // NewParser creates a new parser instance with the given input
 // This function maintains backward compatibility and does not return errors
 func NewParser(input string) *Parser {
+	return NewParserWithOptions(input, DefaultOptions())
+}
+
+// NewParserWithOptions creates a new parser instance with the given input and options
+func NewParserWithOptions(input string, opt Options) *Parser {
 	p := &Parser{
 		tokenizer: NewTokenizer(input),
+		options:   opt,
 	}
 	p.advance()
 	return p
@@ -50,10 +57,8 @@ func NewParserWithValidation(input string) (*Parser, error) {
 
 	// If the first token is an error, return it immediately
 	if p.current.Type == constants.TokenError {
-		if errorCode, ok := p.current.Value.(errors.ErrorCode); ok {
-			return nil, errors.NewParserError(errorCode, p.current.Line, p.current.Column, p.current.Token)
-		}
-		return nil, errors.NewParserError(errors.ErrInvalidToken, p.current.Line, p.current.Column, p.current.Token)
+		// Error tokens store error message in Str field
+		return nil, errors.NewParserError(errors.ErrInvalidToken, p.current.Line, p.current.Column, p.current.Value.Str)
 	}
 
 	return p, nil
@@ -174,7 +179,7 @@ func (p *Parser) parseConditional() Expression {
 
 	// Check for '?'
 	if p.current.Type == constants.TokenOperator {
-		if opValue, ok := p.current.Value.(string); ok && opValue == "?" {
+		if p.current.Value.Kind == TVKOperator && p.current.Value.Str == "?" {
 			qmark := p.current
 			p.advance() // consume '?'
 
@@ -286,7 +291,7 @@ func (p *Parser) parsePower() Expression {
 	left := p.parseUnary()
 
 	if p.current.Type == constants.TokenOperator {
-		if opValue, ok := p.current.Value.(string); ok && opValue == "**" {
+		if p.current.Value.Kind == TVKOperator && p.current.Value.Str == "**" {
 			op := p.current
 			p.advance()
 
@@ -296,7 +301,7 @@ func (p *Parser) parsePower() Expression {
 			// Right-associative parse for the right operand
 			right := p.parsePower()
 
-			powerExpr := &BinaryExpression{Left: base, Operator: opValue, Right: right, Line: op.Line, Column: op.Column}
+			powerExpr := &BinaryExpression{Left: base, Operator: op.Value.Str, Right: right, Line: op.Line, Column: op.Column}
 
 			// Re-apply peeled unary operators around the power expression (outermost first)
 			if len(ops) > 0 {
@@ -336,12 +341,12 @@ func peelLeadingUnary(expr Expression) ([]string, Expression) {
 func (p *Parser) parseUnary() Expression {
 	if p.current.Type == constants.TokenOperator {
 		// Check if the operator is "-" or "!"
-		if opValue, ok := p.current.Value.(string); ok && (opValue == "-" || opValue == "!") {
+		if p.current.Value.Kind == TVKOperator && (p.current.Value.Str == "-" || p.current.Value.Str == "!") {
 			op := p.current
+			opStr := op.Value.Str
 			p.advance()
 			expr := p.parseUnary()
-			// Use the string value from the type assertion
-			return &UnaryExpression{Operator: opValue, Operand: expr, Line: op.Line, Column: op.Column}
+			return &UnaryExpression{Operator: opStr, Operand: expr, Line: op.Line, Column: op.Column}
 		}
 	}
 	return p.parseMemberAccess()
@@ -401,14 +406,14 @@ func (p *Parser) parseMemberAccess() Expression {
 
 			switch p.current.Type {
 			case constants.TokenIdentifier:
-				property, ok := p.current.Value.(string)
-				if !ok {
+				property := p.current.Value.Str
+				if property == "" {
 					property = p.current.Token
 				}
 				p.advance()
 				expr = &MemberAccess{
 					Target:   expr,
-					Property: property,
+					Property: PropS(property),
 					Optional: dot.Type == constants.TokenQuestionDot,
 					Line:     dot.Line,
 					Column:   dot.Column,
@@ -439,13 +444,13 @@ func (p *Parser) parseMemberAccess() Expression {
 							segVal = iv
 						} else {
 							// Fallback: attempt via float then cast
-							if fv, ok := tok.Value.(float64); ok {
-								segVal = int(fv)
+							if tok.Value.Kind == TVKNumber {
+								segVal = int(tok.Value.Num)
 							} else {
 								// As a last resort, keep as raw string
 								expr = &MemberAccess{
 									Target:   expr,
-									Property: part,
+									Property: PropS(part),
 									Optional: dot.Type == constants.TokenQuestionDot,
 									Line:     dot.Line,
 									Column:   dot.Column,
@@ -455,7 +460,7 @@ func (p *Parser) parseMemberAccess() Expression {
 						}
 						expr = &MemberAccess{
 							Target:   expr,
-							Property: segVal,
+							Property: PropI(segVal),
 							Optional: dot.Type == constants.TokenQuestionDot,
 							Line:     dot.Line,
 							Column:   dot.Column,
@@ -463,11 +468,11 @@ func (p *Parser) parseMemberAccess() Expression {
 					}
 				} else {
 					// Simple integer-like number
-					var prop any
-					if f, ok := tok.Value.(float64); ok {
-						prop = int(f)
+					var prop Property
+					if tok.Value.Kind == TVKNumber {
+						prop = PropI(int(tok.Value.Num))
 					} else {
-						prop = tok.Token
+						prop = PropS(tok.Token)
 					}
 					expr = &MemberAccess{
 						Target:   expr,
@@ -723,16 +728,16 @@ func (p *Parser) parseFunctionCall(function Expression) Expression {
 func (p *Parser) parseNumber() Expression {
 	token := p.current
 	p.advance()
-	return &NumberLiteral{Value: token.Value.(float64), Line: token.Line, Column: token.Column}
+	return &NumberLiteral{Value: token.Value.Num, Line: token.Line, Column: token.Column}
 }
 
 func (p *Parser) parseString() Expression {
 	token := p.current
 	p.advance()
 	// Value already has quotes removed
-	value, ok := token.Value.(string)
-	if !ok {
-		// Fallback to removing quotes manually if type assertion fails
+	value := token.Value.Str
+	if value == "" {
+		// Fallback to removing quotes manually if empty
 		value = strings.Trim(token.Token, "'\"")
 	}
 
@@ -764,8 +769,8 @@ func (p *Parser) parseString() Expression {
 func (p *Parser) parseBoolean() Expression {
 	token := p.current
 	p.advance()
-	value, ok := token.Value.(bool)
-	if !ok {
+	value := token.Value.Bool
+	if token.Value.Kind != TVKBoolean {
 		value = token.Token == "true"
 	}
 	return &BooleanLiteral{Value: value, Line: token.Line, Column: token.Column}
@@ -864,8 +869,8 @@ func (p *Parser) parseObject() Expression {
 
 		// Use the Value field which should contain the unquoted string
 		var key string
-		if strValue, ok := p.current.Value.(string); ok && strValue != "" {
-			key = strValue
+		if p.current.Value.Kind == TVKString && p.current.Value.Str != "" {
+			key = p.current.Value.Str
 		} else {
 			// Fallback: remove quotes manually if needed
 			key = strings.Trim(p.current.Token, "'\"")
@@ -916,12 +921,12 @@ func (p *Parser) parseBinaryOp(parseFunc func() Expression, operators ...string)
 	left := parseFunc()
 
 	for p.current.Type == constants.TokenOperator {
-		// Type assertion for operator value
-		opValue, ok := p.current.Value.(string)
-		if !ok || !contains(operators, opValue) {
+		// Check operator value
+		if p.current.Value.Kind != TVKOperator || !contains(operators, p.current.Value.Str) {
 			break
 		}
 		op := p.current
+		opValue := op.Value.Str
 		p.advance()
 		right := parseFunc()
 		left = &BinaryExpression{Left: left, Operator: opValue, Right: right, Line: op.Line, Column: op.Column}
@@ -948,7 +953,7 @@ func (p *Parser) advance() {
 		// Set current to an error token so parsing can continue
 		p.current = Token{
 			Type:   constants.TokenError,
-			Value:  err.Error(),
+			Value:  TokenValue{Kind: TVKString, Str: err.Error()},
 			Token:  err.Error(),
 			Line:   p.tokenizer.line,
 			Column: p.tokenizer.column,
@@ -1034,15 +1039,14 @@ func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]stri
 
 // determinePipeType extracts the pipe type from the pipe token
 func (p *Parser) determinePipeType(op Token) string {
-	if op.Value != nil {
-		if strValue, ok := op.Value.(string); ok && strValue != "" {
-			// If the value is just ":", treat as default pipe
-			// This allows syntax like |: to be interpreted as a normal pipe.
-			if strValue == ":" {
-				return DefaultPipeType
-			}
-			return strValue
+	if op.Value.Kind == TVKString && op.Value.Str != "" {
+		strValue := op.Value.Str
+		// If the value is just ":", treat as default pipe
+		// This allows syntax like |: to be interpreted as a normal pipe.
+		if strValue == ":" {
+			return DefaultPipeType
 		}
+		return strValue
 	}
 	return DefaultPipeType
 }

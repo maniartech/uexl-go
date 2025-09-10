@@ -12,11 +12,35 @@ import (
 
 type Token struct {
 	Type           constants.TokenType
-	Value          any    // Stores native parsed values (float64, string without quotes, etc.)
-	Token          string // Stores the original token string
+	Value          TokenValue // Stores strongly typed parsed values
+	Token          string     // Stores the original token string
 	Line           int
 	Column         int
 	IsSingleQuoted bool // Only set for constants.TokenString
+}
+
+// AsFloat returns the float64 value if the token is a number
+func (t Token) AsFloat() (float64, bool) {
+	if t.Value.Kind == TVKNumber {
+		return t.Value.Num, true
+	}
+	return 0, false
+}
+
+// AsString returns the string value if the token is a string or identifier
+func (t Token) AsString() (string, bool) {
+	if t.Value.Kind == TVKString || t.Value.Kind == TVKIdentifier || t.Value.Kind == TVKOperator {
+		return t.Value.Str, true
+	}
+	return "", false
+}
+
+// AsBool returns the bool value if the token is a boolean
+func (t Token) AsBool() (bool, bool) {
+	if t.Value.Kind == TVKBoolean {
+		return t.Value.Bool, true
+	}
+	return false, false
 }
 
 // Pre-allocated common single character strings to avoid allocations
@@ -229,7 +253,7 @@ func (t *Tokenizer) readNumber() (Token, error) {
 				fv += float64(fu) / pow10[len(fracPart)]
 			}
 			t.setCur()
-			return Token{Type: constants.TokenNumber, Value: fv, Token: originalToken, Line: t.line, Column: startColumn}, nil
+			return Token{Type: constants.TokenNumber, Value: TokenValue{Kind: TVKNumber, Num: fv}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 		}
 	}
 
@@ -241,7 +265,7 @@ stdparse:
 		return Token{}, errors.NewParserError(errors.ErrInvalidNumber, t.line, startColumn, fmt.Sprintf("%s: '%s'", errMsg, originalToken))
 	}
 	t.setCur()
-	return Token{Type: constants.TokenNumber, Value: value, Token: originalToken, Line: t.line, Column: startColumn}, nil
+	return Token{Type: constants.TokenNumber, Value: TokenValue{Kind: TVKNumber, Num: value}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 }
 
 func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
@@ -293,13 +317,13 @@ func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 	originalToken := t.input[start:t.pos]
 	switch originalToken {
 	case "true", "false":
-		return Token{Type: constants.TokenBoolean, Value: originalToken == "true", Token: originalToken, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenBoolean, Value: TokenValue{Kind: TVKBoolean, Bool: originalToken == "true"}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	case "null":
-		return Token{Type: constants.TokenNull, Value: nil, Token: originalToken, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenNull, Value: TokenValue{Kind: TVKNull}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	case "as":
-		return Token{Type: constants.TokenAs, Value: originalToken, Token: originalToken, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenAs, Value: TokenValue{Kind: TVKIdentifier, Str: originalToken}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	default:
-		return Token{Type: constants.TokenIdentifier, Value: originalToken, Token: originalToken, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenIdentifier, Value: TokenValue{Kind: TVKIdentifier, Str: originalToken}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	}
 }
 func (t *Tokenizer) readString() (Token, error) {
@@ -436,7 +460,7 @@ func (t *Tokenizer) readString() (Token, error) {
 			value = t.unescapeStringFast(content)
 		}
 	}
-	return Token{Type: constants.TokenString, Value: value, Token: originalToken, Line: t.line, Column: startColumn, IsSingleQuoted: isSingleQuoted}, nil
+	return Token{Type: constants.TokenString, Value: TokenValue{Kind: TVKString, Str: value}, Token: originalToken, Line: t.line, Column: startColumn, IsSingleQuoted: isSingleQuoted}, nil
 }
 
 func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
@@ -445,13 +469,13 @@ func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
 	if t.current() == '|' {
 		t.advance() // consume second '|'
 		operator := "||"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	if t.current() == ':' {
 		t.advance() // consume ':'
 		pipeValue := ":"
-		return Token{Type: constants.TokenPipe, Value: pipeValue, Token: pipeValue, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenPipe, Value: TokenValue{Kind: TVKString, Str: pipeValue}, Token: pipeValue, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Manual scan for optional [A-Za-z]+ followed by ':'
@@ -476,11 +500,11 @@ func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
 			t.advance()
 		}
 		t.advance() // consume ':'
-		return Token{Type: constants.TokenPipe, Value: pipeName, Token: pipeName, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenPipe, Value: TokenValue{Kind: TVKString, Str: pipeName}, Token: pipeName, Line: t.line, Column: startColumn}, nil
 	}
 
 	operator := "|"
-	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 }
 
 func (t *Tokenizer) readOperator() (Token, error) {
@@ -495,7 +519,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := "??"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle && operator
@@ -503,7 +527,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := "&&"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle ++ operator
@@ -511,7 +535,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := "++"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle ** operator (power)
@@ -519,7 +543,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := "**"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle -- operator, but be smart about unary vs postfix contexts
@@ -537,13 +561,13 @@ func (t *Tokenizer) readOperator() (Token, error) {
 			// Return single '-' token
 			t.advance()
 			operator := "-"
-			return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+			return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 		} else {
 			// Treat as decrement operator (for cases like "i--" in postfix contexts)
 			t.advance()
 			t.advance()
 			operator := "--"
-			return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+			return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 		}
 	}
 
@@ -552,7 +576,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := "=="
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle != operator
@@ -560,7 +584,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := "!="
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle consecutive ! operators - always treat as separate tokens for multiple negation
@@ -569,7 +593,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		// Return single '!' token - let the parser handle multiple consecutive unary operators
 		t.advance()
 		operator := "!"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle <= operator
@@ -577,7 +601,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := "<="
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle >= operator
@@ -585,7 +609,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := ">="
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle << operator
@@ -593,7 +617,7 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := "<<"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle >> operator
@@ -601,13 +625,13 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		t.advance()
 		operator := ">>"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle single-character operators
 	t.advance()
 	operator := t.input[start:t.pos]
-	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 }
 
 // readQuestionOrNullish handles tokens that start with '?': either '?' or '??'
@@ -621,26 +645,26 @@ func (t *Tokenizer) readQuestionOrNullish() (Token, error) {
 		// it's '??'
 		t.advance()
 		operator := "??"
-		return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 	}
 
 	if t.current() == '.' {
 		// '?.'
 		t.advance()
 		tokenStr := "?."
-		return Token{Type: constants.TokenQuestionDot, Value: tokenStr, Token: tokenStr, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenQuestionDot, Value: TokenValue{Kind: TVKOperator, Str: tokenStr}, Token: tokenStr, Line: t.line, Column: startColumn}, nil
 	}
 
 	if t.current() == '[' {
 		// '?['
 		t.advance()
 		tokenStr := "?["
-		return Token{Type: constants.TokenQuestionLeftBracket, Value: tokenStr, Token: tokenStr, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenQuestionLeftBracket, Value: TokenValue{Kind: TVKOperator, Str: tokenStr}, Token: tokenStr, Line: t.line, Column: startColumn}, nil
 	}
 
 	// single '?' -> used by conditional operator parsing
 	operator := "?"
-	return Token{Type: constants.TokenOperator, Value: operator, Token: operator, Line: t.line, Column: startColumn}, nil
+	return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
 }
 
 func (t *Tokenizer) singleCharToken(tokenType constants.TokenType) (Token, error) {
@@ -651,7 +675,7 @@ func (t *Tokenizer) singleCharToken(tokenType constants.TokenType) (Token, error
 	} else {
 		charValue = string(ch)
 	}
-	token := Token{Type: tokenType, Value: charValue, Token: charValue, Line: t.line, Column: t.column}
+	token := Token{Type: tokenType, Value: TokenValue{Kind: TVKString, Str: charValue}, Token: charValue, Line: t.line, Column: t.column}
 	t.advance()
 	return token, nil
 }
@@ -995,7 +1019,7 @@ func (t *Tokenizer) PreloadTokens() []Token {
 			// On error, create an error token for debugging purposes
 			errorToken := Token{
 				Type:   constants.TokenError,
-				Value:  err.Error(),
+				Value:  TokenValue{Kind: TVKString, Str: err.Error()},
 				Token:  err.Error(),
 				Line:   t.line,
 				Column: t.column,
