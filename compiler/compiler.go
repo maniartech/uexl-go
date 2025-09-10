@@ -32,9 +32,9 @@ type InstructionBlock struct {
 }
 
 type accessStep struct {
-	isMember   bool
-	property   any
-	isOptional bool
+	safe         bool
+	propertyStr  string      // member name
+	propertyExpr parser.Node // index expression
 }
 
 func (c *Compiler) compileShortCircuitChain(terms []parser.Node, jumpOpcode code.Opcode) error {

@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/parser"
@@ -131,17 +130,23 @@ func flattenAccessChain(n parser.Node) (base parser.Node, steps []accessStep) {
 	for {
 		switch v := cur.(type) {
 		case *parser.MemberAccess:
-			rev = append(rev, accessStep{
-				isMember:   true,
-				property:   v.Property, // assume already a string
-				isOptional: v.Optional,
-			})
+			if v.Property.IsString() {
+				rev = append(rev, accessStep{
+					safe:        v.Optional,
+					propertyStr: v.Property.S,
+				})
+			} else {
+				// Convert int property to NumberLiteral node for index access
+				rev = append(rev, accessStep{
+					safe:         v.Optional,
+					propertyExpr: &parser.NumberLiteral{Value: float64(v.Property.I)},
+				})
+			}
 			cur = v.Target
 		case *parser.IndexAccess:
 			rev = append(rev, accessStep{
-				isMember:   false,
-				property:   v.Index, // parser.Node to be compiled later
-				isOptional: v.Optional,
+				safe:         v.Optional,
+				propertyExpr: v.Index, // parser.Node to be compiled later
 			})
 			cur = v.Target
 		default:
@@ -167,16 +172,16 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 	// Optional chaining: collect jump placeholders; each jump skips to end of chain
 	var jumpPositions []int
 	for i, step := range steps {
-		if step.isOptional {
+		if step.safe {
 			pos := len(c.currentInstructions())
 			c.emit(code.OpJumpIfNullish, 0) // placeholder to END
 			jumpPositions = append(jumpPositions, pos)
 		}
 
 		isLast := i == len(steps)-1
-		if step.isMember {
-			// Push property name constant
-			propIdx := c.addConstant(step.property)
+		if step.propertyStr != "" {
+			// Member access
+			propIdx := c.addConstant(step.propertyStr)
 			if softenLast && isLast {
 				// If base is nullish, error (earlier link strict). Otherwise, soften only the final access.
 				// Layout:
@@ -211,19 +216,15 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 				c.emit(code.OpConstant, propIdx)
 				c.emit(code.OpMemberAccess)
 			}
-		} else {
-			// Compile index expression
-			idxExpr, ok := step.property.(parser.Node)
-			if !ok {
-				return fmt.Errorf("invalid index expression")
-			}
+		} else if step.propertyExpr != nil {
+			// Index access
 			if softenLast && isLast {
 				// Similar to member: guard base nullish to trigger hard error; else soften index access
 				jErrPos := len(c.currentInstructions())
 				c.emit(code.OpJumpIfNullish, 0) // -> ERR
 
 				// Normal softened path
-				if err := c.Compile(idxExpr); err != nil {
+				if err := c.Compile(step.propertyExpr); err != nil {
 					return err
 				}
 				c.emit(code.OpSafeModeOn)
@@ -235,7 +236,7 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 				// ERR label: compile index again and execute without safe to raise meaningful error
 				errPos := len(c.currentInstructions())
 				c.replaceOperand(jErrPos+1, errPos)
-				if err := c.Compile(idxExpr); err != nil {
+				if err := c.Compile(step.propertyExpr); err != nil {
 					return err
 				}
 				c.emit(code.OpIndex, 0) // optional = false
@@ -244,7 +245,7 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 				endPos := len(c.currentInstructions())
 				c.replaceOperand(jEndPos+1, endPos)
 			} else {
-				if err := c.Compile(idxExpr); err != nil {
+				if err := c.Compile(step.propertyExpr); err != nil {
 					return err
 				}
 				c.emit(code.OpIndex, 0) // optional = false
