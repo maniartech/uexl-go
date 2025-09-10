@@ -7,10 +7,11 @@ import (
 	"github.com/maniartech/uexl_go/compiler"
 )
 
-func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode) {
+func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode, contextVarsValues map[string]any) {
 	vm.constants = bytecode.Constants
 	vm.contextVars = bytecode.ContextVars
 	vm.systemVars = bytecode.SystemVars
+	vm.contextVarsValues = contextVarsValues
 
 	mainFrame := NewFrame(bytecode.Instructions, 0)
 	frames := make([]*Frame, MaxFrames)
@@ -40,8 +41,12 @@ func (vm *VM) run() error {
 			frame.ip += 3
 		case code.OpContextVar:
 			varIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			err := vm.Push(vm.contextVars[varIndex])
+			value, err := vm.getContextValue(vm.contextVars[varIndex])
 			if err != nil {
+				return err
+			}
+
+			if err := vm.Push(value); err != nil {
 				return err
 			}
 			frame.ip += 3
@@ -247,8 +252,8 @@ func (vm *VM) run() error {
 	return nil
 }
 
-func (vm *VM) Run(bytecode *compiler.ByteCode) (any, error) {
-	vm.setBaseInstructions(bytecode)
+func (vm *VM) Run(bytecode *compiler.ByteCode, contextValues map[string]any) (any, error) {
+	vm.setBaseInstructions(bytecode, contextValues)
 	err := vm.run()
 	if err != nil {
 		return nil, err
