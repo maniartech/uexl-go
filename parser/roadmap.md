@@ -48,13 +48,14 @@ Impact:
 - Benefit: compile-time guidance and faster paths (no interface{} boxing/unboxing, fewer allocs).
 
 Mitigation:
-- Provide helper accessors and conversion shims during transition:
+- Provide accessors as methods on `Token` to avoid cross-package/internal visibility issues:
 
 ```go
-// Temporary helpers (parser/internal/compat)
-func AsFloat(t Token) (float64, bool)
-func AsString(t Token) (string, bool)
-func AsBool(t Token) (bool, bool)
+// Temporary shim methods on Token (exported)
+// These can remain long-term as ergonomic helpers
+func (t Token) AsFloat() (float64, bool)
+func (t Token) AsString() (string, bool)
+func (t Token) AsBool() (bool, bool)
 ```
 
 2) AST node typing and constructors (BREAKING)
@@ -166,8 +167,8 @@ case TokenString:
 
 Mitigation (intermediate):
 ```go
-v, _ := compat.AsFloat(tok)
-s, _ := compat.AsString(tok)
+v, _ := tok.AsFloat()
+s, _ := tok.AsString()
 ```
 
 ### Example B: Member access property handling
