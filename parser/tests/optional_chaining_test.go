@@ -19,7 +19,7 @@ func TestOptionalMember_Basic(t *testing.T) {
 		if assert.True(t, ok) {
 			assert.Equal(t, "a", id.Name)
 		}
-		assert.Equal(t, "b", ma.Property)
+		assert.Equal(t, "b", ma.Property.S)
 	}
 }
 
@@ -102,7 +102,7 @@ func TestOptional_AfterFunctionCall(t *testing.T) {
 	ma, ok := ast.(*p.MemberAccess)
 	if assert.True(t, ok, "expected MemberAccess") {
 		assert.True(t, ma.Optional, "member should be optional after call")
-		assert.Equal(t, "prop", ma.Property)
+		assert.Equal(t, "prop", ma.Property.S)
 
 		// And its object should be a FunctionCall to identifier 'fn'
 		call, ok := ma.Target.(*p.FunctionCall)
@@ -130,7 +130,7 @@ func TestOptional_WithNullish_Property(t *testing.T) {
 		ma, ok := be.Left.(*p.MemberAccess)
 		if assert.True(t, ok, "left of ?? should be MemberAccess") {
 			assert.True(t, ma.Optional, "member should be optional")
-			assert.Equal(t, "name", ma.Property)
+			assert.Equal(t, "name", ma.Property.S)
 			id, ok := ma.Target.(*p.Identifier)
 			if assert.True(t, ok, "target should be Identifier") {
 				assert.Equal(t, "obj", id.Name)

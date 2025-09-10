@@ -15,9 +15,8 @@ func TestDotIndexing_Number_OnArray(t *testing.T) {
 	assert.True(t, ok, "expected MemberAccess for .number on array")
 	if ok {
 		// Property should be an int for dot-number
-		v, isInt := ma.Property.(int)
-		assert.True(t, isInt, "expected integer property for dot-number")
-		assert.Equal(t, 1, v)
+		assert.True(t, ma.Property.IsInt(), "expected integer property for dot-number")
+		assert.Equal(t, 1, ma.Property.I)
 	}
 }
 
@@ -28,9 +27,8 @@ func TestDotIndexing_Number_OnString(t *testing.T) {
 	ma, ok := expr.(*parser.MemberAccess)
 	assert.True(t, ok, "expected MemberAccess for .number on string")
 	if ok {
-		v, isInt := ma.Property.(int)
-		assert.True(t, isInt, "expected integer property for dot-number")
-		assert.Equal(t, 2, v)
+		assert.True(t, ma.Property.IsInt(), "expected integer property for dot-number")
+		assert.Equal(t, 2, ma.Property.I)
 	}
 }
 
@@ -88,15 +86,13 @@ func TestDotIndexing_DecimalSplit_OnObject(t *testing.T) {
 	outer, ok := expr.(*parser.MemberAccess)
 	assert.True(t, ok)
 	if ok {
-		v2, ok2 := outer.Property.(int)
-		assert.True(t, ok2)
-		assert.Equal(t, 5, v2)
+		assert.True(t, outer.Property.IsInt())
+		assert.Equal(t, 5, outer.Property.I)
 		inner, ok3 := outer.Target.(*parser.MemberAccess)
 		assert.True(t, ok3)
 		if ok3 {
-			v1, ok4 := inner.Property.(int)
-			assert.True(t, ok4)
-			assert.Equal(t, 1, v1)
+			assert.True(t, inner.Property.IsInt())
+			assert.Equal(t, 1, inner.Property.I)
 		}
 	}
 }
@@ -110,19 +106,17 @@ func TestDotIndexing_DecimalSplit_Chaining(t *testing.T) {
 	nameMA, ok := expr.(*parser.MemberAccess)
 	assert.True(t, ok)
 	if ok {
-		assert.Equal(t, "name", nameMA.Property)
+		assert.Equal(t, "name", nameMA.Property.S)
 		outer, ok2 := nameMA.Target.(*parser.MemberAccess)
 		assert.True(t, ok2)
 		if ok2 {
-			v2, ok3 := outer.Property.(int)
-			assert.True(t, ok3)
-			assert.Equal(t, 5, v2)
+			assert.True(t, outer.Property.IsInt())
+			assert.Equal(t, 5, outer.Property.I)
 			inner, ok4 := outer.Target.(*parser.MemberAccess)
 			assert.True(t, ok4)
 			if ok4 {
-				v1, ok5 := inner.Property.(int)
-				assert.True(t, ok5)
-				assert.Equal(t, 1, v1)
+				assert.True(t, inner.Property.IsInt())
+				assert.Equal(t, 1, inner.Property.I)
 			}
 		}
 	}
@@ -138,9 +132,9 @@ func collectIntProps(t *testing.T, expr parser.Expression) (props []int, base pa
 			base = current
 			break
 		}
-		if v, ok := ma.Property.(int); ok {
-			props = append(props, v)
-		} else if _, ok := ma.Property.(string); ok {
+		if ma.Property.IsInt() {
+			props = append(props, ma.Property.I)
+		} else if ma.Property.IsString() {
 			// Stop if we encounter a string property (used in trailing identifier test)
 			// Push a sentinel by returning current with remaining structure
 			// Caller can validate the string separately
@@ -208,7 +202,7 @@ func TestDotIndexing_LongChain_WithTrailingIdentifier(t *testing.T) {
 	top, ok := expr.(*parser.MemberAccess)
 	assert.True(t, ok)
 	if ok {
-		assert.Equal(t, "name", top.Property)
+		assert.Equal(t, "name", top.Property.S)
 		// Collect numeric properties from the target chain
 		props, base := collectIntProps(t, top.Target)
 		for i, j := 0, len(props)-1; i < j; i, j = i+1, j-1 {

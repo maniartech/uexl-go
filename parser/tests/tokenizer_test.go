@@ -3,6 +3,7 @@ package parser_test
 import (
 	"testing"
 
+	"github.com/maniartech/uexl_go/parser"
 	. "github.com/maniartech/uexl_go/parser"
 	"github.com/maniartech/uexl_go/parser/constants"
 )
@@ -17,37 +18,37 @@ func TestTokenizerBasic(t *testing.T) {
 			name:  "String literals",
 			input: "\"hello\" + 'world'",
 			tokens: []Token{
-				{Type: constants.TokenString, Value: "hello", Token: "\"hello\"", Line: 1, Column: 1},
-				{Type: constants.TokenOperator, Value: "+", Token: "+", Line: 1, Column: 9},
-				{Type: constants.TokenString, Value: "world", Token: "'world'", Line: 1, Column: 11},
+				{Type: constants.TokenString, Value: parser.TokenValue{Kind: parser.TVKString, Str: "hello"}, Token: "\"hello\"", Line: 1, Column: 1},
+				{Type: constants.TokenOperator, Value: parser.TokenValue{Kind: parser.TVKOperator, Str: "+"}, Token: "+", Line: 1, Column: 9},
+				{Type: constants.TokenString, Value: parser.TokenValue{Kind: parser.TVKString, Str: "world"}, Token: "'world'", Line: 1, Column: 11},
 			},
 		},
 		{
 			name:  "Nullish and ternary tokens",
 			input: "a ?? b ? c : d",
 			tokens: []Token{
-				{Type: constants.TokenIdentifier, Value: "a", Token: "a", Line: 1, Column: 1},
-				{Type: constants.TokenOperator, Value: "??", Token: "??", Line: 1, Column: 3},
-				{Type: constants.TokenIdentifier, Value: "b", Token: "b", Line: 1, Column: 6},
-				{Type: constants.TokenOperator, Value: "?", Token: "?", Line: 1, Column: 8},
-				{Type: constants.TokenIdentifier, Value: "c", Token: "c", Line: 1, Column: 10},
-				{Type: constants.TokenColon, Value: ":", Token: ":", Line: 1, Column: 12},
-				{Type: constants.TokenIdentifier, Value: "d", Token: "d", Line: 1, Column: 14},
+				{Type: constants.TokenIdentifier, Value: parser.TokenValue{Kind: parser.TVKIdentifier, Str: "a"}, Token: "a", Line: 1, Column: 1},
+				{Type: constants.TokenOperator, Value: parser.TokenValue{Kind: parser.TVKOperator, Str: "??"}, Token: "??", Line: 1, Column: 3},
+				{Type: constants.TokenIdentifier, Value: parser.TokenValue{Kind: parser.TVKIdentifier, Str: "b"}, Token: "b", Line: 1, Column: 6},
+				{Type: constants.TokenOperator, Value: parser.TokenValue{Kind: parser.TVKOperator, Str: "?"}, Token: "?", Line: 1, Column: 8},
+				{Type: constants.TokenIdentifier, Value: parser.TokenValue{Kind: parser.TVKIdentifier, Str: "c"}, Token: "c", Line: 1, Column: 10},
+				{Type: constants.TokenColon, Value: parser.TokenValue{Kind: parser.TVKString, Str: ":"}, Token: ":", Line: 1, Column: 12},
+				{Type: constants.TokenIdentifier, Value: parser.TokenValue{Kind: parser.TVKIdentifier, Str: "d"}, Token: "d", Line: 1, Column: 14},
 			},
 		},
 		{
 			name:  "Numbers and operators",
 			input: "3.14 + x * (y - z)",
 			tokens: []Token{
-				{Type: constants.TokenNumber, Value: 3.14, Token: "3.14", Line: 1, Column: 1},
-				{Type: constants.TokenOperator, Value: "+", Token: "+", Line: 1, Column: 6},
-				{Type: constants.TokenIdentifier, Value: "x", Token: "x", Line: 1, Column: 8},
-				{Type: constants.TokenOperator, Value: "*", Token: "*", Line: 1, Column: 10},
-				{Type: constants.TokenLeftParen, Value: "(", Token: "(", Line: 1, Column: 12},
-				{Type: constants.TokenIdentifier, Value: "y", Token: "y", Line: 1, Column: 13},
-				{Type: constants.TokenOperator, Value: "-", Token: "-", Line: 1, Column: 15},
-				{Type: constants.TokenIdentifier, Value: "z", Token: "z", Line: 1, Column: 17},
-				{Type: constants.TokenRightParen, Value: ")", Token: ")", Line: 1, Column: 18},
+				{Type: constants.TokenNumber, Value: parser.TokenValue{Kind: parser.TVKNumber, Num: 3.14}, Token: "3.14", Line: 1, Column: 1},
+				{Type: constants.TokenOperator, Value: parser.TokenValue{Kind: parser.TVKOperator, Str: "+"}, Token: "+", Line: 1, Column: 6},
+				{Type: constants.TokenIdentifier, Value: parser.TokenValue{Kind: parser.TVKIdentifier, Str: "x"}, Token: "x", Line: 1, Column: 8},
+				{Type: constants.TokenOperator, Value: parser.TokenValue{Kind: parser.TVKOperator, Str: "*"}, Token: "*", Line: 1, Column: 10},
+				{Type: constants.TokenLeftParen, Value: parser.TokenValue{Kind: parser.TVKString, Str: "("}, Token: "(", Line: 1, Column: 12},
+				{Type: constants.TokenIdentifier, Value: parser.TokenValue{Kind: parser.TVKIdentifier, Str: "y"}, Token: "y", Line: 1, Column: 13},
+				{Type: constants.TokenOperator, Value: parser.TokenValue{Kind: parser.TVKOperator, Str: "-"}, Token: "-", Line: 1, Column: 15},
+				{Type: constants.TokenIdentifier, Value: parser.TokenValue{Kind: parser.TVKIdentifier, Str: "z"}, Token: "z", Line: 1, Column: 17},
+				{Type: constants.TokenRightParen, Value: parser.TokenValue{Kind: parser.TVKString, Str: ")"}, Token: ")", Line: 1, Column: 18},
 			},
 		},
 	}

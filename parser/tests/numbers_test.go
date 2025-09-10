@@ -19,7 +19,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "42",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  float64(42),
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: float64(42)},
 				Token:  "42",
 				Line:   1,
 				Column: 1,
@@ -30,7 +30,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "0",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  float64(0),
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: float64(0)},
 				Token:  "0",
 				Line:   1,
 				Column: 1,
@@ -41,7 +41,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "3.14",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  3.14,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 3.14},
 				Token:  "3.14",
 				Line:   1,
 				Column: 1,
@@ -52,7 +52,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "0.5",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  0.5,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 0.5},
 				Token:  "0.5",
 				Line:   1,
 				Column: 1,
@@ -63,7 +63,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "1e3",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  1000.0,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 1000.0},
 				Token:  "1e3",
 				Line:   1,
 				Column: 1,
@@ -74,7 +74,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "2E4",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  20000.0,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 20000.0},
 				Token:  "2E4",
 				Line:   1,
 				Column: 1,
@@ -85,7 +85,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "1.5e+2",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  150.0,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 150.0},
 				Token:  "1.5e+2",
 				Line:   1,
 				Column: 1,
@@ -96,7 +96,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "1.5e-2",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  0.015,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 0.015},
 				Token:  "1.5e-2",
 				Line:   1,
 				Column: 1,
@@ -107,7 +107,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "123456789",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  123456789.0,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 123456789.0},
 				Token:  "123456789",
 				Line:   1,
 				Column: 1,
@@ -118,7 +118,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "0.000001",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  0.000001,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 0.000001},
 				Token:  "0.000001",
 				Line:   1,
 				Column: 1,
@@ -129,7 +129,7 @@ func TestNumberTokenizer(t *testing.T) {
 			input: "123.456789",
 			expected: parser.Token{
 				Type:   constants.TokenNumber,
-				Value:  123.456789,
+				Value:  parser.TokenValue{Kind: parser.TVKNumber, Num: 123.456789},
 				Token:  "123.456789",
 				Line:   1,
 				Column: 1,
@@ -326,7 +326,7 @@ func TestNumberPrecision(t *testing.T) {
 
 			assert.NoError(t, err, "Should not return error for valid input")
 			assert.Equal(t, constants.TokenNumber, token.Type, "Should be a number token")
-			assert.Equal(t, tt.expected, token.Value, "Value should match expected precision")
+			assert.Equal(t, tt.expected, token.Value.Num, "Value should match expected precision")
 		})
 	}
 }

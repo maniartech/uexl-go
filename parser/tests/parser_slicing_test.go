@@ -177,7 +177,7 @@ func TestParser_Slicing(t *testing.T) {
 			expected: &parser.SliceExpression{
 				Target: &parser.MemberAccess{
 					Target:   &parser.Identifier{Name: "data"},
-					Property: "items",
+					Property: parser.PropS("items"),
 				},
 				Start: &parser.NumberLiteral{Value: 2},
 				End:   &parser.NumberLiteral{Value: 4},
@@ -280,7 +280,7 @@ func TestParser_Slicing(t *testing.T) {
 			expected: &parser.SliceExpression{
 				Target: &parser.MemberAccess{
 					Target:   &parser.Identifier{Name: "arr2d"},
-					Property: 0,
+					Property: parser.PropI(0),
 				},
 				Start:    &parser.NumberLiteral{Value: 1},
 				End:      &parser.NumberLiteral{Value: 5},
@@ -325,12 +325,8 @@ func TestParser_Slicing(t *testing.T) {
 					act := actual.(*parser.MemberAccess)
 					compareExpr(exp.Target, act.Target)
 					// Convert property to int for comparison if it's a float64
-					if p, ok := exp.Property.(float64); ok {
-						exp.Property = int(p)
-					}
-					if p, ok := act.Property.(float64); ok {
-						act.Property = int(p)
-					}
+					// Property is now strongly typed, no conversion needed
+					// Property is now strongly typed, no conversion needed
 					assert.Equal(t, exp.Property, act.Property)
 				case *parser.ArrayLiteral:
 					act := actual.(*parser.ArrayLiteral)
