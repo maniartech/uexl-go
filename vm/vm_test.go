@@ -40,7 +40,7 @@ type vmTestCase struct {
 	expected any
 }
 
-func runVmTests(t *testing.T, tests []vmTestCase) {
+func runVmTests(t *testing.T, tests []vmTestCase, contextValues ...map[string]any) {
 	t.Helper()
 	for i, tt := range tests {
 		program := parse(tt.input)
@@ -54,7 +54,14 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 			PipeHandlers: vm.DefaultPipeHandlers,
 		})
 		bytecode := comp.ByteCode()
-		output, err := vm.Run(bytecode)
+		var context map[string]any
+		if len(contextValues) > 0 {
+			context = contextValues[0]
+		} else {
+			context = make(map[string]any)
+		}
+		// Set the context values in the VM
+		output, err := vm.Run(bytecode, context)
 		if err != nil {
 			t.Fatalf("[case %d] vm error: %s", i+1, err)
 		}
@@ -705,4 +712,38 @@ func TestTernaryOperator(t *testing.T) {
 		{`false ? (1 ? (0 ? 10 : 20) : 30) : (0 ? 50 : 60)`, 60.0},
 	}
 	runVmTests(t, tests)
+}
+
+func TestContextValues(t *testing.T) {
+	tests := []vmTestCase{
+		// Accessing top-level context values
+		{"value", "test"},
+		{"number", 42.0},
+		{"boolean", true},
+		{"nullValue", nil},
+		{"array[1]", 2.0},
+		{"object.key1", "value1"},
+
+		// Using context values in expressions
+		{"array[1] + 1", 3.0},
+		{"number * 2", 84.0},
+		{"boolean && false", false},
+		{"nullValue ?? 'default'", "default"},
+		{"array[0] + array[1]", 3.0},
+		{"object.key1 + ' is the key'", "value1 is the key"},
+	}
+
+	contextValues := map[string]any{
+		"value":     "test",
+		"number":    42.0,
+		"boolean":   true,
+		"nullValue": nil,
+		"array":     []any{1.0, 2.0, 3.0},
+		"object": map[string]any{
+			"key1": "value1",
+			"key2": "value2",
+		},
+	}
+
+	runVmTests(t, tests, contextValues)
 }

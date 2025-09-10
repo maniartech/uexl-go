@@ -22,7 +22,7 @@ func runVmExpectError(t *testing.T, input string) {
 		return // compile error counts as expected error
 	}
 	machine := vm.New(vm.LibContext{Functions: vm.Builtins, PipeHandlers: vm.DefaultPipeHandlers})
-	if _, err := machine.Run(comp.ByteCode()); err != nil {
+	if _, err := machine.Run(comp.ByteCode(), nil); err != nil {
 		return // runtime error as expected
 	}
 	t.Fatalf("expected error for input %q, got nil", input)
