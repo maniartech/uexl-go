@@ -87,7 +87,7 @@ func runVmErrorTests(t *testing.T, tests []vmTestCase) {
 			PipeHandlers: vm.DefaultPipeHandlers,
 		})
 		bytecode := comp.ByteCode()
-		_, err = vm.Run(bytecode)
+		_, err = vm.Run(bytecode, nil)
 
 		if err == nil {
 			t.Fatalf("[case %d] expected VM error but got none for input: %s", i+1, tt.input)

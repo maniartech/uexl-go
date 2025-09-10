@@ -19,7 +19,7 @@ func EvalExpr(expr string) (any, error) {
 	}
 
 	machine := vm.New(vm.LibContext{})
-	result, err := machine.Run(comp.ByteCode())
+	result, err := machine.Run(comp.ByteCode(), nil)
 	if err != nil {
 		return nil, err
 	}
