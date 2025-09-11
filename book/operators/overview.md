@@ -35,6 +35,8 @@ user.age >= 18 ? "adult" : "minor"
 !isDisabled
 --x      // Numeric double negation: -(-(x))
 !!value  // Boolean conversion: !(!(value))
+// When special numeric literals are enabled:
+-Inf     // Unary minus applied to Inf (negative infinity)
 2**3     // Power operation: 8
 5 ^ 3    // XOR operation: 6
 0 || 10  // Logical OR (truthiness): 10 (replaces falsy 0)
