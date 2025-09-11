@@ -113,3 +113,78 @@ To achieve speed, clarity, and robustness, implement operator dispatch using a c
 - Guardrails: reject NaN/±Inf and non-integers for repetition counts; optional size caps to prevent runaway allocations; consistent error messages.
 
 This pattern is widely recognized (akin to Julia’s multiple dispatch) and delivers predictable semantics with high performance in Go (no reflect, small constant-time tables).
+
+## Additional candidates inspired by Ruby/Python/JS
+These are optional extensions that make common expressions concise while preserving clarity. They can be adopted incrementally.
+
+### A) Array join with delimiter
+- Rule: `array * string` → join array elements with the string delimiter, producing a string (Ruby-style: `["a","b"] * ","` → `"a,b"`).
+- Asymmetry: `array * string` allowed; `string * array` remains error to avoid confusion.
+- Examples:
+  - `["a", "b", "c"] * ","` → `"a,b,c"`
+  - `[] * ","` → `""`
+- Notes:
+  - Elements are stringified using the same shortest round‑trip rules for numbers; other types use their string representation (consistent with existing stringify function/pipes).
+  - Precedence within `*`: when operands are (array, string), join takes precedence over repetition.
+
+### B) Set-like operations on arrays
+- Union: `array | array` → unique union, preserving first occurrence order (Ruby-like).
+- Intersection: `array & array` → elements common to both, preserving left array order.
+- Difference: `array - array` → elements in left not present in right, preserving left order.
+- Commutativity:
+  - `|` and `&` are commutative (results identical ignoring order rules); `-` is not.
+- Equality semantics for elements:
+  - Use SameValueZero for primitives (numbers, strings, booleans): `NaN` equals `NaN`; `+0` equals `-0`.
+  - For arrays/objects, compare by reference identity (no deep equality) for performance and predictability.
+- Examples:
+  - `[1,2,2] | [2,3]` → `[1,2,3]`
+  - `[1,2,3] & [2,2,4]` → `[2]`
+  - `[1,2,3] - [2,4]` → `[1,3]`
+- VM notes:
+  - Implement with a small hash/set per operation, using type-aware keys; for numbers, use their float64 with a canonical NaN representative.
+
+### C) Object (map) shallow merge
+- Rule: `object | object` → shallow merge; right wins on key conflicts.
+- Asymmetry: not commutative; left-to-right application with right overriding.
+- Examples:
+  - `{a:1, b:2} | {b:9, c:3}` → `{a:1, b:9, c:3}`
+- Notes:
+  - Only for objects; mixing with non-objects is an error.
+  - This reuses the `|` operator polymorphically: numeric `|` remains bitwise; arrays get set-union; objects get merge.
+
+### D) Append/Prepend aliases (ergonomics)
+- Array:
+  - `array << value` → append (alias of `array + value`).
+  - `value >> array` → prepend (alias of `value + array`).
+- String:
+  - `string << value` → append stringified value (alias of `string + value`).
+  - `value >> string` → prepend stringified value (alias of `value + string`).
+- Notes:
+  - For numbers on string side, use the same numeric→string formatting rules.
+  - For numbers, `<<`/`>>` remain bitwise shifts; polymorphism is type-driven.
+
+### E) Membership operator (readability)
+- Rule: `x in array` (contains), `ch in string` (substring containment), `key in object` (key presence) → boolean.
+- Examples:
+  - `2 in [1,2,3]` → true
+  - `"bc" in "abc"` → true
+  - `"id" in {id: 1}` → true
+- Notes:
+  - This is a new operator token; included here for completeness since it greatly shortens common containment checks.
+
+## Extended resolution notes for new candidates
+- For binary `*`: precedence is `(string⋆number) > (array⋆number) > (array⋆string join) > numeric` or `(array⋆string)` may be placed before `(array⋆number)` if join is favored. Pick one and document—default here: string/number repeat, then array/number repeat, then array/string join.
+- For `|`:
+  - numbers: bitwise OR
+  - arrays: set-union
+  - objects: shallow merge
+- For `&`:
+  - numbers: bitwise AND
+  - arrays: intersection
+- For `-` (arrays only): difference; numbers remain numeric subtraction.
+
+## Performance and robustness notes for candidates
+- Join (`array * string`): precompute total output size if feasible, or use strings.Builder with chunked writes.
+- Set ops: build small type-aware hash maps; avoid reflect; fast-path primitives. Cap memory if needed for very large inputs.
+- Object merge: preallocate map with len(left)+len(right); assign right after left.
+- Append/Prepend: reuse existing concat paths; these are pure aliases.
