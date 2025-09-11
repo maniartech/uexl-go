@@ -54,6 +54,9 @@ type Options struct {
 	EnableNullish          bool
 	EnableOptionalChaining bool
 	EnablePipes            bool
+	// Opt-in support for IEEE-754 special numeric literals: NaN, Inf (signless)
+	// When enabled, tokenizer emits TokenNumber for NaN and Inf; signs are parsed via unary minus only.
+	EnableIeeeSpecials bool
 
 	// Limits & safety
 	MaxDepth int // 0 => unlimited
@@ -65,6 +68,7 @@ func DefaultOptions() Options {
 		EnableNullish:          true,
 		EnableOptionalChaining: true,
 		EnablePipes:            true,
+		EnableIeeeSpecials:     true,
 		MaxDepth:               0, // unlimited
 	}
 }

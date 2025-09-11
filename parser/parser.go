@@ -34,7 +34,7 @@ func NewParser(input string) *Parser {
 // NewParserWithOptions creates a new parser instance with the given input and options
 func NewParserWithOptions(input string, opt Options) *Parser {
 	p := &Parser{
-		tokenizer: NewTokenizer(input),
+		tokenizer: NewTokenizerWithOptions(input, opt),
 		options:   opt,
 	}
 	p.advance()
@@ -49,7 +49,7 @@ func NewParserWithValidation(input string) (*Parser, error) {
 	}
 
 	p := &Parser{
-		tokenizer: NewTokenizer(input),
+		tokenizer: NewTokenizerWithOptions(input, DefaultOptions()),
 	}
 
 	// Get the first token and check for immediate errors

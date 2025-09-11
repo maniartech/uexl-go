@@ -142,6 +142,12 @@ Mitigation:
 - Introduce an internal arena or sync.Pool for frequently created nodes, guarded by options and benchmarks.
 - No public API break if kept internal; can be iterated safely.
 
+6) IEEE-754 special numeric literals (OPT-IN)
+- Add support for NaN and Inf literals as numbers (not identifiers), gated by a parser option to avoid collisions.
+- Accepted forms: `NaN`, `Inf` as signless tokens; optional unary minus handled by the parser (`-Inf`, `-NaN`). Unary plus is not supported (`+Inf` is not a valid literal).
+- Tokenizer emits numeric tokens carrying float64 values: `NaN` → math.NaN(), `Inf` → math.Inf(+1). Signs are never absorbed by the tokenizer.
+- Default: disabled (option off) for backward compatibility; can be enabled via Options.
+
 ## Concrete examples and migrations
 
 ### Example A: Numbers and strings (compiler token consumers)
@@ -192,6 +198,24 @@ if ma.Property.IsString() {
     // index-like property
 }
 ```
+
+### Example C: IEEE-754 special numeric literals (opt-in)
+
+Before (as identifiers when option disabled):
+```uexl
+NaN   // identifier, not a number literal
+Inf   // identifier, not a number literal
+```
+After (as numeric literals when option enabled):
+```uexl
+NaN   // float64(math.NaN())
+Inf   // float64(math.Inf(+1))
+-Inf  // unary minus applied to +Inf
+-NaN  // still NaN
+
+// Note: unary plus is not supported; '+Inf' is not a valid literal
+```
+Mitigation: keep the feature behind Options.EnableIeeeSpecials; default off to avoid identifier collisions in existing code.
 
 ### Example C: Parser construction in compiler tests
 
@@ -251,6 +275,10 @@ Expected effort: mechanical refactors across a limited set of choke points (toke
  - Versioning: keep current module path; use semantic version tags and clear release notes to signal breaking changes.
 - Changelog: document migration snippets similar to examples above.
 
+Additionally for IEEE-754 literals (opt-in):
+- Document the option flag and default (disabled).
+- Provide a short note on JSON serialization policy for NaN/Inf.
+
 ## Risks and mitigations
 
 - Risk: Wide impact of Token.Value change.
@@ -267,11 +295,19 @@ Expected effort: mechanical refactors across a limited set of choke points (toke
 - Benchmarks show neutral-to-better performance across parser/compiler/vm critical paths.
 - Documentation updated: this roadmap, package docs, and migration notes.
 
+For IEEE-754 literals (opt-in):
+- Tokenizer correctly emits numeric tokens for `NaN` and `Inf` only when option enabled.
+- Parser, compiler, and VM handle values as regular numbers (float64) with IEEE-754 semantics.
+- Tests cover arithmetic (`1/0 → +Inf`, `0/0 → NaN`), comparisons (`NaN != NaN`), and signed forms (`-Inf`).
+
 ## Timeline (suggested)
 
 - Week 1: Introduce TokenValue + compat; refactor compiler hot paths.
 - Week 2: Property typing in AST; adjust vm/compiler; stabilize tests.
 - Week 3: Parser options + cleanups; remove compat; final benchmarks and docs.
+
+Optional (can be folded into Week 2/3):
+- Add `EnableIeeeSpecials` to Options; implement tokenizer recognition; add tests and docs.
 
 ## Appendix: What we’ve already improved
 
@@ -386,6 +422,11 @@ VM predominantly consumes bytecode and runtime values; it does not depend on par
     Anchors (as of this snapshot):
     - `vm/vm.go:222-229` — `case code.OpMemberAccess:` and `vm.executeMemberAccess(...)`
     - `vm/vm_handlers.go:261` — `func (vm *VM) executeMemberAccess(container, index any) error`
+
+For IEEE-754 literals (opt-in):
+- VM arithmetic and comparison already follow Go float64 semantics; no opcode changes expected.
+- Ensure `OpDiv` uses IEEE behavior (division by zero yields ±Inf/NaN) and `OpMod` uses `math.Mod` (NaN on zero divisor).
+- Decide and document JSON encoding policy for NaN/Inf (error by default or encode as strings).
 
 ---
 

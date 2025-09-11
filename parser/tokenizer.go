@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
@@ -62,6 +63,8 @@ type Tokenizer struct {
 	curSize int
 	// reusable buffer for string unescaping to avoid allocations
 	strBuf []byte
+	// options for feature flags
+	options Options
 }
 
 func (t Token) String() string {
@@ -69,12 +72,18 @@ func (t Token) String() string {
 }
 
 func NewTokenizer(input string) *Tokenizer {
+	return NewTokenizerWithOptions(input, DefaultOptions())
+}
+
+// NewTokenizerWithOptions creates a tokenizer with provided options
+func NewTokenizerWithOptions(input string, opt Options) *Tokenizer {
 	tz := &Tokenizer{
-		input:  input,
-		pos:    0,
-		line:   1,
-		column: 1,
-		strBuf: make([]byte, 0, 256), // preallocate buffer for string processing
+		input:   input,
+		pos:     0,
+		line:    1,
+		column:  1,
+		strBuf:  make([]byte, 0, 256), // preallocate buffer for string processing
+		options: opt,
 	}
 	tz.setCur()
 	return tz
@@ -315,6 +324,15 @@ func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 	}
 
 	originalToken := t.input[start:t.pos]
+	if t.options.EnableIeeeSpecials {
+		// Recognize IEEE-754 special literals strictly: NaN, Inf (case-sensitive)
+		if originalToken == "NaN" {
+			return Token{Type: constants.TokenNumber, Value: TokenValue{Kind: TVKNumber, Num: math.NaN()}, Token: originalToken, Line: t.line, Column: startColumn}, nil
+		}
+		if originalToken == "Inf" {
+			return Token{Type: constants.TokenNumber, Value: TokenValue{Kind: TVKNumber, Num: math.Inf(+1)}, Token: originalToken, Line: t.line, Column: startColumn}, nil
+		}
+	}
 	switch originalToken {
 	case "true", "false":
 		return Token{Type: constants.TokenBoolean, Value: TokenValue{Kind: TVKBoolean, Bool: originalToken == "true"}, Token: originalToken, Line: t.line, Column: startColumn}, nil
