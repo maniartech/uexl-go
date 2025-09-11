@@ -38,3 +38,4 @@
   - [Nullish Coalescing Operator](v2/nullish-coalescing-operator.md)
   - [Null Chaining Operator](v2/null-chaining-operator.md)
   - [Slicing Operator](v2/slicing-operator.md)
+  - [Cross-type Operator Polymorphism](v2/cross-type-operator-polymorphism.md)

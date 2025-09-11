@@ -73,6 +73,7 @@ The VM currently implements number equality/inequality and greater/greater-equal
 - Unchanged. `+` on strings is concatenation and does not mix with numeric NaN/Inf.
 
 ## Mixed-type operations (NaN/Inf with non-number)
+> For proposed v2 cross-type operator semantics (e.g., string/array with numeric operators), see the dedicated page: [Cross-type operator polymorphism](./cross-type-operator-polymorphism.md).
 Currently, the VM does not perform implicit type coercions. Numeric operators require numeric operands; string operators require strings; boolean operators require booleans. When NaN or ±Inf are combined with non-number operands, the result is a type error, not coercion.
 
 - Arithmetic and numeric operators (+, -, *, /, %, **, bitwise, shifts):
