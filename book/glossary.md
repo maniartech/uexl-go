@@ -85,3 +85,16 @@ A quick reference for UExL terminology and concepts.
   - Accessing properties on incompatible types may error per language rules.
 
 For deeper dives, follow the links in each section to the full documentation pages.
+
+
+## Special numeric values (enabled by default)
+
+- NaN (Not‑a‑Number)
+  - An IEEE‑754 special value representing an undefined or unrepresentable number.
+  - Available as a literal by default. By IEEE‑754 rules, `NaN != NaN` is true, and comparisons with `NaN` are false.
+  - Truthiness: numbers are truthy except zero; `NaN` is treated as a number and therefore truthy in truthiness checks.
+- Inf (Infinity)
+  - An IEEE‑754 special value representing positive infinity; write as `Inf`. Negative infinity is expressed as `-Inf` (unary minus).
+  - Enabled by default (configurable); there is no `Infinity` literal.
+  - Ordering: `-Inf < any finite number < +Inf`.
+  - See `vm/ieee754-semantics.md` for operator semantics with infinities and NaN.

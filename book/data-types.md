@@ -14,6 +14,18 @@ Numbers in UExL can be integers or floating-point values. Use them for calculati
   - `1e3` (scientific notation, equals 1000)
 - **Edge Case:** Leading zeros are not allowed: `01` is invalid.
 
+### Special numeric values (enabled by default)
+UExL supports IEEE-754 special numeric values as literals (enabled by default, configurable):
+- `NaN` (Not-a-Number)
+- `Inf` (positive infinity)
+- `-Inf` (negative infinity, via unary minus)
+
+Notes:
+- Enabled by default; can be disabled via parser options (EnableIeeeSpecials). When disabled, `NaN` and `Inf` are treated as identifiers.
+- Only `NaN` and `Inf` are recognized; there is no `Infinity` literal and no unary plus form.
+- Equality and comparisons follow IEEE-754 rules: for example, `NaN != NaN` is true, and any comparison with `NaN` is false.
+- Runtime operator behavior (arithmetic, comparisons, bitwise, etc.) with `NaN`/`Inf` is specified in `vm/ieee754-semantics.md`. Division by zero remains an error by design.
+
 ## Strings
 Strings are sequences of characters, enclosed in single or double quotes. Use them for text, messages, and keys.
 - **Examples:**

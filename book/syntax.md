@@ -8,7 +8,7 @@ Syntax defines the rules for how you write expressions, values, and operations i
 ## Expressions: The Heart of UExL
 An expression is any valid combination of values, variables, operators, and functions that produces a result. Expressions can be simple or complex, and they are the foundation of all UExL logic.
 
-- A literal (number, string, boolean, null)
+- A literal (number, string, boolean, null, and `NaN`/`Inf` when enabled; enabled by default)
 - A variable or identifier
 - A binary or unary operation
 - A function call
@@ -20,12 +20,15 @@ An expression is any valid combination of values, variables, operators, and func
 ```
 42                  // Number literal
 "hello"             // String literal
+x                   // Identifier
 x + 10              // Binary operation
 min(1, 2, 3)        // Function call
 [1, 2, 3] |map: $1 * 2 // Pipe operation
 user.name           // Object property access
 (a + b) * c         // Grouped expression
 "hello"[0]          // String index access
+NaN                 // Special number (enabled by default)
+-Inf                // Unary minus applied to Inf (enabled by default)
 ```
 
 ## Whitespace and Formatting
@@ -41,6 +44,8 @@ Whitespace (spaces, tabs, newlines) is generally ignored except where needed to 
 ## Edge Cases and Tips
 - String literals can use single or double quotes, but quotes must match.
 - Identifiers are case-sensitive: `Value` and `value` are different.
+- Special numeric literals `NaN` and `Inf` are enabled by default (configurable). When disabled, they are treated as identifiers.
+- See `vm/ieee754-semantics.md` for the runtime behavior of operations involving `NaN` and `Inf`.
 - Parentheses help clarify complex logic.
 
 ## Practice: Try It Yourself
