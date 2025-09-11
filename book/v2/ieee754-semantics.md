@@ -72,6 +72,39 @@ The VM currently implements number equality/inequality and greater/greater-equal
 ## String operations
 - Unchanged. `+` on strings is concatenation and does not mix with numeric NaN/Inf.
 
+## Mixed-type operations (NaN/Inf with non-number)
+Currently, the VM does not perform implicit type coercions. Numeric operators require numeric operands; string operators require strings; boolean operators require booleans. When NaN or ±Inf are combined with non-number operands, the result is a type error, not coercion.
+
+- Arithmetic and numeric operators (+, -, *, /, %, **, bitwise, shifts):
+  - Both operands must be numbers (float64 or int). If either is a non-number (string, bool, array, object, nil), the VM raises a type error like "expected number, got <type>".
+  - Examples:
+    - `NaN * "hello"` → error: expected number, got string
+    - `(+Inf) | true` → error: expected number, got bool
+    - `5 % nil` → error: expected number, got <nil>
+  - For bitwise and shift operators, see also the earlier rule that non-finite numbers (NaN/±Inf) are errors even when both operands are numeric.
+
+- String concatenation (+):
+  - Only defined for two strings. Mixing with numbers (including NaN/±Inf) is an error; there is no auto-stringification in binary `+`.
+  - Examples:
+    - `"hello" + NaN` → error: string addition requires string operands
+    - `NaN + "hello"` → error: expected number, got string
+
+- Comparisons (==, !=, <, <=, >, >=):
+  - No cross-type comparisons. Number-vs-number follows IEEE-754 rules above; string-vs-string and bool-vs-bool are supported separately.
+  - Mixing types yields a type error like "number comparison requires float64 operands" or "string comparison requires string operands" depending on the left operand.
+  - Examples:
+    - `NaN == "1"` → error (no implicit conversion)
+    - `+Inf > false` → error (no implicit conversion)
+
+- Logical operators (&&, ||, !):
+  - Binary logical operators require booleans. Using numbers directly (including NaN/±Inf) is a type error. Convert explicitly if desired using double-negation.
+  - `!x` (unary) uses truthiness, so it accepts any type; see Truthiness above.
+  - Examples:
+    - `NaN && true` → error (operands must be booleans)
+    - `!!NaN && true` → true (since NaN is truthy, `!!NaN` is true)
+
+In short: there is no implicit coercion between numbers, strings, and booleans in binary operators. NaN/±Inf behave like ordinary numbers with respect to type requirements—they do not trigger special conversions.
+
 ## Error interoperability and propagation
 - Where an operation returns a float64 NaN/Inf, that value is pushed and propagates through subsequent numeric operations per rules above.
 - The division by zero rule remains an error (no NaN/Inf produced by `/ 0`).
