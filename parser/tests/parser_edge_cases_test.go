@@ -72,20 +72,20 @@ func TestParserEdgeCasesAndErrorPaths(t *testing.T) {
 // TestParserPowerOperatorEdgeCases tests edge cases for the power operator
 func TestParserPowerOperatorEdgeCases(t *testing.T) {
 	t.Run("Power with unary operators", func(t *testing.T) {
-		// Test -2 ** 3 (should be -(2**3) = -8, not (-2)**3 = -8)
+		// Test -2 ** 3 with Excel-style precedence (should be (-2)**3 = -8)
 		p := parser.NewParser("-2 ** 3")
 		expr, err := p.Parse()
 		assert.NoError(t, err)
 		assert.NotNil(t, expr)
 
-		// Should be a unary expression with a power expression as operand
-		unary, ok := expr.(*parser.UnaryExpression)
-		assert.True(t, ok)
-		assert.Equal(t, "-", unary.Operator)
-
-		power, ok := unary.Operand.(*parser.BinaryExpression)
+		// Should be a binary expression with unary expression as left operand (Excel-style)
+		power, ok := expr.(*parser.BinaryExpression)
 		assert.True(t, ok)
 		assert.Equal(t, "**", power.Operator)
+
+		unary, ok := power.Left.(*parser.UnaryExpression)
+		assert.True(t, ok)
+		assert.Equal(t, "-", unary.Operator)
 	})
 
 	t.Run("Chained power operators", func(t *testing.T) {

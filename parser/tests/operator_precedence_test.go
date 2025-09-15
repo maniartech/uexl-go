@@ -474,6 +474,7 @@ func TestPowerOperator(t *testing.T) {
 }
 
 // TestPowerOperatorPrecedence tests that power operator has correct precedence
+// Following Excel-style precedence where unary operators bind tighter than power
 func TestPowerOperatorPrecedence(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -499,6 +500,18 @@ func TestPowerOperatorPrecedence(t *testing.T) {
 			expectedType: "BinaryExpression",
 			description:  "Should be parsed as 2**(3**4), not (2**3)**4",
 		},
+		{
+			name:         "unary_vs_power_excel_style",
+			input:        "-2**3",
+			expectedType: "BinaryExpression",
+			description:  "Excel-style: Should be parsed as (-2)**3, not -(2**3)",
+		},
+		{
+			name:         "unary_vs_power_with_parentheses",
+			input:        "-(2**3)",
+			expectedType: "UnaryExpression",
+			description:  "Explicit parentheses: Should be parsed as -(2**3)",
+		},
 	}
 
 	for _, tt := range tests {
@@ -507,12 +520,11 @@ func TestPowerOperatorPrecedence(t *testing.T) {
 			expr, err := p.Parse()
 			assert.NoError(t, err)
 
-			binExpr, ok := expr.(*parser.BinaryExpression)
-			assert.True(t, ok, "Expected BinaryExpression for input: %s", tt.input)
-
 			// Verify the structure based on the specific test
 			switch tt.name {
 			case "power_vs_multiplication":
+				binExpr, ok := expr.(*parser.BinaryExpression)
+				assert.True(t, ok, "Expected BinaryExpression for input: %s", tt.input)
 				// Should be: * operator at root, with left=2 and right=(3**2)
 				assert.Equal(t, "*", binExpr.Operator)
 				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
@@ -520,6 +532,8 @@ func TestPowerOperatorPrecedence(t *testing.T) {
 				assert.Equal(t, "**", rightExpr.Operator)
 
 			case "power_vs_addition":
+				binExpr, ok := expr.(*parser.BinaryExpression)
+				assert.True(t, ok, "Expected BinaryExpression for input: %s", tt.input)
 				// Should be: + operator at root, with left=1 and right=(2**3)
 				assert.Equal(t, "+", binExpr.Operator)
 				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
@@ -527,11 +541,33 @@ func TestPowerOperatorPrecedence(t *testing.T) {
 				assert.Equal(t, "**", rightExpr.Operator)
 
 			case "right_associative":
+				binExpr, ok := expr.(*parser.BinaryExpression)
+				assert.True(t, ok, "Expected BinaryExpression for input: %s", tt.input)
 				// Should be: ** operator at root, with left=2 and right=(3**4)
 				assert.Equal(t, "**", binExpr.Operator)
 				rightExpr, ok := binExpr.Right.(*parser.BinaryExpression)
 				assert.True(t, ok, "Right side should be a BinaryExpression")
 				assert.Equal(t, "**", rightExpr.Operator)
+
+			case "unary_vs_power_excel_style":
+				binExpr, ok := expr.(*parser.BinaryExpression)
+				assert.True(t, ok, "Expected BinaryExpression for input: %s", tt.input)
+				// Should be: ** operator at root, with left=UnaryExpression(-2) and right=3
+				assert.Equal(t, "**", binExpr.Operator)
+				leftExpr, ok := binExpr.Left.(*parser.UnaryExpression)
+				assert.True(t, ok, "Left side should be a UnaryExpression")
+				assert.Equal(t, "-", leftExpr.Operator)
+
+			case "unary_vs_power_with_parentheses":
+				unaryExpr, ok := expr.(*parser.UnaryExpression)
+				assert.True(t, ok, "Expected UnaryExpression for input: %s", tt.input)
+				// Should be: - operator at root, with operand=GroupedExpression containing BinaryExpression
+				assert.Equal(t, "-", unaryExpr.Operator)
+				groupedExpr, ok := unaryExpr.Operand.(*parser.GroupedExpression)
+				assert.True(t, ok, "Operand should be a GroupedExpression")
+				binExpr, ok := groupedExpr.Expression.(*parser.BinaryExpression)
+				assert.True(t, ok, "Grouped expression should contain a BinaryExpression")
+				assert.Equal(t, "**", binExpr.Operator)
 			}
 		})
 	}
