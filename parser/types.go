@@ -76,21 +76,22 @@ func DefaultOptions() Options {
 type NodeType string
 
 const (
-	NodeTypeBinaryExpression NodeType = "BinaryExpression"
-	NodeTypeUnaryExpression  NodeType = "UnaryExpression"
-	NodeTypeConditional      NodeType = "ConditionalExpression"
-	NodeTypeNumberLiteral    NodeType = "NumberLiteral"
-	NodeTypeStringLiteral    NodeType = "StringLiteral"
-	NodeTypeBooleanLiteral   NodeType = "BooleanLiteral"
-	NodeTypeNullLiteral      NodeType = "NullLiteral"
-	NodeTypeIdentifier       NodeType = "Identifier"
-	NodeTypeArrayLiteral     NodeType = "ArrayLiteral"
-	NodeTypeObjectLiteral    NodeType = "ObjectLiteral"
-	NodeTypeFunctionCall     NodeType = "FunctionCall"
-	NodeTypeMemberAccess     NodeType = "MemberAccess"
-	NodeTypeSliceExpression  NodeType = "SliceExpression"
-	NodeTypePipeExpression   NodeType = "PipeExpression"
-	NodeTypeProgram          NodeType = "Program"
+	NodeTypeBinaryExpression  NodeType = "BinaryExpression"
+	NodeTypeUnaryExpression   NodeType = "UnaryExpression"
+	NodeTypeConditional       NodeType = "ConditionalExpression"
+	NodeTypeGroupedExpression NodeType = "GroupedExpression"
+	NodeTypeNumberLiteral     NodeType = "NumberLiteral"
+	NodeTypeStringLiteral     NodeType = "StringLiteral"
+	NodeTypeBooleanLiteral    NodeType = "BooleanLiteral"
+	NodeTypeNullLiteral       NodeType = "NullLiteral"
+	NodeTypeIdentifier        NodeType = "Identifier"
+	NodeTypeArrayLiteral      NodeType = "ArrayLiteral"
+	NodeTypeObjectLiteral     NodeType = "ObjectLiteral"
+	NodeTypeFunctionCall      NodeType = "FunctionCall"
+	NodeTypeMemberAccess      NodeType = "MemberAccess"
+	NodeTypeSliceExpression   NodeType = "SliceExpression"
+	NodeTypePipeExpression    NodeType = "PipeExpression"
+	NodeTypeProgram           NodeType = "Program"
 )
 
 type Node interface {
@@ -138,6 +139,18 @@ type UnaryExpression struct {
 func (ue *UnaryExpression) expressionNode()      {}
 func (ue *UnaryExpression) Type() NodeType       { return NodeTypeUnaryExpression }
 func (ue *UnaryExpression) Position() (int, int) { return ue.Line, ue.Column }
+
+// GroupedExpression represents an expression enclosed in parentheses
+// This preserves the fact that parentheses were used, which affects operator precedence
+type GroupedExpression struct {
+	Expression Expression
+	Line       int
+	Column     int
+}
+
+func (ge *GroupedExpression) expressionNode()      {}
+func (ge *GroupedExpression) Type() NodeType       { return NodeTypeGroupedExpression }
+func (ge *GroupedExpression) Position() (int, int) { return ge.Line, ge.Column }
 
 type NumberLiteral struct {
 	Value  float64 // Parsed numeric value

@@ -283,10 +283,10 @@ func (p *Parser) parseMultiplicative() Expression {
 }
 
 func (p *Parser) parsePower() Expression {
-	// Power operator is right-associative and has higher precedence than unary
-	// To mirror JavaScript precedence, if the left side is a chain of unary operators
-	// (e.g., -, !), and we see '**', we must lift those unary operators to wrap the
-	// entire exponent expression:  -2**3  =>  -(2**3),  !!2**3  =>  !!(2**3)
+	// Power operator is right-associative but has lower precedence than unary operators
+	// Following Excel model for expression languages:
+	// -2**2 should be parsed as (-2)**2 = 4, not -(2**2) = -4
+	// This is more intuitive for spreadsheet users and expression language contexts
 
 	left := p.parseUnary()
 
@@ -295,47 +295,14 @@ func (p *Parser) parsePower() Expression {
 			op := p.current
 			p.advance()
 
-			// Peel leading unary operators from the left side if present
-			ops, base := peelLeadingUnary(left)
-
 			// Right-associative parse for the right operand
 			right := p.parsePower()
 
-			powerExpr := &BinaryExpression{Left: base, Operator: op.Value.Str, Right: right, Line: op.Line, Column: op.Column}
-
-			// Re-apply peeled unary operators around the power expression (outermost first)
-			if len(ops) > 0 {
-				expr := Expression(powerExpr)
-				for _, uop := range ops {
-					expr = &UnaryExpression{Operator: uop, Operand: expr, Line: op.Line, Column: op.Column}
-				}
-				return expr
-			}
-
-			return powerExpr
+			return &BinaryExpression{Left: left, Operator: op.Value.Str, Right: right, Line: op.Line, Column: op.Column}
 		}
 	}
 
 	return left
-}
-
-// peelLeadingUnary extracts a sequence of leading unary operators ('-' and '!')
-// from the given expression. It returns the operators in outer-to-inner order
-// and the innermost non-unary base expression.
-func peelLeadingUnary(expr Expression) ([]string, Expression) {
-	ops := []string{}
-
-	for {
-		if ue, ok := expr.(*UnaryExpression); ok {
-			if ue.Operator == "-" || ue.Operator == "!" {
-				ops = append(ops, ue.Operator)
-				expr = ue.Operand
-				continue
-			}
-		}
-		break
-	}
-	return ops, expr
 }
 
 func (p *Parser) parseUnary() Expression {
@@ -783,6 +750,7 @@ func (p *Parser) parseNull() Expression {
 }
 
 func (p *Parser) parseGroupedExpression() Expression {
+	openParen := p.current
 	p.advance() // consume '('
 
 	// Set both flags to track that we're in a parenthesized expression
@@ -802,7 +770,12 @@ func (p *Parser) parseGroupedExpression() Expression {
 	p.inParenthesis = wasInParenthesis
 	p.subExpressionActive = wasSubExpressionActive
 
-	return expr
+	// Wrap in GroupedExpression to preserve the fact that parentheses were used
+	return &GroupedExpression{
+		Expression: expr,
+		Line:       openParen.Line,
+		Column:     openParen.Column,
+	}
 }
 
 func (p *Parser) parseArray() Expression {

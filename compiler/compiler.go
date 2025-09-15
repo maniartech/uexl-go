@@ -140,6 +140,9 @@ func (c *Compiler) Compile(node parser.Node) error {
 		case "~":
 			c.emit(code.OpBitwiseNot)
 		}
+	case *parser.GroupedExpression:
+		// GroupedExpression is just a wrapper - compile the inner expression
+		return c.Compile(node.Expression)
 	case *parser.FunctionCall:
 		for _, arg := range node.Arguments {
 			if err := c.Compile(arg); err != nil {
