@@ -93,16 +93,25 @@ func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right
 	case code.OpMod:
 		vm.Push(math.Mod(leftValue, rightValue))
 	// Bitwise operations
-	case code.OpBitwiseAnd:
-		vm.Push(float64(int(leftValue) & int(rightValue)))
-	case code.OpBitwiseOr:
-		vm.Push(float64(int(leftValue) | int(rightValue)))
-	case code.OpBitwiseXor:
-		vm.Push(float64(int(leftValue) ^ int(rightValue)))
-	case code.OpShiftLeft:
-		vm.Push(float64(int(leftValue) << int(rightValue)))
-	case code.OpShiftRight:
-		vm.Push(float64(int(leftValue) >> int(rightValue)))
+	case code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight:
+		// Only allow float64 values that are actually integers
+		if leftValue != math.Trunc(leftValue) || rightValue != math.Trunc(rightValue) {
+			return fmt.Errorf("bitwise operations require integerish operands (no decimals), got %v and %v", left, right)
+		}
+		l := int64(leftValue)
+		r := int64(rightValue)
+		switch operator {
+		case code.OpBitwiseAnd:
+			vm.Push(float64(l & r))
+		case code.OpBitwiseOr:
+			vm.Push(float64(l | r))
+		case code.OpBitwiseXor:
+			vm.Push(float64(l ^ r))
+		case code.OpShiftLeft:
+			vm.Push(float64(l << r))
+		case code.OpShiftRight:
+			vm.Push(float64(l >> r))
+		}
 	default:
 		return fmt.Errorf("unknown operator: %v", operator)
 	}
