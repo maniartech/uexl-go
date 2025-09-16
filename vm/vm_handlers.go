@@ -63,6 +63,13 @@ func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) err
 func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right any) error {
 	leftValue := left.(float64)
 	rightValue := right.(float64)
+	isNanOrInf := math.IsNaN(leftValue) || math.IsInf(leftValue, 0) || math.IsNaN(rightValue) || math.IsInf(rightValue, 0)
+
+	isBitwiseOp := operator == code.OpBitwiseAnd || operator == code.OpBitwiseOr || operator == code.OpBitwiseXor || operator == code.OpShiftLeft || operator == code.OpShiftRight
+
+	if isBitwiseOp && isNanOrInf {
+		return fmt.Errorf("bitwise requires finite integers")
+	}
 
 	switch operator {
 	case code.OpAdd:
@@ -77,6 +84,11 @@ func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right
 		}
 		vm.Push(leftValue / rightValue)
 	case code.OpPow:
+		// Always push a float64 result, even if it's NaN or Inf, to match IEEE-754 and test expectations
+		if leftValue == 1 && (math.IsNaN(rightValue) || math.IsInf(rightValue, 0)) {
+			vm.Push(math.NaN())
+			return nil
+		}
 		vm.Push(math.Pow(leftValue, rightValue))
 	case code.OpMod:
 		vm.Push(math.Mod(leftValue, rightValue))
