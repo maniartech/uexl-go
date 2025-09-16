@@ -270,6 +270,16 @@ func TestBitwiseOperations(t *testing.T) {
 		{"(5 & 3) | (2 ^ 1)", 3.0}, // (1) | (3) = 3
 	}
 	runVmTests(t, tests)
+
+	// test for bitwise operations with non-integer values should result in error
+	errorTests := []vmTestCase{
+		{"5.5 & 3", "bitwise operations require integerish operands (no decimals), got 5.5 and 3"},
+		{"5 | 3.2", "bitwise operations require integerish operands (no decimals), got 5 and 3.2"},
+		{"5 ^ 3.8", "bitwise operations require integerish operands (no decimals), got 5 and 3.8"},
+		{"8.2 << 2", "bitwise operations require integerish operands (no decimals), got 8.2 and 2"},
+		{"32 >> 3.1", "bitwise operations require integerish operands (no decimals), got 32 and 3.1"},
+	}
+	runVmErrorTests(t, errorTests)
 }
 func TestBooleanLiterals(t *testing.T) {
 	tests := []vmTestCase{
