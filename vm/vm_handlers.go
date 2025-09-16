@@ -84,9 +84,11 @@ func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right
 		}
 		vm.Push(leftValue / rightValue)
 	case code.OpPow:
-		// if isNanOrInf {
-		// 	// Handle special cases for NaN and Inf
-		// }
+		// Always push a float64 result, even if it's NaN or Inf, to match IEEE-754 and test expectations
+		if leftValue == 1 && (math.IsNaN(rightValue) || math.IsInf(rightValue, 0)) {
+			vm.Push(math.NaN())
+			return nil
+		}
 		vm.Push(math.Pow(leftValue, rightValue))
 	case code.OpMod:
 		vm.Push(math.Mod(leftValue, rightValue))
