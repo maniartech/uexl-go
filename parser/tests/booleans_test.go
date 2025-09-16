@@ -52,8 +52,12 @@ func TestBooleans(t *testing.T) {
 	assert.True(t, ok, "Expected left operand to be BooleanLiteral")
 	assert.True(t, leftBool.Value, "Expected left operand to be true")
 
-	rightBinExpr, ok := binExpr.Right.(*parser.BinaryExpression)
-	assert.True(t, ok, "Expected right operand to be BinaryExpression")
+	// The right operand should be a GroupedExpression containing a BinaryExpression
+	rightGrouped, ok := binExpr.Right.(*parser.GroupedExpression)
+	assert.True(t, ok, "Expected right operand to be GroupedExpression")
+
+	rightBinExpr, ok := rightGrouped.Expression.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected grouped expression to contain BinaryExpression")
 	assert.Equal(t, "||", rightBinExpr.Operator)
 
 	rightLeftBool, ok := rightBinExpr.Left.(*parser.BooleanLiteral)
@@ -72,8 +76,12 @@ func TestBooleans(t *testing.T) {
 	assert.True(t, ok, "Expected BinaryExpression")
 	assert.Equal(t, "&&", binExpr.Operator)
 
-	leftBinExpr, ok := binExpr.Left.(*parser.BinaryExpression)
-	assert.True(t, ok, "Expected left operand to be BinaryExpression")
+	// The left operand should be a GroupedExpression containing a BinaryExpression
+	leftGrouped, ok := binExpr.Left.(*parser.GroupedExpression)
+	assert.True(t, ok, "Expected left operand to be GroupedExpression")
+
+	leftBinExpr, ok := leftGrouped.Expression.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected grouped expression to contain BinaryExpression")
 	assert.Equal(t, "||", leftBinExpr.Operator)
 
 	leftLeftBool, ok := leftBinExpr.Left.(*parser.BooleanLiteral)
@@ -84,8 +92,12 @@ func TestBooleans(t *testing.T) {
 	assert.True(t, ok, "Expected left-right operand to be BooleanLiteral")
 	assert.True(t, leftRightBool.Value, "Expected left-right operand to be true")
 
-	rightBinExpr, ok = binExpr.Right.(*parser.BinaryExpression)
-	assert.True(t, ok, "Expected right operand to be BinaryExpression")
+	// The right operand should also be a GroupedExpression containing a BinaryExpression
+	rightGrouped, ok = binExpr.Right.(*parser.GroupedExpression)
+	assert.True(t, ok, "Expected right operand to be GroupedExpression")
+
+	rightBinExpr, ok = rightGrouped.Expression.(*parser.BinaryExpression)
+	assert.True(t, ok, "Expected grouped expression to contain BinaryExpression")
 	assert.Equal(t, "||", rightBinExpr.Operator)
 
 	rightLeftBool, ok = rightBinExpr.Left.(*parser.BooleanLiteral)
