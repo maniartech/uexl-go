@@ -139,8 +139,7 @@ func TestIEEE754CompilerComplexExpressions(t *testing.T) {
 		// Pipe operations with special values
 		"NaN | round",
 		"Inf | abs",
-		// TODO: Re-enable when lambda expressions are fully implemented
-		// "[NaN, Inf, -Inf] | map(x => x + 1)",
+		"[NaN, Inf, -Inf] |map: $item + 1",
 
 		// Complex arithmetic chains
 		"(NaN + 1) * (Inf - 2) / (-Inf + 3)",
