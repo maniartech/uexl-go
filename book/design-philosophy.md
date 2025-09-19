@@ -26,8 +26,15 @@ UExL is deliberately explicit about how values are accessed and how defaults are
   - If `a` doesn’t exist in `x` or is nullish (or any prior link fails) → still an error. Earlier links remain strict.
 
 4) Short‑circuiting without side effects
+
 - `a && b` evaluates `b` only if `a` is truthy; `a || b` evaluates `b` only if `a` is falsy.
 - `a?.b` and `a?.[i]` do not evaluate the property or index expression when `a` is nullish.
+
+5) Unicode-level explicitness
+
+- String operations default to grapheme clusters (user-perceived characters) for correctness.
+- When different Unicode levels are needed, use explicit view functions: `char()` for code points, `utf8()` for bytes, `utf16()` for code units.
+- All operations work consistently across all views, maintaining composability.
 
 ## Explicitness policies (nullish and boolish)
 
@@ -52,6 +59,10 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 - Optional access guards only the base being nullish, not missing members:
   - `(user?.address).city` can still error if `user` exists but `address` is missing.
   - Use explicit checks or host helpers for existence if you want to treat missing as acceptable.
+- Unicode-level operations are explicit about their target level:
+  - `len("éclair")` → 6 graphemes (safe for user display)
+  - `len(char("éclair"))` → explicit code point count when needed
+  - `len(utf8("éclair"))` → explicit byte count for protocols/storage
 
 ## Precedence notes
 
@@ -62,4 +73,5 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 
 - v2/Null chaining operator: `book/v2/null-chaining-operator.md`
 - v2/Nullish coalescing operator: `book/v2/nullish-coalescing-operator.md`
+- v2/Accessing graphemes: `book/v2/accessing-graphemes.md`
 - Mutability and purity: `book/mutability.md`
