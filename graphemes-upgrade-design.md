@@ -418,7 +418,7 @@ func TestStringViews_AllOperations(t *testing.T) {
         {"utf8_slice", `utf8("éclair")[0:3]`, "é\u0301"}, // Partial grapheme
 
         // Mixed operations
-        {"mixed_workflow", `char("éclair") |filter: $item != "é" |join: ""`, "clair"},
+        {"mixed_workflow", `char("éclair") |filter: $item != "é"`, []any{"c", "l", "a", "i", "r"}},
     }
 
     for _, tt := range tests {
@@ -473,6 +473,638 @@ func TestGraphemeEdgeCases(t *testing.T) {
             }
         })
     }
+}
+```
+
+#### 5.4 Comprehensive String Views Test Suite (`vm/string_views_comprehensive_test.go`)
+
+```go
+package vm
+
+import (
+    "testing"
+    "reflect"
+    "fmt"
+)
+
+// TestStringViews_AllOperations_Comprehensive covers ALL string operations across ALL view types
+func TestStringViews_AllOperations_Comprehensive(t *testing.T) {
+    // Test data covering all complexity levels and edge cases
+    testStrings := map[string]struct {
+        input     string
+        graphemes []string
+        runes     []rune
+        utf8      []byte
+        utf16     []uint16
+    }{
+        "ascii": {
+            input:     "hello",
+            graphemes: []string{"h", "e", "l", "l", "o"},
+            runes:     []rune{'h', 'e', 'l', 'l', 'o'},
+            utf8:      []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f},
+            utf16:     []uint16{0x0068, 0x0065, 0x006c, 0x006c, 0x006f},
+        },
+        "simple_unicode": {
+            input:     "café",
+            graphemes: []string{"c", "a", "f", "é"},
+            runes:     []rune{'c', 'a', 'f', 'é'},
+            utf8:      []byte{0x63, 0x61, 0x66, 0xc3, 0xa9},
+            utf16:     []uint16{0x0063, 0x0061, 0x0066, 0x00e9},
+        },
+        "combining_marks": {
+            input:     "e\u0301", // e + acute accent
+            graphemes: []string{"é"},
+            runes:     []rune{'e', '\u0301'},
+            utf8:      []byte{0x65, 0xcc, 0x81},
+            utf16:     []uint16{0x0065, 0x0301},
+        },
+        "emoji_family": {
+            input:     "👨‍👩‍👧‍👦", // Family emoji with ZWJ
+            graphemes: []string{"👨‍👩‍👧‍👦"},
+            runes:     []rune{0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F467, 0x200D, 0x1F466},
+            utf8:      []byte{0xf0, 0x9f, 0x91, 0xa8, 0xe2, 0x80, 0x8d, 0xf0, 0x9f, 0x91, 0xa9, 0xe2, 0x80, 0x8d, 0xf0, 0x9f, 0x91, 0xa7, 0xe2, 0x80, 0x8d, 0xf0, 0x9f, 0x91, 0xa6},
+            utf16:     []uint16{0xd83d, 0xdc68, 0x200d, 0xd83d, 0xdc69, 0x200d, 0xd83d, 0xdc67, 0x200d, 0xd83d, 0xdc66},
+        },
+        "flag_emoji": {
+            input:     "🇺🇸", // US flag (regional indicators)
+            graphemes: []string{"🇺🇸"},
+            runes:     []rune{0x1F1FA, 0x1F1F8},
+            utf8:      []byte{0xf0, 0x9f, 0x87, 0xba, 0xf0, 0x9f, 0x87, 0xb8},
+            utf16:     []uint16{0xd83c, 0xddfa, 0xd83c, 0xddf8},
+        },
+        "skin_tone": {
+            input:     "👋🏽", // Waving hand with medium skin tone
+            graphemes: []string{"👋🏽"},
+            runes:     []rune{0x1F44B, 0x1F3FD},
+            utf8:      []byte{0xf0, 0x9f, 0x91, 0x8b, 0xf0, 0x9f, 0x8f, 0xbd},
+            utf16:     []uint16{0xd83d, 0xdc4b, 0xd83c, 0xdffd},
+        },
+        "mixed_content": {
+            input:     "Hi🌍café",
+            graphemes: []string{"H", "i", "🌍", "c", "a", "f", "é"},
+            runes:     []rune{'H', 'i', 0x1F30D, 'c', 'a', 'f', 'é'},
+            utf8:      []byte{0x48, 0x69, 0xf0, 0x9f, 0x8c, 0x8d, 0x63, 0x61, 0x66, 0xc3, 0xa9},
+            utf16:     []uint16{0x0048, 0x0069, 0xd83c, 0xdf0d, 0x0063, 0x0061, 0x0066, 0x00e9},
+        },
+    }
+
+    // Test all view types
+    for testName, testData := range testStrings {
+        t.Run(testName, func(t *testing.T) {
+            testAllViewOperations(t, testData.input, testData.graphemes, testData.runes, testData.utf8, testData.utf16)
+        })
+    }
+}
+
+func testAllViewOperations(t *testing.T, input string, expectedGraphemes []string, expectedRunes []rune, expectedUTF8 []byte, expectedUTF16 []uint16) {
+    // Test LENGTH operations
+    t.Run("Length", func(t *testing.T) {
+        tests := []struct {
+            expr     string
+            expected int
+        }{
+            {fmt.Sprintf(`len("%s")`, input), len(expectedGraphemes)},                    // Default grapheme
+            {fmt.Sprintf(`len(char("%s"))`, input), len(expectedRunes)},                 // Rune view
+            {fmt.Sprintf(`len(utf8("%s"))`, input), len(expectedUTF8)},                  // UTF-8 view
+            {fmt.Sprintf(`len(utf16("%s"))`, input), len(expectedUTF16)},                // UTF-16 view
+        }
+
+        for _, test := range tests {
+            result := evalExpression(test.expr)
+            if result != float64(test.expected) {
+                t.Errorf("Expected %d, got %v for: %s", test.expected, result, test.expr)
+            }
+        }
+    })
+
+    // Test INDEXING operations
+    t.Run("Indexing", func(t *testing.T) {
+        // Test positive indices
+        for i := 0; i < len(expectedGraphemes); i++ {
+            result := evalExpression(fmt.Sprintf(`"%s"[%d]`, input, i))
+            if result != expectedGraphemes[i] {
+                t.Errorf("Grapheme index [%d] expected %q, got %v", i, expectedGraphemes[i], result)
+            }
+        }
+
+        for i := 0; i < len(expectedRunes); i++ {
+            result := evalExpression(fmt.Sprintf(`char("%s")[%d]`, input, i))
+            if result != string(expectedRunes[i]) {
+                t.Errorf("Rune index [%d] expected %q, got %v", i, string(expectedRunes[i]), result)
+            }
+        }
+
+        for i := 0; i < len(expectedUTF8); i++ {
+            result := evalExpression(fmt.Sprintf(`utf8("%s")[%d]`, input, i))
+            if result != string([]byte{expectedUTF8[i]}) {
+                t.Errorf("UTF-8 index [%d] expected %q, got %v", i, string([]byte{expectedUTF8[i]}), result)
+            }
+        }
+
+        // Test negative indices
+        if len(expectedGraphemes) > 0 {
+            result := evalExpression(fmt.Sprintf(`"%s"[-1]`, input))
+            if result != expectedGraphemes[len(expectedGraphemes)-1] {
+                t.Errorf("Negative index [-1] expected %q, got %v", expectedGraphemes[len(expectedGraphemes)-1], result)
+            }
+        }
+
+        // Test out-of-bounds (should error)
+        shouldError := []string{
+            fmt.Sprintf(`"%s"[%d]`, input, len(expectedGraphemes)+1),
+            fmt.Sprintf(`char("%s")[%d]`, input, len(expectedRunes)+1),
+            fmt.Sprintf(`utf8("%s")[%d]`, input, len(expectedUTF8)+1),
+        }
+
+        for _, expr := range shouldError {
+            result, err := evalExpressionWithError(expr)
+            if err == nil {
+                t.Errorf("Expected error for out-of-bounds access: %s, got: %v", expr, result)
+            }
+        }
+    })
+
+    // Test SLICING operations
+    t.Run("Slicing", func(t *testing.T) {
+        if len(expectedGraphemes) >= 2 {
+            // Basic slices
+            tests := []struct {
+                expr     string
+                expected string
+            }{
+                {fmt.Sprintf(`"%s"[0:2]`, input), joinGraphemes(expectedGraphemes[0:2])},
+                {fmt.Sprintf(`"%s"[1:]`, input), joinGraphemes(expectedGraphemes[1:])},
+                {fmt.Sprintf(`"%s"[:2]`, input), joinGraphemes(expectedGraphemes[:2])},
+                {fmt.Sprintf(`"%s"[:]`, input), input},
+            }
+
+            for _, test := range tests {
+                result := evalExpression(test.expr)
+                if result != test.expected {
+                    t.Errorf("Slice expected %q, got %v for: %s", test.expected, result, test.expr)
+                }
+            }
+        }
+
+        // Test slicing with step
+        if len(expectedGraphemes) >= 3 {
+            result := evalExpression(fmt.Sprintf(`"%s"[::2]`, input))
+            expected := joinGraphemesWithStep(expectedGraphemes, 0, len(expectedGraphemes), 2)
+            if result != expected {
+                t.Errorf("Step slice expected %q, got %v", expected, result)
+            }
+        }
+
+        // Test reverse slicing
+        if len(expectedGraphemes) > 0 {
+            result := evalExpression(fmt.Sprintf(`"%s"[::-1]`, input))
+            expected := reverseJoinGraphemes(expectedGraphemes)
+            if result != expected {
+                t.Errorf("Reverse slice expected %q, got %v", expected, result)
+            }
+        }
+    })
+
+    // Test COMPARISON operations
+    t.Run("Comparisons", func(t *testing.T) {
+        tests := []struct {
+            expr     string
+            expected bool
+        }{
+            {fmt.Sprintf(`"%s" == "%s"`, input, input), true},
+            {fmt.Sprintf(`"%s" != "%s"`, input, input), false},
+            {fmt.Sprintf(`char("%s") == char("%s")`, input, input), true},
+            {fmt.Sprintf(`utf8("%s") == utf8("%s")`, input, input), true},
+            {fmt.Sprintf(`"%s" == "different"`, input), false},
+        }
+
+        for _, test := range tests {
+            result := evalExpression(test.expr)
+            if result != test.expected {
+                t.Errorf("Comparison expected %v, got %v for: %s", test.expected, result, test.expr)
+            }
+        }
+    })
+
+    // Test CONTAINS operations
+    t.Run("Contains", func(t *testing.T) {
+        if len(expectedGraphemes) > 0 {
+            firstGrapheme := expectedGraphemes[0]
+            tests := []struct {
+                expr     string
+                expected bool
+            }{
+                {fmt.Sprintf(`contains("%s", "%s")`, input, firstGrapheme), true},
+                {fmt.Sprintf(`contains("%s", "xyz")`, input), false},
+                {fmt.Sprintf(`contains(char("%s"), char("%s"))`, input, firstGrapheme), true},
+            }
+
+            for _, test := range tests {
+                result := evalExpression(test.expr)
+                if result != test.expected {
+                    t.Errorf("Contains expected %v, got %v for: %s", test.expected, result, test.expr)
+                }
+            }
+        }
+    })
+
+    // Test SUBSTR operations
+    t.Run("Substr", func(t *testing.T) {
+        if len(expectedGraphemes) >= 2 {
+            tests := []struct {
+                expr     string
+                expected string
+            }{
+                {fmt.Sprintf(`substr("%s", 0, 2)`, input), joinGraphemes(expectedGraphemes[0:2])},
+                {fmt.Sprintf(`substr(char("%s"), 0, 2)`, input), string(expectedRunes[0:min(2, len(expectedRunes))])},
+            }
+
+            for _, test := range tests {
+                result := evalExpression(test.expr)
+                if result != test.expected {
+                    t.Errorf("Substr expected %q, got %v for: %s", test.expected, result, test.expr)
+                }
+            }
+        }
+    })
+}
+
+// Test core PIPE operations with string views
+// Testing map, filter, and reduce - if these work, other pipes will work too
+func TestStringViews_CorePipeOperations(t *testing.T) {
+    tests := []struct {
+        name     string
+        expr     string
+        expected any
+    }{
+        // FILTER operations - test filtering across all view types
+        {
+            "filter_graphemes",
+            `"hello" |filter: $item != "l"`,
+            []any{"h", "e", "o"}, // Grapheme-level filtering
+        },
+        {
+            "filter_runes",
+            `char("café") |filter: $item != "é"`,
+            []any{"c", "a", "f"}, // Rune-level filtering
+        },
+        {
+            "filter_utf8_bytes",
+            `utf8("abc") |filter: $item != "b"`,
+            []any{[]byte("a")[0], []byte("c")[0]}, // Byte-level filtering
+        },
+
+        // MAP operations - test transformations across view types
+        {
+            "map_graphemes_to_upper",
+            `"hello" |map: upper($item)`,
+            []any{"H", "E", "L", "L", "O"}, // Grapheme transformations
+        },
+        {
+            "map_runes_to_codes",
+            `char("abc") |map: ord($item)`,
+            []any{97.0, 98.0, 99.0}, // Rune to ASCII code mapping
+        },
+        {
+            "map_utf8_to_length",
+            `utf8("aé") |map: len($item)`,
+            []any{1.0, 2.0}, // UTF-8 byte length mapping (é is 2 bytes)
+        },
+
+        // REDUCE operations - test aggregation across view types
+        {
+            "reduce_grapheme_count",
+            `"hello" |reduce: $acc + 1, 0`,
+            5.0, // Count graphemes using reduce
+        },
+        {
+            "reduce_rune_concat",
+            `char("hi") |reduce: str($acc) + $item, ""`,
+            "hi", // Reconstruct string from runes
+        },
+        {
+            "reduce_byte_sum",
+            `utf8("abc") |reduce: $acc + $item, 0`,
+            294.0, // Sum ASCII values: 97+98+99
+        },
+
+        // COMBINED operations - test chaining pipes with views
+        {
+            "filter_then_map",
+            `"hello" |filter: $item != "l" |map: upper($item)`,
+            []any{"H", "E", "O"}, // Filter then transform
+        },
+        {
+            "map_then_reduce",
+            `"hi" |map: upper($item) |reduce: str($acc) + $item, ""`,
+            "HI", // Transform then reconstruct
+        },
+        {
+            "cross_view_filter_reduce",
+            `char("café") |filter: len(utf8($item)) == 1 |reduce: str($acc) + $item, ""`,
+            "caf", // Filter multi-byte chars, then concatenate
+        },
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            result := evalExpression(test.expr)
+            if !reflect.DeepEqual(result, test.expected) {
+                t.Errorf("Expected %v (%T), got %v (%T) for: %s",
+                    test.expected, test.expected, result, result, test.expr)
+            }
+        })
+    }
+}
+
+// Test cross-view compatibility and conversions
+func TestStringViews_CrossViewOperations(t *testing.T) {
+    tests := []struct {
+        name     string
+        expr     string
+        expected any
+    }{
+        // View conversions
+        {
+            "grapheme_to_rune_view",
+            `char(str("café"))`,
+            "RuneView", // Should return RuneView type
+        },
+        {
+            "rune_to_utf8_view",
+            `utf8(str(char("café")))`,
+            "UTF8View", // Should return UTF8View type
+        },
+
+        // Mixed view comparisons
+        {
+            "compare_views_same_content",
+            `str("café") == str(char("café"))`,
+            true, // Should be equal when converted to string
+        },
+        {
+            "compare_different_views",
+            `len("café") == len(utf8("café"))`,
+            false, // Grapheme count vs byte count should differ
+        },
+
+        // View type preservation in operations
+        {
+            "index_preserves_view_semantics",
+            `char("café")[1] == "a"`,
+            true, // Rune indexing should return "a"
+        },
+        {
+            "slice_preserves_view_semantics",
+            `len(char("café")[0:2]) == 2`,
+            true, // Rune slice should have 2 elements
+        },
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            result := evalExpression(test.expr)
+            if result != test.expected {
+                t.Errorf("Expected %v, got %v for: %s", test.expected, result, test.expr)
+            }
+        })
+    }
+}
+
+// Test error conditions and edge cases
+func TestStringViews_ErrorConditions(t *testing.T) {
+    errorTests := []struct {
+        name string
+        expr string
+    }{
+        {"null_string_to_view", `char(null)`},
+        {"invalid_type_to_view", `char(42)`},
+        {"out_of_bounds_positive", `"hello"[10]`},
+        {"out_of_bounds_negative", `"hello"[-10]`},
+        {"invalid_slice_step", `"hello"[::0]`},
+        {"invalid_index_type", `"hello"["invalid"]`},
+        {"mixed_type_comparison", `"hello" == 42`},
+    }
+
+    for _, test := range errorTests {
+        t.Run(test.name, func(t *testing.T) {
+            _, err := evalExpressionWithError(test.expr)
+            if err == nil {
+                t.Errorf("Expected error for: %s", test.expr)
+            }
+        })
+    }
+}
+
+// Test empty string and null handling
+func TestStringViews_EdgeCases(t *testing.T) {
+    tests := []struct {
+        name     string
+        expr     string
+        expected any
+    }{
+        {"empty_string_length", `len("")`, 0.0},
+        {"empty_string_char_length", `len(char(""))`, 0.0},
+        {"empty_string_utf8_length", `len(utf8(""))`, 0.0},
+        {"empty_string_slice", `""[:]`, ""},
+        {"single_char_negative_index", `"a"[-1]`, "a"},
+        {"whitespace_only", `len("   ")`, 3.0},
+        {"newlines_and_tabs", `len("\n\t\r")`, 3.0},
+        {"null_coalescing_with_views", `char("") ?? "default"`, "default"},
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            result := evalExpression(test.expr)
+            if result != test.expected {
+                t.Errorf("Expected %v, got %v for: %s", test.expected, result, test.expr)
+            }
+        })
+    }
+}
+
+// Helper functions for test assertions
+func joinGraphemes(graphemes []string) string {
+    result := ""
+    for _, g := range graphemes {
+        result += g
+    }
+    return result
+}
+
+func joinGraphemesWithStep(graphemes []string, start, end, step int) string {
+    result := ""
+    for i := start; i < end && i < len(graphemes); i += step {
+        result += graphemes[i]
+    }
+    return result
+}
+
+func reverseJoinGraphemes(graphemes []string) string {
+    result := ""
+    for i := len(graphemes) - 1; i >= 0; i-- {
+        result += graphemes[i]
+    }
+    return result
+}
+
+func min(a, b int) int {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+// Mock evaluation functions (to be implemented with actual UExL evaluator)
+func evalExpression(expr string) any {
+    // This would be implemented with the actual UExL VM
+    panic("Not implemented - replace with actual UExL evaluator")
+}
+
+func evalExpressionWithError(expr string) (any, error) {
+    // This would be implemented with the actual UExL VM
+    panic("Not implemented - replace with actual UExL evaluator")
+}
+```
+
+#### 5.5 Performance Regression Tests (`vm/string_views_performance_test.go`)
+
+```go
+package vm
+
+import (
+    "testing"
+    "strings"
+    "fmt"
+)
+
+// Benchmark string operations to ensure no performance regression
+func BenchmarkStringViews_Operations(b *testing.B) {
+    testStrings := []struct {
+        name string
+        str  string
+    }{
+        {"short_ascii", "hello"},
+        {"medium_ascii", strings.Repeat("hello", 10)},
+        {"long_ascii", strings.Repeat("abcdefghijklmnop", 100)},
+        {"short_unicode", "café naïve"},
+        {"medium_unicode", strings.Repeat("café naïve résumé ", 10)},
+        {"complex_emoji", "👨‍👩‍👧‍👦🇺🇸👋🏽"},
+        {"mixed_content", "Hello 世界 👋 café naïve!"},
+    }
+
+    operations := []struct {
+        name string
+        fn   func(string) any
+    }{
+        {"len", func(s string) any { return len(segmentGraphemes(s)) }},
+        {"index_0", func(s string) any {
+            clusters := segmentGraphemes(s)
+            if len(clusters) > 0 {
+                return clusters[0]
+            }
+            return ""
+        }},
+        {"slice_0_2", func(s string) any {
+            clusters := segmentGraphemes(s)
+            if len(clusters) >= 2 {
+                return joinGraphemes(clusters[0:2])
+            }
+            return s
+        }},
+        {"contains_first", func(s string) any {
+            clusters := segmentGraphemes(s)
+            if len(clusters) > 0 {
+                return strings.Contains(s, clusters[0])
+            }
+            return false
+        }},
+    }
+
+    for _, str := range testStrings {
+        for _, op := range operations {
+            benchName := fmt.Sprintf("%s_%s", op.name, str.name)
+
+            b.Run(benchName, func(b *testing.B) {
+                b.ResetTimer()
+                for i := 0; i < b.N; i++ {
+                    _ = op.fn(str.str)
+                }
+            })
+
+            // Also benchmark the view-based versions
+            b.Run(benchName+"_char_view", func(b *testing.B) {
+                view := &RuneView{original: str.str, runes: []rune(str.str)}
+                b.ResetTimer()
+                for i := 0; i < b.N; i++ {
+                    switch op.name {
+                    case "len":
+                        _ = view.Length()
+                    case "index_0":
+                        if view.Length() > 0 {
+                            _, _ = view.Index(0)
+                        }
+                    case "slice_0_2":
+                        if view.Length() >= 2 {
+                            _, _ = view.Slice(0, 2, 1)
+                        }
+                    }
+                }
+            })
+        }
+    }
+}
+
+// Benchmark complexity detection performance
+func BenchmarkStringViews_ComplexityDetection(b *testing.B) {
+    testCases := []struct {
+        name string
+        str  string
+    }{
+        {"ascii_short", "hello"},
+        {"ascii_long", strings.Repeat("abcdefg", 1000)},
+        {"unicode_simple", "café naïve"},
+        {"unicode_complex", "👨‍👩‍👧‍👦🇺🇸👋🏽"},
+        {"mixed", "Hello 世界 👋 test"},
+    }
+
+    for _, tc := range testCases {
+        b.Run(tc.name, func(b *testing.B) {
+            b.ResetTimer()
+            for i := 0; i < b.N; i++ {
+                _ = analyzeStringComplexity(tc.str)
+            }
+        })
+    }
+}
+
+// Benchmark memory allocations
+func BenchmarkStringViews_AllocationsTest(b *testing.B) {
+    testStr := "Hello 世界 👋 café"
+
+    b.Run("grapheme_segmentation", func(b *testing.B) {
+        b.ReportAllocs()
+        b.ResetTimer()
+        for i := 0; i < b.N; i++ {
+            _ = segmentGraphemes(testStr)
+        }
+    })
+
+    b.Run("rune_conversion", func(b *testing.B) {
+        b.ReportAllocs()
+        b.ResetTimer()
+        for i := 0; i < b.N; i++ {
+            _ = []rune(testStr)
+        }
+    })
+
+    b.Run("complexity_detection", func(b *testing.B) {
+        b.ReportAllocs()
+        b.ResetTimer()
+        for i := 0; i < b.N; i++ {
+            _ = analyzeStringComplexity(testStr)
+        }
+    })
 }
 ```
 
