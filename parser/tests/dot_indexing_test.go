@@ -223,8 +223,11 @@ func TestDotIndexing_IdentifierIndex_OnArray(t *testing.T) {
 	assert.NoError(t, err)
 	idx, ok := expr.(*parser.IndexAccess)
 	assert.True(t, ok)
-	_, ok = idx.Index.(*parser.Identifier)
-	assert.True(t, ok, "index should be an Identifier expression")
+	// Index should be a GroupedExpression containing an Identifier
+	grouped, ok := idx.Index.(*parser.GroupedExpression)
+	assert.True(t, ok, "index should be a GroupedExpression")
+	_, ok = grouped.Expression.(*parser.Identifier)
+	assert.True(t, ok, "index should contain an Identifier expression")
 }
 
 func TestDotIndexing_IdentifierIndex_OnString(t *testing.T) {
@@ -233,6 +236,9 @@ func TestDotIndexing_IdentifierIndex_OnString(t *testing.T) {
 	assert.NoError(t, err)
 	idx, ok := expr.(*parser.IndexAccess)
 	assert.True(t, ok)
-	_, ok = idx.Index.(*parser.Identifier)
-	assert.True(t, ok, "index should be an Identifier expression")
+	// Index should be a GroupedExpression containing an Identifier
+	grouped, ok := idx.Index.(*parser.GroupedExpression)
+	assert.True(t, ok, "index should be a GroupedExpression")
+	_, ok = grouped.Expression.(*parser.Identifier)
+	assert.True(t, ok, "index should contain an Identifier expression")
 }
