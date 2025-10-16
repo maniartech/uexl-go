@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/maniartech/uexl_go/code"
 )
@@ -126,7 +127,11 @@ func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right any
 		if !lok || !rok {
 			return fmt.Errorf("string addition requires string operands, got %T and %T", left, right)
 		}
-		return vm.Push(l + r)
+
+		// For now, use simple concatenation.
+		// TODO: Future optimization could use strings.Builder for concatenation chains
+		result := l + r
+		return vm.Push(result)
 	default:
 		return fmt.Errorf("unsupported string operation: %s", operator.String())
 	}
@@ -384,4 +389,137 @@ func isTruthy(val any) bool {
 
 func isNullish(val any) bool {
 	return val == nil
+}
+
+// executeStringConcat efficiently concatenates multiple strings from the stack
+func (vm *VM) executeStringConcat(count int) error {
+	if count < 2 {
+		return fmt.Errorf("string concatenation requires at least 2 operands")
+	}
+
+	// Fast path for 2-string concatenation (most common case)
+	if count == 2 {
+		right := vm.Pop()
+		left := vm.Pop()
+
+		leftStr, leftOk := left.(string)
+		rightStr, rightOk := right.(string)
+
+		if leftOk && rightOk {
+			// Both are strings - use simple concatenation
+			return vm.Push(leftStr + rightStr)
+		}
+
+		// One or both need conversion
+		if !leftOk {
+			leftStr = fmt.Sprintf("%v", left)
+		}
+		if !rightOk {
+			rightStr = fmt.Sprintf("%v", right)
+		}
+		return vm.Push(leftStr + rightStr)
+	}
+
+	// General case for 3+ strings
+	// Calculate total length and convert to strings in one pass
+	var totalLen int
+	stringValues := make([]string, count)
+
+	for i := count - 1; i >= 0; i-- {
+		val := vm.Pop()
+		if str, ok := val.(string); ok {
+			stringValues[i] = str
+			totalLen += len(str)
+		} else {
+			// Convert non-string to string
+			str = fmt.Sprintf("%v", val)
+			stringValues[i] = str
+			totalLen += len(str)
+		}
+	}
+
+	// Use strings.Builder for efficient concatenation
+	var builder strings.Builder
+	builder.Grow(totalLen) // Pre-allocate exact capacity
+	for _, str := range stringValues {
+		builder.WriteString(str)
+	}
+
+	return vm.Push(builder.String())
+}
+
+// executeStringPatternMatch optimizes string comparison patterns like:
+// variable == "prefix" + dynamic + "suffix"
+// Stack layout: [target, prefix, middle, suffix]
+// Uses zero-allocation pattern matching without string concatenation
+func (vm *VM) executeStringPatternMatch(prefixIdx, suffixIdx int) error {
+	const requiredStackElements = 4 // target, prefix, middle, suffix
+
+	// Validate stack has sufficient elements
+	if len(vm.stack) < requiredStackElements {
+		return fmt.Errorf("insufficient stack elements for string pattern match: need %d, have %d",
+			requiredStackElements, len(vm.stack))
+	}
+
+	// Stack has: [target, prefix, middle, suffix] from bottom to top
+	// Pop in reverse order
+	suffix := vm.Pop()
+	middle := vm.Pop()
+	prefix := vm.Pop()
+	target := vm.Pop()
+
+	// Convert all values to strings (fast path for strings)
+	var targetStr, prefixStr, middleStr, suffixStr string
+
+	if str, ok := target.(string); ok {
+		targetStr = str
+	} else {
+		targetStr = fmt.Sprintf("%v", target)
+	}
+
+	if str, ok := prefix.(string); ok {
+		prefixStr = str
+	} else {
+		prefixStr = fmt.Sprintf("%v", prefix)
+	}
+
+	if str, ok := middle.(string); ok {
+		middleStr = str
+	} else {
+		middleStr = fmt.Sprintf("%v", middle)
+	}
+
+	if str, ok := suffix.(string); ok {
+		suffixStr = str
+	} else {
+		suffixStr = fmt.Sprintf("%v", suffix)
+	}
+
+	// Zero-allocation pattern matching
+	// Check total length first
+	expectedLen := len(prefixStr) + len(middleStr) + len(suffixStr)
+	if len(targetStr) != expectedLen {
+		return vm.Push(false)
+	}
+
+	// Check prefix match (length already validated above)
+	if len(prefixStr) > 0 && targetStr[:len(prefixStr)] != prefixStr {
+		return vm.Push(false)
+	}
+
+	// Check suffix match (length already validated above)
+	if len(suffixStr) > 0 && targetStr[len(targetStr)-len(suffixStr):] != suffixStr {
+		return vm.Push(false)
+	}
+
+	// Check middle match
+	middleStart := len(prefixStr)
+	middleEnd := len(targetStr) - len(suffixStr)
+	if middleStart <= middleEnd {
+		actualMiddle := targetStr[middleStart:middleEnd]
+		result := actualMiddle == middleStr
+		return vm.Push(result)
+	}
+
+	return vm.Push(false)
 }

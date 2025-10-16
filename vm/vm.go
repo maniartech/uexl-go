@@ -282,6 +282,21 @@ func (vm *VM) run() error {
 		case code.OpSafeModeOff:
 			vm.safeMode = false
 			frame.ip += 1
+		case code.OpStringConcat:
+			count := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			err := vm.executeStringConcat(int(count))
+			if err != nil {
+				return err
+			}
+			frame.ip += 3
+		case code.OpStringPatternMatch:
+			prefixIdx := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
+			suffixIdx := code.ReadUint16(frame.instructions[frame.ip+3 : frame.ip+5])
+			err := vm.executeStringPatternMatch(int(prefixIdx), int(suffixIdx))
+			if err != nil {
+				return err
+			}
+			frame.ip += 5
 		default:
 			return fmt.Errorf("unknown opcode: %v at ip=%d", opcode, frame.ip)
 		}
