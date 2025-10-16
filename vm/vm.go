@@ -13,18 +13,26 @@ func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode, contextVarsValues
 	vm.systemVars = bytecode.SystemVars
 	vm.contextVarsValues = contextVarsValues
 
-	mainFrame := NewFrame(bytecode.Instructions, 0)
-	frames := make([]*Frame, MaxFrames)
-	pipeScopes := make([]map[string]any, 0)
-	stack := make([]any, StackSize)
-	aliasVars := make(map[string]any)
-
-	frames[0] = mainFrame
-	vm.frames = frames
+	// Reset execution state
+	vm.sp = 0
 	vm.framesIdx = 1
-	vm.pipeScopes = pipeScopes
-	vm.stack = stack
-	vm.aliasVars = aliasVars
+
+	// Reuse existing frame instead of allocating
+	if vm.frames[0] == nil {
+		vm.frames[0] = NewFrame(bytecode.Instructions, 0)
+	} else {
+		vm.frames[0].instructions = bytecode.Instructions
+		vm.frames[0].ip = 0
+		vm.frames[0].basePointer = 0
+	}
+
+	// Clear pipe scopes (preserve capacity)
+	vm.pipeScopes = vm.pipeScopes[:0]
+
+	// Clear alias vars (reuse map)
+	for k := range vm.aliasVars {
+		delete(vm.aliasVars, k)
+	}
 }
 
 func (vm *VM) run() error {
