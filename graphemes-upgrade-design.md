@@ -125,10 +125,31 @@ func builtinUTF16(args ...any) (any, error) {
 }
 ```
 
-#### 1.3 Updated Core Operations (`vm/builtins_v2.go`)
+#### 1.3 Updated Builtins Registry (`vm/builtins_v2.go`)
 
 ```go
-// BACKWARD COMPATIBLE: Updated len function
+// Enhanced Builtins map with string view functions
+var Builtins = VMFunctions{
+    // Existing functions (enhanced)
+    "len":      builtinLen,
+    "substr":   builtinSubstr,
+    "contains": builtinContains,
+    "set":      builtinSet,
+    "str":      builtinStr,
+
+    // NEW: String view functions
+    "char":     builtinChar,    // Create rune view: char("café")
+    "utf8":     builtinUTF8,    // Create byte view: utf8("café")
+    "utf16":    builtinUTF16,   // Create UTF-16 view: utf16("café")
+
+    // Additional string functions that work with views
+    "upper":    builtinUpper,   // Case conversion
+    "lower":    builtinLower,   // Case conversion
+    "ord":      builtinOrd,     // Character to code point
+    "chr":      builtinChr,     // Code point to character
+}
+
+// GENERIC: Updated len function - works with strings, views, arrays, slices, maps
 func builtinLen(args ...any) (any, error) {
     if len(args) != 1 {
         return nil, fmt.Errorf("len expects 1 argument")
@@ -136,11 +157,25 @@ func builtinLen(args ...any) (any, error) {
 
     switch v := args[0].(type) {
     case string:
-        // NEW: Default to grapheme count for strings
+        // Default to grapheme count for native strings
         return float64(graphemeCount(v)), nil
     case StringView:
+        // Use view-specific length calculation
         return float64(v.Length()), nil
     case []any:
+        // Array/slice length
+        return float64(len(v)), nil
+    case map[string]any:
+        // Map/object length
+        return float64(len(v)), nil
+    case []byte:
+        // Byte slice length
+        return float64(len(v)), nil
+    case []rune:
+        // Rune slice length
+        return float64(len(v)), nil
+    case []string:
+        // String slice length
         return float64(len(v)), nil
     default:
         return nil, fmt.Errorf("len: unsupported type %T", args[0])
@@ -162,6 +197,233 @@ func builtinContains(args ...any) (any, error) {
 
     // Use view-appropriate comparison
     return viewAwareContains(str1, view1, str2, view2), nil
+}
+
+// ENHANCED: Updated substr function with string view support
+func builtinSubstr(args ...any) (any, error) {
+    if len(args) != 3 {
+        return nil, fmt.Errorf("substr expects 3 arguments")
+    }
+
+    // Handle both native strings and string views
+    var str string
+    var view StringView
+
+    switch v := args[0].(type) {
+    case string:
+        str = v
+        view = nil // Use default grapheme view
+    case StringView:
+        str = v.String()
+        view = v
+    default:
+        return nil, fmt.Errorf("substr: first argument must be a string or string view")
+    }
+
+    start, ok1 := args[1].(float64)
+    length, ok2 := args[2].(float64)
+    if !ok1 || !ok2 {
+        return nil, fmt.Errorf("substr: start and length must be numbers")
+    }
+
+    return viewAwareSubstr(str, view, int(start), int(length))
+}
+
+// ENHANCED: Updated str function with string view support
+func builtinStr(args ...any) (any, error) {
+    if len(args) != 1 {
+        return nil, fmt.Errorf("str expects 1 argument")
+    }
+
+    switch v := args[0].(type) {
+    case string:
+        return v, nil
+    case StringView:
+        return v.String(), nil
+    default:
+        return fmt.Sprintf("%v", args[0]), nil
+    }
+}
+
+// Helper functions for string view integration
+func normalizeStringArg(arg any) (string, StringView) {
+    switch v := arg.(type) {
+    case string:
+        return v, nil
+    case StringView:
+        return v.String(), v
+    default:
+        return "", nil
+    }
+}
+
+func viewAwareContains(str1 string, view1 StringView, str2 string, view2 StringView) bool {
+    // If both are views of same type, use view-level comparison
+    if view1 != nil && view2 != nil && view1.ViewType() == view2.ViewType() {
+        return strings.Contains(view1.String(), view2.String())
+    }
+
+    // Default to string-level comparison (grapheme-aware)
+    return strings.Contains(str1, str2)
+}
+
+func viewAwareSubstr(str string, view StringView, start, length int) (any, error) {
+    if view != nil {
+        // Use view-specific substring
+        maxLen := view.Length()
+        if start < 0 || start >= maxLen || length < 0 {
+            return "", fmt.Errorf("substr: invalid start or length")
+        }
+
+        end := min(start+length, maxLen)
+        return view.Slice(start, end, 1)
+    }
+
+    // Default grapheme-aware substring
+    return optimizedStringSlice(str, start, start+length)
+}
+
+// UNIVERSAL: String functions that work with ANY string type (native or views)
+func builtinUpper(args ...any) (any, error) {
+    if len(args) != 1 {
+        return nil, fmt.Errorf("upper expects 1 argument")
+    }
+
+    // Accept native strings, string views, or anything convertible to string
+    str, view := normalizeStringArg(args[0])
+    if str == "" && view == nil {
+        // Try converting other types to string first
+        if s := fmt.Sprintf("%v", args[0]); s != "" {
+            str = s
+        } else {
+            return nil, fmt.Errorf("upper: argument must be a string, string view, or convertible to string")
+        }
+    }
+
+    result := strings.ToUpper(str)
+
+    // Return same view type as input, or native string if input was native
+    if view != nil {
+        switch view.ViewType() {
+        case ViewRune:
+            return &RuneView{original: result, runes: []rune(result)}, nil
+        case ViewUTF8:
+            return &UTF8View{original: result, bytes: []byte(result)}, nil
+        case ViewUTF16:
+            return &UTF16View{original: result, units: utf16.Encode([]rune(result))}, nil
+        default:
+            return result, nil // Fallback to native string
+        }
+    }
+
+    return result, nil
+}
+
+func builtinLower(args ...any) (any, error) {
+    if len(args) != 1 {
+        return nil, fmt.Errorf("lower expects 1 argument")
+    }
+
+    // Accept native strings, string views, or anything convertible to string
+    str, view := normalizeStringArg(args[0])
+    if str == "" && view == nil {
+        // Try converting other types to string first
+        if s := fmt.Sprintf("%v", args[0]); s != "" {
+            str = s
+        } else {
+            return nil, fmt.Errorf("lower: argument must be a string, string view, or convertible to string")
+        }
+    }
+
+    result := strings.ToLower(str)
+
+    // Return same view type as input, or native string if input was native
+    if view != nil {
+        switch view.ViewType() {
+        case ViewRune:
+            return &RuneView{original: result, runes: []rune(result)}, nil
+        case ViewUTF8:
+            return &UTF8View{original: result, bytes: []byte(result)}, nil
+        case ViewUTF16:
+            return &UTF16View{original: result, units: utf16.Encode([]rune(result))}, nil
+        default:
+            return result, nil // Fallback to native string
+        }
+    }
+
+    return result, nil
+}
+
+func builtinOrd(args ...any) (any, error) {
+    if len(args) != 1 {
+        return nil, fmt.Errorf("ord expects 1 argument")
+    }
+
+    // Accept native strings, string views, or anything convertible to string
+    str, _ := normalizeStringArg(args[0])
+    if str == "" {
+        // Try converting other types to string first
+        if s := fmt.Sprintf("%v", args[0]); s != "" {
+            str = s
+        } else {
+            return nil, fmt.Errorf("ord: argument must be a string, string view, or convertible to string")
+        }
+    }
+
+    if len(str) == 0 {
+        return nil, fmt.Errorf("ord: empty string")
+    }
+
+    // Get first rune (Unicode code point)
+    r, _ := utf8.DecodeRuneInString(str)
+    return float64(r), nil
+}
+
+func builtinChr(args ...any) (any, error) {
+    if len(args) != 1 {
+        return nil, fmt.Errorf("chr expects 1 argument")
+    }
+
+    // Convert to rune (Unicode code point) from any numeric type
+    var code float64
+    switch v := args[0].(type) {
+    case float64:
+        code = v
+    case float32:
+        code = float64(v)
+    case int:
+        code = float64(v)
+    case int8:
+        code = float64(v)
+    case int16:
+        code = float64(v)
+    case int32:
+        code = float64(v)
+    case int64:
+        code = float64(v)
+    case uint:
+        code = float64(v)
+    case uint8:
+        code = float64(v)
+    case uint16:
+        code = float64(v)
+    case uint32:
+        code = float64(v)
+    case uint64:
+        code = float64(v)
+    case rune:
+        code = float64(v)
+    case byte:
+        code = float64(v)
+    default:
+        return nil, fmt.Errorf("chr: argument must be a numeric value")
+    }
+
+    if code < 0 || code > 0x10FFFF {
+        return nil, fmt.Errorf("chr: invalid Unicode code point")
+    }
+
+    return string(rune(code)), nil
 }
 ```
 
@@ -803,6 +1065,164 @@ func TestStringViews_CorePipeOperations(t *testing.T) {
             "cross_view_filter_reduce",
             `char("café") |filter: len(utf8($item)) == 1 |reduce: str($acc) + $item, ""`,
             "caf", // Filter multi-byte chars, then concatenate
+        },
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            result := evalExpression(test.expr)
+            if !reflect.DeepEqual(result, test.expected) {
+                t.Errorf("Expected %v (%T), got %v (%T) for: %s",
+                    test.expected, test.expected, result, result, test.expr)
+            }
+        })
+    }
+}
+
+// Test string view functions integration with ALL builtin functions
+func TestStringViews_BuiltinFunctionsIntegration(t *testing.T) {
+    tests := []struct {
+        name     string
+        expr     string
+        expected any
+    }{
+        // LEN function - must work with all view types
+        {
+            "len_native_string",
+            `len("café")`,
+            4.0, // Grapheme count (default)
+        },
+        {
+            "len_char_view",
+            `len(char("café"))`,
+            4.0, // Rune count
+        },
+        {
+            "len_utf8_view",
+            `len(utf8("café"))`,
+            5.0, // Byte count (é = 2 bytes)
+        },
+        {
+            "len_utf16_view",
+            `len(utf16("café"))`,
+            4.0, // UTF-16 code unit count
+        },
+
+        // CONTAINS function - must work with view types and native strings
+        {
+            "contains_native_both",
+            `contains("café", "é")`,
+            true, // Native string contains
+        },
+        {
+            "contains_view_native",
+            `contains(char("café"), "é")`,
+            true, // String view with native string
+        },
+        {
+            "contains_native_view",
+            `contains("café", char("é"))`,
+            true, // Native string with string view
+        },
+        {
+            "contains_view_view",
+            `contains(char("café"), char("é"))`,
+            true, // Both string views
+        },
+        {
+            "contains_cross_view",
+            `contains(utf8("café"), char("é"))`,
+            true, // Different view types should work
+        },
+
+        // SUBSTR function - must work with view types
+        {
+            "substr_native",
+            `substr("hello", 1, 3)`,
+            "ell", // Native string substr
+        },
+        {
+            "substr_char_view",
+            `substr(char("hello"), 1, 3)`,
+            "ell", // Rune view substr
+        },
+        {
+            "substr_utf8_view",
+            `substr(utf8("hello"), 1, 3)`,
+            "ell", // Byte view substr
+        },
+        {
+            "substr_with_unicode",
+            `substr("café", 0, 2)`,
+            "ca", // Unicode string substr (grapheme-aware)
+        },
+        {
+            "substr_char_with_unicode",
+            `substr(char("café"), 0, 2)`,
+            "ca", // Rune view with Unicode
+        },
+
+        // STR function - must convert views back to native strings
+        {
+            "str_char_view",
+            `str(char("hello"))`,
+            "hello", // Convert rune view to string
+        },
+        {
+            "str_utf8_view",
+            `str(utf8("hello"))`,
+            "hello", // Convert byte view to string
+        },
+        {
+            "str_utf16_view",
+            `str(utf16("hello"))`,
+            "hello", // Convert UTF-16 view to string
+        },
+        {
+            "str_nested_operation",
+            `str(char("hello")[0:3])`,
+            "hel", // Convert sliced view to string
+        },
+
+        // SET function - must work when views are converted to strings as keys
+        {
+            "set_with_view_key",
+            `set({}, str(char("key")), "value")`,
+            map[string]any{"key": "value"}, // Use view-derived string as key
+        },
+
+        // Mixed builtin function combinations
+        {
+            "len_of_substr_view",
+            `len(substr(char("hello"), 1, 3))`,
+            3.0, // Length of substring from view
+        },
+        {
+            "contains_substr_result",
+            `contains("hello world", substr(char("world"), 0, 2))`,
+            false, // Contains substring result ("wo" not in "hello world")
+        },
+        {
+            "str_of_filtered_view",
+            `str(char("hello") |filter: $item != "l" |reduce: str($acc) + $item, "")`,
+            "heo", // String representation of filtered and reduced view
+        },
+
+        // Edge cases with empty and null
+        {
+            "len_empty_view",
+            `len(char(""))`,
+            0.0, // Length of empty view
+        },
+        {
+            "contains_empty_view",
+            `contains(char("hello"), char(""))`,
+            true, // Empty string is contained in any string
+        },
+        {
+            "substr_empty_result",
+            `substr(char("a"), 1, 0)`,
+            "", // Zero-length substring
         },
     }
 
@@ -1783,6 +2203,126 @@ This approach ensures that **common cases remain fast** while **complex cases be
 - Performance characteristics documented
 - Examples for all view functions
 
+## Test Suite: Enhanced Builtin Function Compatibility
+
+### TestStringViews_EnhancedBuiltinFunctions
+
+```go
+func TestStringViews_EnhancedBuiltinFunctions(t *testing.T) {
+    // Test generic functions working with all applicable types
+    tests := []struct {
+        name     string
+        expr     string
+        expected any
+    }{
+        // len() with different collection types
+        {"len native string", `len("hello")`, 5.0},
+        {"len RuneView", `len(char("hello"))`, 5.0},
+        {"len UTF8View", `len(utf8("hello"))`, 5.0},
+        {"len UTF16View", `len(utf16("hello"))`, 5.0},
+        {"len array", `len(["a", "b", "c"])`, 3.0},
+        {"len map", `len({x: 1, y: 2})`, 2.0},
+        {"len slice", `len([1, 2, 3, 4, 5])`, 5.0},
+
+        // upper() preserving view types
+        {"upper native", `upper("hello")`, "HELLO"},
+        {"upper RuneView", `upper(char("hello"))`, "HELLO"}, // Returns RuneView
+        {"upper UTF8View", `upper(utf8("hello"))`, "HELLO"}, // Returns UTF8View
+        {"upper UTF16View", `upper(utf16("hello"))`, "HELLO"}, // Returns UTF16View
+        {"upper convertible", `upper(123)`, "123"}, // Converts then uppercases
+
+        // lower() preserving view types
+        {"lower native", `lower("WORLD")`, "world"},
+        {"lower RuneView", `lower(char("WORLD"))`, "world"}, // Returns RuneView
+        {"lower UTF8View", `lower(utf8("WORLD"))`, "world"}, // Returns UTF8View
+        {"lower UTF16View", `lower(utf16("WORLD"))`, "world"}, // Returns UTF16View
+
+        // substr() preserving view types
+        {"substr native", `substr("hello", 1, 3)`, "ell"},
+        {"substr RuneView", `substr(char("hello"), 1, 3)`, "ell"}, // Returns RuneView
+        {"substr UTF8View", `substr(utf8("hello"), 1, 3)`, "ell"}, // Returns UTF8View
+        {"substr UTF16View", `substr(utf16("hello"), 1, 3)`, "ell"}, // Returns UTF16View
+
+        // contains() with all string types
+        {"contains native", `contains("hello", "ell")`, true},
+        {"contains RuneView", `contains(char("hello"), "ell")`, true},
+        {"contains UTF8View", `contains(utf8("hello"), "ell")`, true},
+        {"contains UTF16View", `contains(utf16("hello"), "ell")`, true},
+
+        // ord() with all string types
+        {"ord native", `ord("A")`, 65.0},
+        {"ord RuneView", `ord(char("A"))`, 65.0},
+        {"ord UTF8View", `ord(utf8("A"))`, 65.0},
+        {"ord UTF16View", `ord(utf16("A"))`, 65.0},
+        {"ord convertible", `ord(toString(65))`, 65.0}, // If 65 -> "A"
+
+        // chr() with all numeric types
+        {"chr int", `chr(65)`, "A"},
+        {"chr float64", `chr(65.0)`, "A"},
+        {"chr float32", `chr(float32(65))`, "A"},
+        {"chr truncate", `chr(65.9)`, "A"}, // Truncates fractional part
+        {"chr Unicode", `chr(8364)`, "€"}, // Euro symbol
+    }
+
+    for _, test := range tests {
+        t.Run(test.name, func(t *testing.T) {
+            result, err := uexl.Eval(test.expr)
+            if err != nil {
+                t.Fatalf("Expression %q failed: %v", test.expr, err)
+            }
+
+            // Special handling for view types - check value equality
+            if expected, ok := test.expected.(string); ok {
+                if resultView, isView := result.(StringView); isView {
+                    if resultView.String() != expected {
+                        t.Errorf("Expected %q, got %q", expected, resultView.String())
+                    }
+                } else if result != expected {
+                    t.Errorf("Expected %q, got %q", expected, result)
+                }
+            } else {
+                if result != test.expected {
+                    t.Errorf("Expected %v, got %v", test.expected, result)
+                }
+            }
+        })
+    }
+}
+
+// Test error cases for enhanced functions
+func TestStringViews_EnhancedBuiltinFunctionErrors(t *testing.T) {
+    errorTests := []struct {
+        name string
+        expr string
+        expectedError string
+    }{
+        {"chr invalid Unicode", `chr(0x110000)`, "invalid Unicode code point"},
+        {"chr negative", `chr(-1)`, "invalid Unicode code point"},
+        {"ord empty string", `ord("")`, "empty string"},
+        {"len unsupported type", `len(true)`, "unsupported type for len"},
+        {"upper nil", `upper(null)`, "cannot convert null"},
+    }
+
+    for _, test := range errorTests {
+        t.Run(test.name, func(t *testing.T) {
+            _, err := uexl.Eval(test.expr)
+            if err == nil {
+                t.Fatalf("Expected error for %q", test.expr)
+            }
+            if !strings.Contains(err.Error(), test.expectedError) {
+                t.Errorf("Expected error containing %q, got %q", test.expectedError, err.Error())
+            }
+        })
+    }
+}
+```
+
 ---
 
 This implementation plan provides a complete, backward-compatible upgrade path to grapheme-aware string operations while maintaining UExL's philosophy of explicit, predictable behavior. The phased approach allows for incremental development and testing, ensuring stability throughout the upgrade process.
+
+**Enhanced Builtin Functions**: All core builtin functions (`len`, `upper`, `lower`, `substr`, `contains`, `ord`, `chr`) now support universal type compatibility:
+- **len()**: Works with strings, string views, arrays, slices, maps, and byte/rune/string slices
+- **String functions**: Accept native strings, string views, or convertible types while preserving input view types
+- **ord()**: Extracts Unicode code points from any string type
+- **chr()**: Converts any numeric type to Unicode character string
