@@ -331,8 +331,13 @@ func (c *Compiler) optimizeStringConcatenation(expr *parser.BinaryExpression) bo
 
 	// For 3+ parts or any chain with mixed types, use optimized string concatenation
 	if len(parts) >= 2 {
-		// Merge consecutive string literals first
+		// Merge consecutive string literals for efficiency
 		mergedParts := c.mergeStringLiterals(parts)
+
+		// If all parts merged into a single literal, no concatenation needed
+		if len(mergedParts) < 2 {
+			return false // Fall back to regular compilation
+		}
 
 		// Compile all parts first
 		for _, part := range mergedParts {
