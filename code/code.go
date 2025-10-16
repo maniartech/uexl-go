@@ -113,7 +113,7 @@ var definations = map[Opcode]*Definition{
 	OpNull:               {"OpNull", []int{}},
 	OpSafeModeOn:         {"OpSafeModeOn", []int{}},
 	OpSafeModeOff:        {"OpSafeModeOff", []int{}},
-	OpStringConcat:       {"OpStringConcat", []int{2}}, // Takes count of strings to concatenate  
+	OpStringConcat:       {"OpStringConcat", []int{2}},          // Takes count of strings to concatenate
 	OpStringPatternMatch: {"OpStringPatternMatch", []int{2, 2}}, // prefix_constant_index, suffix_constant_index
 }
 
