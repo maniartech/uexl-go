@@ -419,7 +419,7 @@ func (c *Compiler) optimizeStringComparison(expr *parser.BinaryExpression) bool 
 	if expr == nil {
 		return false
 	}
-	
+
 	// Only handle == and != comparisons
 	if expr.Operator != "==" && expr.Operator != "!=" {
 		return false
