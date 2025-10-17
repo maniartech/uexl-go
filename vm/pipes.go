@@ -47,6 +47,7 @@ var DefaultPipeHandlers = PipeHandlers{
 	"groupBy": GroupByPipeHandler,
 	"window":  WindowPipeHandler,
 	"chunk":   ChunkPipeHandler,
+	"flatMap": FlatMapPipeHandler,
 }
 
 func DefaultPipeHandler(input any, block any, alias string, vm *VM) (any, error) {
@@ -99,13 +100,12 @@ func MapPipeHandler(input any, block any, alias string, vm *VM) (any, error) {
 	vm.setPipeVar("$index", 0)  // Initialize key
 
 	for i, elem := range arr {
-		// Direct map access for better performance (avoid setPipeVar overhead)
-		pipeScope := vm.pipeScopes[len(vm.pipeScopes)-1]
+		// Update scope variables for this iteration using fast-path
 		if alias != "" {
-			pipeScope[alias] = elem
+			vm.setPipeVar(alias, elem)
 		}
-		pipeScope["$item"] = elem
-		pipeScope["$index"] = i
+		vm.setPipeVar("$item", elem)
+		vm.setPipeVar("$index", i)
 
 		// Reset frame for reuse
 		frame.ip = 0
@@ -136,29 +136,49 @@ func FilterPipeHandler(input any, block any, alias string, vm *VM) (any, error) 
 	if !ok || blk == nil || blk.Instructions == nil {
 		return nil, fmt.Errorf("filter pipe expects a predicate block")
 	}
+
 	var result []any
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	if alias != "" {
+		vm.setPipeVar(alias, nil) // Initialize key
+	}
+	vm.setPipeVar("$item", nil) // Initialize key
+	vm.setPipeVar("$index", 0)  // Initialize key
+
 	for i, elem := range arr {
-		vm.pushPipeScope()
+		// Update scope variables for this iteration
 		if alias != "" {
 			vm.setPipeVar(alias, elem)
 		}
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", i)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		res := vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
+
 		if b, ok := res.(bool); ok && b {
 			result = append(result, elem)
 		}
 	}
+
+	vm.popPipeScope()
 	return result, nil
 }
 
@@ -174,24 +194,41 @@ func ReducePipeHandler(input any, block any, alias string, vm *VM) (any, error) 
 	if len(arr) == 0 {
 		return nil, fmt.Errorf("reduce pipe cannot operate on empty array")
 	}
+
 	var acc any
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	vm.setPipeVar("$acc", nil)  // Initialize key
+	vm.setPipeVar("$item", nil) // Initialize key
+	vm.setPipeVar("$index", 0)  // Initialize key
+
 	for i := 0; i < len(arr); i++ {
-		vm.pushPipeScope()
+		// Update scope variables for this iteration
 		vm.setPipeVar("$acc", acc)
 		vm.setPipeVar("$item", arr[i])
 		vm.setPipeVar("$index", i)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		acc = vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
 	}
+
+	vm.popPipeScope()
 	return acc, nil
 }
 
@@ -204,25 +241,42 @@ func FindPipeHandler(input any, block any, alias string, vm *VM) (any, error) {
 	if !ok || blk == nil || blk.Instructions == nil {
 		return nil, fmt.Errorf("find pipe expects a predicate block")
 	}
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	vm.setPipeVar("$item", nil) // Initialize key
+	vm.setPipeVar("$index", 0)  // Initialize key
+
 	for i, elem := range arr {
-		vm.pushPipeScope()
+		// Update scope variables for this iteration
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", i)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		res := vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
+
 		if b, ok := res.(bool); ok && b {
+			vm.popPipeScope()
 			return elem, nil
 		}
 	}
+
+	vm.popPipeScope()
 	return nil, nil
 }
 
@@ -235,25 +289,42 @@ func SomePipeHandler(input any, block any, alias string, vm *VM) (any, error) {
 	if !ok || blk == nil || blk.Instructions == nil {
 		return nil, fmt.Errorf("some pipe expects a predicate block")
 	}
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	vm.setPipeVar("$item", nil) // Initialize key
+	vm.setPipeVar("$index", 0)  // Initialize key
+
 	for i, elem := range arr {
-		vm.pushPipeScope()
+		// Update scope variables for this iteration
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", i)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		res := vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
+
 		if b, ok := res.(bool); ok && b {
+			vm.popPipeScope()
 			return true, nil
 		}
 	}
+
+	vm.popPipeScope()
 	return false, nil
 }
 
@@ -266,25 +337,42 @@ func EveryPipeHandler(input any, block any, alias string, vm *VM) (any, error) {
 	if !ok || blk == nil || blk.Instructions == nil {
 		return nil, fmt.Errorf("every pipe expects a predicate block")
 	}
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	vm.setPipeVar("$item", nil) // Initialize key
+	vm.setPipeVar("$index", 0)  // Initialize key
+
 	for i, elem := range arr {
-		vm.pushPipeScope()
+		// Update scope variables for this iteration
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", i)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		res := vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
+
 		if b, ok := res.(bool); !ok || !b {
+			vm.popPipeScope()
 			return false, nil
 		}
 	}
+
+	vm.popPipeScope()
 	return true, nil
 }
 
@@ -314,28 +402,45 @@ func SortPipeHandler(input any, block any, alias string, vm *VM) (any, error) {
 	if !ok || blk == nil || blk.Instructions == nil {
 		return nil, fmt.Errorf("sort pipe expects a predicate block")
 	}
+
 	type sortableElem struct {
 		key any
 		val any
 	}
 	sortable := make([]sortableElem, len(arr))
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	vm.setPipeVar("$item", nil) // Initialize key
+	vm.setPipeVar("$index", 0)  // Initialize key
+
 	for i, elem := range arr {
-		vm.pushPipeScope()
+		// Update scope variables for this iteration
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", i)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		key := vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
 		sortable[i] = sortableElem{key, elem}
 	}
+
+	vm.popPipeScope()
+
 	sort.SliceStable(sortable, func(i, j int) bool {
 		ki, kiNum := sortable[i].key.(float64)
 		kj, kjNum := sortable[j].key.(float64)
@@ -365,25 +470,41 @@ func GroupByPipeHandler(input any, block any, alias string, vm *VM) (any, error)
 	if !ok || blk == nil || blk.Instructions == nil {
 		return nil, fmt.Errorf("groupBy pipe expects a predicate block")
 	}
+
 	groups := make(map[string][]any)
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	vm.setPipeVar("$item", nil) // Initialize key
+	vm.setPipeVar("$index", 0)  // Initialize key
+
 	for i, elem := range arr {
-		vm.pushPipeScope()
+		// Update scope variables for this iteration
 		vm.setPipeVar("$item", elem)
 		vm.setPipeVar("$index", i)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		key := vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
 		keyStr := fmt.Sprintf("%v", key)
 		groups[keyStr] = append(groups[keyStr], elem)
 	}
+
+	vm.popPipeScope()
 	return groups, nil
 }
 
@@ -396,26 +517,43 @@ func WindowPipeHandler(input any, block any, alias string, vm *VM) (any, error) 
 	if !ok || blk == nil || blk.Instructions == nil {
 		return nil, fmt.Errorf("window pipe expects a predicate block")
 	}
+
 	windowSize := 2
 	var result []any
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	vm.setPipeVar("$window", nil) // Initialize key
+	vm.setPipeVar("$index", 0)    // Initialize key
+
 	for i := 0; i <= len(arr)-windowSize; i++ {
 		window := arr[i : i+windowSize]
-		vm.pushPipeScope()
+
+		// Update scope variables for this iteration
 		vm.setPipeVar("$window", window)
 		vm.setPipeVar("$index", i)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		res := vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
 		result = append(result, res)
 	}
+
+	vm.popPipeScope()
 	return result, nil
 }
 
@@ -428,29 +566,106 @@ func ChunkPipeHandler(input any, block any, alias string, vm *VM) (any, error) {
 	if !ok || blk == nil || blk.Instructions == nil {
 		return nil, fmt.Errorf("chunk pipe expects a predicate block")
 	}
+
 	chunkSize := 2
 	var result []any
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	vm.setPipeVar("$chunk", nil) // Initialize key
+	vm.setPipeVar("$index", 0)   // Initialize key
+
 	for i := 0; i < len(arr); i += chunkSize {
 		end := i + chunkSize
 		if end > len(arr) {
 			end = len(arr)
 		}
 		chunk := arr[i:end]
-		vm.pushPipeScope()
+
+		// Update scope variables for this iteration
 		vm.setPipeVar("$chunk", chunk)
 		vm.setPipeVar("$index", i/chunkSize)
-		frame := NewFrame(blk.Instructions, 0)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
 		vm.pushFrame(frame)
+
 		err := vm.run()
 		if err != nil {
-			vm.popPipeScope()
 			vm.popFrame()
+			vm.popPipeScope()
 			return nil, err
 		}
+
 		res := vm.Pop()
 		vm.popFrame()
-		vm.popPipeScope()
 		result = append(result, res)
 	}
+
+	vm.popPipeScope()
+	return result, nil
+}
+
+// FlatMapPipeHandler maps each element and flattens results in one operation
+func FlatMapPipeHandler(input any, block any, alias string, vm *VM) (any, error) {
+	arr, ok := input.([]any)
+	if !ok {
+		return nil, fmt.Errorf("flatMap pipe expects array input")
+	}
+	blk, ok := block.(*compiler.InstructionBlock)
+	if !ok || blk == nil || blk.Instructions == nil {
+		return nil, fmt.Errorf("flatMap pipe expects a predicate block")
+	}
+
+	var result []any
+
+	// Optimization: Reuse pipe scope and frame for all iterations
+	vm.pushPipeScope()
+	frame := NewFrame(blk.Instructions, 0)
+
+	// Pre-initialize scope keys once
+	if alias != "" {
+		vm.setPipeVar(alias, nil) // Initialize key
+	}
+	vm.setPipeVar("$item", nil) // Initialize key
+	vm.setPipeVar("$index", 0)  // Initialize key
+
+	for i, elem := range arr {
+		// Update scope variables for this iteration
+		if alias != "" {
+			vm.setPipeVar(alias, elem)
+		}
+		vm.setPipeVar("$item", elem)
+		vm.setPipeVar("$index", i)
+
+		// Reset frame for reuse
+		frame.ip = 0
+		frame.basePointer = vm.sp
+		vm.pushFrame(frame)
+
+		err := vm.run()
+		if err != nil {
+			vm.popFrame()
+			vm.popPipeScope()
+			return nil, err
+		}
+
+		res := vm.Pop()
+		vm.popFrame()
+
+		// Flatten: if result is an array, append its elements
+		if resArr, ok := res.([]any); ok {
+			result = append(result, resArr...)
+		} else {
+			// If not an array, append the value itself
+			result = append(result, res)
+		}
+	}
+
+	vm.popPipeScope()
 	return result, nil
 }
