@@ -64,7 +64,7 @@ func TestBitwiseShiftEdgeCases(t *testing.T) {
 	tests := []vmTestCase{
 		// Large shift amounts that could cause issues
 		{"1 << 63", -9223372036854775808.0}, // Shift by 63 causes signed overflow
-		{"1 << 64", 0.0},                    // Shift by 64 wraps around in Go to 0
+		{"1 << 64", "error"},                // Shift by 64 is out of range - correctly rejected
 		{"8 >> 3", 1.0},                     // Normal right shift
 
 		// Fractional shift amounts (truncated)
@@ -89,6 +89,9 @@ func TestBitwiseShiftEdgeCases(t *testing.T) {
 			}
 			if tc.input == "16 >> 1.7" {
 				tc.expected = "bitwise operations require integerish operands (no decimals), got 16 and 1.7"
+			}
+			if tc.input == "1 << 64" {
+				tc.expected = "shift count 64 out of range [0, 63]"
 			}
 			errorTests = append(errorTests, tc)
 		} else {
