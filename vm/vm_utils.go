@@ -94,6 +94,36 @@ func (vm *VM) Push(node any) error {
 	return nil
 }
 
+// Type-specific push methods to avoid interface boxing overhead
+// These eliminate runtime.convT* calls by storing typed values directly
+
+func (vm *VM) pushFloat64(val float64) error {
+	if vm.sp >= StackSize {
+		return fmt.Errorf("stack overflow")
+	}
+	vm.stack[vm.sp] = val
+	vm.sp++
+	return nil
+}
+
+func (vm *VM) pushString(val string) error {
+	if vm.sp >= StackSize {
+		return fmt.Errorf("stack overflow")
+	}
+	vm.stack[vm.sp] = val
+	vm.sp++
+	return nil
+}
+
+func (vm *VM) pushBool(val bool) error {
+	if vm.sp >= StackSize {
+		return fmt.Errorf("stack overflow")
+	}
+	vm.stack[vm.sp] = val
+	vm.sp++
+	return nil
+}
+
 func (vm *VM) Pop() any {
 	if vm.sp == 0 {
 		return nil

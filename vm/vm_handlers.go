@@ -71,17 +71,17 @@ func (vm *VM) executeNumberArithmetic(operator code.Opcode, left, right float64)
 	// Fast path for common operations without NaN/Inf checks
 	switch operator {
 	case code.OpAdd:
-		return vm.Push(left + right)
+		return vm.pushFloat64(left + right)
 	case code.OpSub:
-		return vm.Push(left - right)
+		return vm.pushFloat64(left - right)
 	case code.OpMul:
-		return vm.Push(left * right)
+		return vm.pushFloat64(left * right)
 	case code.OpDiv:
 		// Zero check optimization - most divisions are non-zero
 		if right == 0 {
 			return fmt.Errorf("division by zero")
 		}
-		return vm.Push(left / right)
+		return vm.pushFloat64(left / right)
 	}
 
 	// Expensive checks only for operations that need them
@@ -96,11 +96,11 @@ func (vm *VM) executeNumberArithmetic(operator code.Opcode, left, right float64)
 	case code.OpPow:
 		// Optimized power operation with special case handling
 		if left == 1 && isNanOrInf {
-			return vm.Push(math.NaN())
+			return vm.pushFloat64(math.NaN())
 		}
-		return vm.Push(math.Pow(left, right))
+		return vm.pushFloat64(math.Pow(left, right))
 	case code.OpMod:
-		return vm.Push(math.Mod(left, right))
+		return vm.pushFloat64(math.Mod(left, right))
 	// Bitwise operations with fast integer path
 	case code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight:
 		// Fast path: check if values are already integers
@@ -109,21 +109,21 @@ func (vm *VM) executeNumberArithmetic(operator code.Opcode, left, right float64)
 			r := int64(right)
 			switch operator {
 			case code.OpBitwiseAnd:
-				return vm.Push(float64(l & r))
+				return vm.pushFloat64(float64(l & r))
 			case code.OpBitwiseOr:
-				return vm.Push(float64(l | r))
+				return vm.pushFloat64(float64(l | r))
 			case code.OpBitwiseXor:
-				return vm.Push(float64(l ^ r))
+				return vm.pushFloat64(float64(l ^ r))
 			case code.OpShiftLeft:
 				if r < 0 || r >= 64 {
 					return fmt.Errorf("shift count %d out of range [0, 63]", r)
 				}
-				return vm.Push(float64(l << uint(r)))
+				return vm.pushFloat64(float64(l << uint(r)))
 			case code.OpShiftRight:
 				if r < 0 || r >= 64 {
 					return fmt.Errorf("shift count %d out of range [0, 63]", r)
 				}
-				return vm.Push(float64(l >> uint(r)))
+				return vm.pushFloat64(float64(l >> uint(r)))
 			}
 		}
 		return fmt.Errorf("bitwise operations require integerish operands (no decimals), got %v and %v", left, right)
@@ -136,7 +136,7 @@ func (vm *VM) executeNumberArithmetic(operator code.Opcode, left, right float64)
 // This eliminates interface conversion overhead by accepting string directly
 func (vm *VM) executeStringAddition(left, right string) error {
 	// Direct string concatenation without interface boxing
-	return vm.Push(left + right)
+	return vm.pushString(left + right)
 }
 
 func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right any) error {
