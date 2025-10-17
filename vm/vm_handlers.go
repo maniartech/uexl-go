@@ -48,6 +48,10 @@ func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) err
 		if !ok {
 			return fmt.Errorf("expected string, got %T", right)
 		}
+		// Type-specific dispatch for string operations
+		if operator == code.OpAdd {
+			return vm.executeStringAddition(leftVal, r)
+		}
 		return vm.executeStringBinaryOperation(operator, leftVal, r)
 	case bool:
 		r, ok := right.(bool)
@@ -126,6 +130,13 @@ func (vm *VM) executeNumberArithmetic(operator code.Opcode, left, right float64)
 	default:
 		return fmt.Errorf("unknown arithmetic operator: %v", operator)
 	}
+}
+
+// executeStringAddition handles string concatenation with type-specific parameters
+// This eliminates interface conversion overhead by accepting string directly
+func (vm *VM) executeStringAddition(left, right string) error {
+	// Direct string concatenation without interface boxing
+	return vm.Push(left + right)
 }
 
 func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right any) error {
