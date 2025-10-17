@@ -60,12 +60,29 @@ func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) err
 	}
 }
 
-// executeBinaryArithmeticOperation evaluates the binary arithmetic expression by popping the top two elements from the stack, applying the operator, and pushing the result back onto the stack.
+// executeBinaryArithmeticOperation evaluates the binary arithmetic expression with optimized fast paths
 func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right any) error {
 	leftValue := left.(float64)
 	rightValue := right.(float64)
-	isNanOrInf := math.IsNaN(leftValue) || math.IsInf(leftValue, 0) || math.IsNaN(rightValue) || math.IsInf(rightValue, 0)
 
+	// Fast path for common operations without NaN/Inf checks
+	switch operator {
+	case code.OpAdd:
+		return vm.Push(leftValue + rightValue)
+	case code.OpSub:
+		return vm.Push(leftValue - rightValue)
+	case code.OpMul:
+		return vm.Push(leftValue * rightValue)
+	case code.OpDiv:
+		// Zero check optimization - most divisions are non-zero
+		if rightValue == 0 {
+			return fmt.Errorf("division by zero")
+		}
+		return vm.Push(leftValue / rightValue)
+	}
+
+	// Expensive checks only for operations that need them
+	isNanOrInf := math.IsNaN(leftValue) || math.IsInf(leftValue, 0) || math.IsNaN(rightValue) || math.IsInf(rightValue, 0)
 	isBitwiseOp := operator == code.OpBitwiseAnd || operator == code.OpBitwiseOr || operator == code.OpBitwiseXor || operator == code.OpShiftLeft || operator == code.OpShiftRight
 
 	if isBitwiseOp && isNanOrInf {
@@ -73,50 +90,43 @@ func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right
 	}
 
 	switch operator {
-	case code.OpAdd:
-		vm.Push(leftValue + rightValue)
-	case code.OpSub:
-		vm.Push(leftValue - rightValue)
-	case code.OpMul:
-		vm.Push(leftValue * rightValue)
-	case code.OpDiv:
-		if rightValue == 0 {
-			return fmt.Errorf("division by zero")
-		}
-		vm.Push(leftValue / rightValue)
 	case code.OpPow:
-		// Always push a float64 result, even if it's NaN or Inf, to match IEEE-754 and test expectations
-		if leftValue == 1 && (math.IsNaN(rightValue) || math.IsInf(rightValue, 0)) {
-			vm.Push(math.NaN())
-			return nil
+		// Optimized power operation with special case handling
+		if leftValue == 1 && isNanOrInf {
+			return vm.Push(math.NaN())
 		}
-		vm.Push(math.Pow(leftValue, rightValue))
+		return vm.Push(math.Pow(leftValue, rightValue))
 	case code.OpMod:
-		vm.Push(math.Mod(leftValue, rightValue))
-	// Bitwise operations
+		return vm.Push(math.Mod(leftValue, rightValue))
+	// Bitwise operations with fast integer path
 	case code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight:
-		// Only allow float64 values that are actually integers
-		if leftValue != math.Trunc(leftValue) || rightValue != math.Trunc(rightValue) {
-			return fmt.Errorf("bitwise operations require integerish operands (no decimals), got %v and %v", left, right)
+		// Fast path: check if values are already integers
+		if leftValue == math.Trunc(leftValue) && rightValue == math.Trunc(rightValue) {
+			l := int64(leftValue)
+			r := int64(rightValue)
+			switch operator {
+			case code.OpBitwiseAnd:
+				return vm.Push(float64(l & r))
+			case code.OpBitwiseOr:
+				return vm.Push(float64(l | r))
+			case code.OpBitwiseXor:
+				return vm.Push(float64(l ^ r))
+			case code.OpShiftLeft:
+				if r < 0 || r >= 64 {
+					return fmt.Errorf("shift count %d out of range [0, 63]", r)
+				}
+				return vm.Push(float64(l << uint(r)))
+			case code.OpShiftRight:
+				if r < 0 || r >= 64 {
+					return fmt.Errorf("shift count %d out of range [0, 63]", r)
+				}
+				return vm.Push(float64(l >> uint(r)))
+			}
 		}
-		l := int64(leftValue)
-		r := int64(rightValue)
-		switch operator {
-		case code.OpBitwiseAnd:
-			vm.Push(float64(l & r))
-		case code.OpBitwiseOr:
-			vm.Push(float64(l | r))
-		case code.OpBitwiseXor:
-			vm.Push(float64(l ^ r))
-		case code.OpShiftLeft:
-			vm.Push(float64(l << r))
-		case code.OpShiftRight:
-			vm.Push(float64(l >> r))
-		}
+		return fmt.Errorf("bitwise operations require integerish operands (no decimals), got %v and %v", left, right)
 	default:
-		return fmt.Errorf("unknown operator: %v", operator)
+		return fmt.Errorf("unknown arithmetic operator: %v", operator)
 	}
-	return nil
 }
 
 func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right any) error {
@@ -149,57 +159,43 @@ func (vm *VM) executeBooleanBinaryOperation(operator code.Opcode, left, right bo
 	return nil
 }
 
-func (vm *VM) executeNumberComparisonOperation(operator code.Opcode, left, right any) error {
-	leftValue, lok := left.(float64)
-	rightValue, rok := right.(float64)
-	if !lok || !rok {
-		return fmt.Errorf("number comparison requires float64 operands, got %T and %T", left, right)
-	}
+// executeNumberComparisonOperation optimized for maximum performance
+func (vm *VM) executeNumberComparisonOperation(operator code.Opcode, left, right float64) error {
+	// Optimized switch with inline operations
 	switch operator {
 	case code.OpEqual:
-		vm.Push(leftValue == rightValue)
+		return vm.Push(left == right)
 	case code.OpNotEqual:
-		vm.Push(leftValue != rightValue)
+		return vm.Push(left != right)
 	case code.OpGreaterThan:
-		vm.Push(leftValue > rightValue)
+		return vm.Push(left > right)
 	case code.OpGreaterThanOrEqual:
-		vm.Push(leftValue >= rightValue)
+		return vm.Push(left >= right)
 	default:
 		return fmt.Errorf("unknown comparison operator: %v", operator)
 	}
-	return nil
 }
-func (vm *VM) executeStringComparisonOperation(operator code.Opcode, left, right any) error {
-	leftValue, lok := left.(string)
-	rightValue, rok := right.(string)
-	if !lok || !rok {
-		return fmt.Errorf("string comparison requires string operands, got %T and %T", left, right)
-	}
+
+func (vm *VM) executeStringComparisonOperation(operator code.Opcode, left, right string) error {
 	switch operator {
 	case code.OpEqual:
-		vm.Push(leftValue == rightValue)
+		return vm.Push(left == right)
 	case code.OpNotEqual:
-		vm.Push(leftValue != rightValue)
+		return vm.Push(left != right)
 	default:
 		return fmt.Errorf("unknown string comparison operator: %v", operator)
 	}
-	return nil
 }
-func (vm *VM) executeBooleanComparisonOperation(operator code.Opcode, left, right any) error {
-	leftValue, lok := left.(bool)
-	rightValue, rok := right.(bool)
-	if !lok || !rok {
-		return fmt.Errorf("boolean comparison requires bool operands, got %T and %T", left, right)
-	}
+
+func (vm *VM) executeBooleanComparisonOperation(operator code.Opcode, left, right bool) error {
 	switch operator {
 	case code.OpEqual:
-		vm.Push(leftValue == rightValue)
+		return vm.Push(left == right)
 	case code.OpNotEqual:
-		vm.Push(leftValue != rightValue)
+		return vm.Push(left != right)
 	default:
 		return fmt.Errorf("unknown boolean comparison operator: %v", operator)
 	}
-	return nil
 }
 
 func (vm *VM) executeUnaryExpression(operator code.Opcode, operand any) error {
@@ -237,13 +233,25 @@ func (vm *VM) executeUnaryBangOperation(operand any) error {
 }
 
 func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right any) error {
-	switch left.(type) {
+	switch l := left.(type) {
 	case float64:
-		return vm.executeNumberComparisonOperation(operator, left, right)
+		r, ok := right.(float64)
+		if !ok {
+			return fmt.Errorf("number comparison requires float64 operands, got %T and %T", left, right)
+		}
+		return vm.executeNumberComparisonOperation(operator, l, r)
 	case string:
-		return vm.executeStringComparisonOperation(operator, left, right)
+		r, ok := right.(string)
+		if !ok {
+			return fmt.Errorf("string comparison requires string operands, got %T and %T", left, right)
+		}
+		return vm.executeStringComparisonOperation(operator, l, r)
 	case bool:
-		return vm.executeBooleanComparisonOperation(operator, left, right)
+		r, ok := right.(bool)
+		if !ok {
+			return fmt.Errorf("boolean comparison requires bool operands, got %T and %T", left, right)
+		}
+		return vm.executeBooleanComparisonOperation(operator, l, r)
 	default:
 		return fmt.Errorf("unsupported comparison for type: %T", left)
 	}

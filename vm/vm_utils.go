@@ -14,6 +14,11 @@ var True = parser.BooleanLiteral{Value: true}
 var False = parser.BooleanLiteral{Value: false}
 var Null = parser.NullLiteral{}
 
+// Sentinel value to distinguish "variable not provided" from "variable is nil"
+type contextVarMissing struct{}
+
+var contextVarNotProvided = contextVarMissing{}
+
 type VMFunctions map[string]func(args ...any) (any, error)
 type PipeHandler func(
 	input any,
@@ -38,6 +43,8 @@ type VM struct {
 	constants         []any
 	contextVars       []string
 	contextVarsValues map[string]any
+	contextVarCache   []any          // Pre-resolved context var values for O(1) access
+	lastContextValues map[string]any // Cache the last context values pointer to detect changes
 	systemVars        []any
 	aliasVars         map[string]any
 	functionContext   VMFunctions

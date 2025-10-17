@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/compiler"
@@ -11,7 +12,38 @@ func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode, contextVarsValues
 	vm.constants = bytecode.Constants
 	vm.contextVars = bytecode.ContextVars
 	vm.systemVars = bytecode.SystemVars
+
+	// Pre-resolve context variables into a lookup slice for O(1) access
+	// Optimization: Only rebuild cache if context values pointer changed or cache size mismatches
+	// Compare map pointers using reflect to avoid rebuilding cache when same map is reused
+	var lastPtr, newPtr uintptr
+	if vm.lastContextValues != nil {
+		lastPtr = reflect.ValueOf(vm.lastContextValues).Pointer()
+	}
+	if contextVarsValues != nil {
+		newPtr = reflect.ValueOf(contextVarsValues).Pointer()
+	}
+	contextValuesChanged := lastPtr != newPtr || len(vm.contextVarCache) != len(vm.contextVars)
 	vm.contextVarsValues = contextVarsValues
+	vm.lastContextValues = contextVarsValues
+
+	if len(vm.contextVars) > 0 && contextValuesChanged {
+		if vm.contextVarCache == nil || cap(vm.contextVarCache) < len(vm.contextVars) {
+			vm.contextVarCache = make([]any, len(vm.contextVars))
+		} else {
+			vm.contextVarCache = vm.contextVarCache[:len(vm.contextVars)]
+		}
+
+		for i, varName := range vm.contextVars {
+			if value, exists := contextVarsValues[varName]; exists {
+				// Store actual value (can be nil, which is valid)
+				vm.contextVarCache[i] = value
+			} else {
+				// Store sentinel to indicate missing variable
+				vm.contextVarCache[i] = contextVarNotProvided
+			}
+		}
+	}
 
 	// Reset execution state
 	vm.sp = 0
@@ -29,9 +61,11 @@ func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode, contextVarsValues
 	// Clear pipe scopes (preserve capacity)
 	vm.pipeScopes = vm.pipeScopes[:0]
 
-	// Clear alias vars (reuse map)
-	for k := range vm.aliasVars {
-		delete(vm.aliasVars, k)
+	// Clear alias vars only if non-empty (avoid iteration cost)
+	if len(vm.aliasVars) > 0 {
+		// For small maps, clearing is faster than allocating new map
+		// For large maps or frequent clears, Go runtime optimizes clear() (Go 1.21+)
+		clear(vm.aliasVars)
 	}
 }
 
@@ -49,13 +83,26 @@ func (vm *VM) run() error {
 			frame.ip += 3
 		case code.OpContextVar:
 			varIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			value, err := vm.getContextValue(vm.contextVars[varIndex])
-			if err != nil {
-				return err
-			}
-
-			if err := vm.Push(value); err != nil {
-				return err
+			// Fast path: use pre-resolved cache (O(1) array access)
+			if int(varIndex) < len(vm.contextVarCache) {
+				value := vm.contextVarCache[varIndex]
+				if _, isMissing := value.(contextVarMissing); isMissing {
+					// Variable was not provided in context
+					return fmt.Errorf("context variable %q not found", vm.contextVars[varIndex])
+				}
+				// Push the value (can be nil, which is valid)
+				if err := vm.Push(value); err != nil {
+					return err
+				}
+			} else {
+				// Fallback to map lookup (should not happen in normal execution)
+				value, err := vm.getContextValue(vm.contextVars[varIndex])
+				if err != nil {
+					return err
+				}
+				if err := vm.Push(value); err != nil {
+					return err
+				}
 			}
 			frame.ip += 3
 		case code.OpStore:
