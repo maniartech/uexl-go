@@ -42,7 +42,7 @@ func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) err
 		default:
 			return fmt.Errorf("expected number, got %T", right)
 		}
-		return vm.executeBinaryArithmeticOperation(operator, l, r)
+		return vm.executeNumberArithmetic(operator, l, r)
 	case string:
 		r, ok := right.(string)
 		if !ok {
@@ -61,28 +61,27 @@ func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) err
 }
 
 // executeBinaryArithmeticOperation evaluates the binary arithmetic expression with optimized fast paths
-func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right any) error {
-	leftValue := left.(float64)
-	rightValue := right.(float64)
-
+// executeNumberArithmetic handles arithmetic operations with type-specific parameters
+// This eliminates interface conversion overhead by accepting float64 directly
+func (vm *VM) executeNumberArithmetic(operator code.Opcode, left, right float64) error {
 	// Fast path for common operations without NaN/Inf checks
 	switch operator {
 	case code.OpAdd:
-		return vm.Push(leftValue + rightValue)
+		return vm.Push(left + right)
 	case code.OpSub:
-		return vm.Push(leftValue - rightValue)
+		return vm.Push(left - right)
 	case code.OpMul:
-		return vm.Push(leftValue * rightValue)
+		return vm.Push(left * right)
 	case code.OpDiv:
 		// Zero check optimization - most divisions are non-zero
-		if rightValue == 0 {
+		if right == 0 {
 			return fmt.Errorf("division by zero")
 		}
-		return vm.Push(leftValue / rightValue)
+		return vm.Push(left / right)
 	}
 
 	// Expensive checks only for operations that need them
-	isNanOrInf := math.IsNaN(leftValue) || math.IsInf(leftValue, 0) || math.IsNaN(rightValue) || math.IsInf(rightValue, 0)
+	isNanOrInf := math.IsNaN(left) || math.IsInf(left, 0) || math.IsNaN(right) || math.IsInf(right, 0)
 	isBitwiseOp := operator == code.OpBitwiseAnd || operator == code.OpBitwiseOr || operator == code.OpBitwiseXor || operator == code.OpShiftLeft || operator == code.OpShiftRight
 
 	if isBitwiseOp && isNanOrInf {
@@ -92,18 +91,18 @@ func (vm *VM) executeBinaryArithmeticOperation(operator code.Opcode, left, right
 	switch operator {
 	case code.OpPow:
 		// Optimized power operation with special case handling
-		if leftValue == 1 && isNanOrInf {
+		if left == 1 && isNanOrInf {
 			return vm.Push(math.NaN())
 		}
-		return vm.Push(math.Pow(leftValue, rightValue))
+		return vm.Push(math.Pow(left, right))
 	case code.OpMod:
-		return vm.Push(math.Mod(leftValue, rightValue))
+		return vm.Push(math.Mod(left, right))
 	// Bitwise operations with fast integer path
 	case code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight:
 		// Fast path: check if values are already integers
-		if leftValue == math.Trunc(leftValue) && rightValue == math.Trunc(rightValue) {
-			l := int64(leftValue)
-			r := int64(rightValue)
+		if left == math.Trunc(left) && right == math.Trunc(right) {
+			l := int64(left)
+			r := int64(right)
 			switch operator {
 			case code.OpBitwiseAnd:
 				return vm.Push(float64(l & r))

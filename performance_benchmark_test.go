@@ -10,6 +10,7 @@ import (
 
 // Test data similar to the comparison project
 const benchmarkBooleanExpr = `(Origin == "MOW" || Country == "RU") && (Value >= 100.0 || Adults == 1.0)`
+const benchmarkArithmeticExpr = `(a + b) * c - d / e`
 const benchmarkStringExpr = `"hello" + ", world"`
 const benchmarkStringCompareExpr = `name == "/groups/" + group + "/bar"`
 const benchmarkMapExpr = `array |map: $item * 2.0`
@@ -20,6 +21,16 @@ func createBenchmarkParams() map[string]any {
 		"Country": "RU",
 		"Adults":  1.0,
 		"Value":   100.0,
+	}
+}
+
+func createBenchmarkArithmeticParams() map[string]any {
+	return map[string]any{
+		"a": 10.0,
+		"b": 20.0,
+		"c": 5.0,
+		"d": 100.0,
+		"e": 4.0,
 	}
 }
 
@@ -81,6 +92,34 @@ func BenchmarkVM_Boolean_Current(b *testing.B) {
 
 	if !out.(bool) {
 		b.Fail()
+	}
+}
+
+func BenchmarkVM_Arithmetic_Current(b *testing.B) {
+	params := createBenchmarkArithmeticParams()
+	bytecode, err := compileExpression(benchmarkArithmeticExpr)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	var out any
+
+	machine := vm.New(vm.LibContext{
+		Functions:    vm.Builtins,
+		PipeHandlers: vm.DefaultPipeHandlers,
+	})
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		out, err = machine.Run(bytecode, params)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.StopTimer()
+
+	// (10 + 20) * 5 - 100 / 4 = 30 * 5 - 25 = 150 - 25 = 125
+	if out.(float64) != 125.0 {
+		b.Fatalf("Expected 125.0, got %v", out)
 	}
 }
 

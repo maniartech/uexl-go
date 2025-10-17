@@ -8,6 +8,10 @@ uexl-go
 *.so
 *.dylib
 
+
+*.prof
+*.txt
+
 # Test binary, built with `go test -c`
 *.test
 
