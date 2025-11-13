@@ -166,7 +166,7 @@ func BenchmarkPipe_Every_False(b *testing.B) {
 
 func BenchmarkPipe_Unique_NoDuplicates(b *testing.B) {
 	params := map[string]any{"arr": createPipeTestArray(100)}
-	runPipeBenchmark(b, `arr |unique:`, params)
+	runPipeBenchmark(b, `arr |unique: $item`, params)
 }
 
 func BenchmarkPipe_Unique_ManyDuplicates(b *testing.B) {
@@ -176,7 +176,7 @@ func BenchmarkPipe_Unique_ManyDuplicates(b *testing.B) {
 		arr[i] = float64((i % 10) + 1)
 	}
 	params := map[string]any{"arr": arr}
-	runPipeBenchmark(b, `arr |unique:`, params)
+	runPipeBenchmark(b, `arr |unique: $item`, params)
 }
 
 // ============================================================================
@@ -190,7 +190,7 @@ func BenchmarkPipe_Sort_Ascending(b *testing.B) {
 		arr[i] = float64(100 - i)
 	}
 	params := map[string]any{"arr": arr}
-	runPipeBenchmark(b, `arr |sort:`, params)
+	runPipeBenchmark(b, `arr |sort: $item`, params)
 }
 
 func BenchmarkPipe_Sort_WithPredicate(b *testing.B) {

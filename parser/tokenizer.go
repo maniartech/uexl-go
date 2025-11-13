@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -324,23 +325,31 @@ func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 	}
 
 	originalToken := t.input[start:t.pos]
+
+	// Excel compatibility: case-insensitive language literals
+	// Normalize to lowercase for comparison, preserve original token
+	lowerToken := strings.ToLower(originalToken)
+
 	if t.options.EnableIeeeSpecials {
-		// Recognize IEEE-754 special literals strictly: NaN, Inf (case-sensitive)
-		if originalToken == "NaN" {
+		// Recognize IEEE-754 special literals (case-insensitive for Excel compat)
+		if lowerToken == "nan" {
 			return Token{Type: constants.TokenNumber, Value: TokenValue{Kind: TVKNumber, Num: math.NaN()}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 		}
-		if originalToken == "Inf" {
+		if lowerToken == "inf" {
 			return Token{Type: constants.TokenNumber, Value: TokenValue{Kind: TVKNumber, Num: math.Inf(+1)}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 		}
 	}
-	switch originalToken {
+
+	// Case-insensitive keyword matching (Excel compatibility)
+	switch lowerToken {
 	case "true", "false":
-		return Token{Type: constants.TokenBoolean, Value: TokenValue{Kind: TVKBoolean, Bool: originalToken == "true"}, Token: originalToken, Line: t.line, Column: startColumn}, nil
+		return Token{Type: constants.TokenBoolean, Value: TokenValue{Kind: TVKBoolean, Bool: lowerToken == "true"}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	case "null":
 		return Token{Type: constants.TokenNull, Value: TokenValue{Kind: TVKNull}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	case "as":
 		return Token{Type: constants.TokenAs, Value: TokenValue{Kind: TVKIdentifier, Str: originalToken}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	default:
+		// User-defined identifiers remain case-sensitive
 		return Token{Type: constants.TokenIdentifier, Value: TokenValue{Kind: TVKIdentifier, Str: originalToken}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	}
 }
@@ -612,6 +621,14 @@ func (t *Tokenizer) readOperator() (Token, error) {
 		t.advance()
 		operator := "!"
 		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
+	}
+
+	// Handle <> operator (Excel-compatible not-equals)
+	if t.current() == '<' && t.peek() == '>' {
+		t.advance()
+		t.advance()
+		operator := "!=" // Map to canonical form
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: "<>", Line: t.line, Column: startColumn}, nil
 	}
 
 	// Handle <= operator

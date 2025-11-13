@@ -247,7 +247,8 @@ func (p *Parser) parseBitwiseOr() Expression {
 }
 
 func (p *Parser) parseBitwiseXor() Expression {
-	return p.parseBinaryOp(p.parseBitwiseAnd, constants.SymbolBitwiseXor)
+	// Now uses ~ for binary XOR (changed from ^, Excel compatibility)
+	return p.parseBinaryOp(p.parseBitwiseAnd, "~")
 }
 
 func (p *Parser) parseBitwiseAnd() Expression {
@@ -255,7 +256,8 @@ func (p *Parser) parseBitwiseAnd() Expression {
 }
 
 func (p *Parser) parseEquality() Expression {
-	return p.parseBinaryOp(p.parseComparison, constants.SymbolEqual, constants.SymbolNotEqual)
+	// Accept both != and <> for not-equals (Excel compatibility)
+	return p.parseBinaryOp(p.parseComparison, constants.SymbolEqual, constants.SymbolNotEqual, constants.SymbolNotEqualExcel)
 }
 
 func (p *Parser) parseComparison() Expression {
@@ -291,14 +293,17 @@ func (p *Parser) parsePower() Expression {
 	left := p.parseUnary()
 
 	if p.current.Type == constants.TokenOperator {
-		if p.current.Value.Kind == TVKOperator && p.current.Value.Str == "**" {
-			op := p.current
-			p.advance()
+		if p.current.Value.Kind == TVKOperator {
+			// Accept both ** and ^ for power (Excel compatibility)
+			if p.current.Value.Str == "**" || p.current.Value.Str == "^" {
+				op := p.current
+				p.advance()
 
-			// Right-associative parse for the right operand
-			right := p.parsePower()
+				// Right-associative parse for the right operand
+				right := p.parsePower()
 
-			return &BinaryExpression{Left: left, Operator: op.Value.Str, Right: right, Line: op.Line, Column: op.Column}
+				return &BinaryExpression{Left: left, Operator: op.Value.Str, Right: right, Line: op.Line, Column: op.Column}
+			}
 		}
 	}
 
@@ -307,8 +312,8 @@ func (p *Parser) parsePower() Expression {
 
 func (p *Parser) parseUnary() Expression {
 	if p.current.Type == constants.TokenOperator {
-		// Check if the operator is "-" or "!"
-		if p.current.Value.Kind == TVKOperator && (p.current.Value.Str == "-" || p.current.Value.Str == "!") {
+		// Check if the operator is "-", "!", or "~" (bitwise NOT)
+		if p.current.Value.Kind == TVKOperator && (p.current.Value.Str == "-" || p.current.Value.Str == "!" || p.current.Value.Str == "~") {
 			op := p.current
 			opStr := op.Value.Str
 			p.advance()

@@ -41,13 +41,14 @@ const (
 	SymbolMultiply = "*"
 	SymbolDivide   = "/"
 	SymbolModulo   = "%"
-	SymbolPower    = "**"
+	SymbolPower    = "**" // Legacy alias, also supports "^" (Excel-compatible)
+	SymbolPowerAlt = "^"  // Excel-compatible power operator (was XOR in v1.x)
 
 	// Bitwise operators
 	SymbolBitwiseAnd = "&"
 	SymbolBitwiseOr  = "|"
-	SymbolBitwiseXor = "^"
-	SymbolBitwiseNot = "~"
+	SymbolBitwiseXor = "~" // Changed from "^" - Lua-style context-dependent (binary XOR)
+	SymbolBitwiseNot = "~" // Same symbol as XOR, context-dependent (unary NOT)
 
 	// Shift operators
 	SymbolLeftShift  = "<<"
@@ -71,6 +72,7 @@ const (
 	// Comparison operators
 	SymbolEqual          = "=="
 	SymbolNotEqual       = "!="
+	SymbolNotEqualExcel  = "<>" // Excel-compatible not-equals alias
 	SymbolGreaterThan    = ">"
 	SymbolLessThan       = "<"
 	SymbolGreaterOrEqual = ">="
