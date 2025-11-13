@@ -138,10 +138,11 @@ When adding new optimizations:
 
 ## External Resources
 
-- Main codebase: `../../uexl-go/`
-- Comparison benchmarks: `../`
-- Architecture docs: `../../uexl-go/wip-notes/`
-- Design philosophy: `../../uexl-go/book/design-philosophy.md`
+- Main codebase: `../../`
+- Comparison benchmarks: `../../../golang-expression-evaluation-comparison/`
+- Architecture docs: `../../wip-notes/`
+- Design philosophy: `../../book/design-philosophy.md`
+- Value migration: `../value-migration/README.md`
 
 ---
 
