@@ -2,6 +2,8 @@ package compiler
 
 import (
 	"testing"
+
+	"github.com/maniartech/uexl_go/types"
 )
 
 func TestNewCompiler(t *testing.T) {
@@ -15,9 +17,12 @@ func TestNewCompiler(t *testing.T) {
 }
 
 func TestNewWithState(t *testing.T) {
-	c := NewWithState([]any{"foo"})
-	if len(c.constants) != 1 || c.constants[0] != "foo" {
+	c := NewWithState([]types.Value{types.NewStringValue("foo")})
+	if len(c.constants) != 1 {
 		t.Error("constants not set correctly")
+	}
+	if str, ok := c.constants[0].AsString(); !ok || str != "foo" {
+		t.Errorf("expected 'foo', got %v", c.constants[0].ToAny())
 	}
 }
 

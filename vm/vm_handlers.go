@@ -19,7 +19,7 @@ func (vm *VM) getContextValue(name string) (any, error) {
 	return value, nil
 }
 
-// executeBinaryExpression evaluates the binary expression by popping the top two elements from the stack, applying the operator, and pushing the result back onto the stack.
+// executeBinaryExpression evaluates the binary expression using Value types from stack
 func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) error {
 	switch leftVal := left.(type) {
 	case float64, int:
@@ -160,27 +160,26 @@ func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right any
 func (vm *VM) executeBooleanBinaryOperation(operator code.Opcode, left, right bool) error {
 	switch operator {
 	case code.OpLogicalAnd:
-		vm.Push(left && right)
+		return vm.pushBool(left && right)
 	case code.OpLogicalOr:
-		vm.Push(left || right)
+		return vm.pushBool(left || right)
 	default:
 		return fmt.Errorf("unsupported boolean operation: %s", operator.String())
 	}
-	return nil
 }
 
 // executeNumberComparisonOperation optimized for maximum performance
 func (vm *VM) executeNumberComparisonOperation(operator code.Opcode, left, right float64) error {
-	// Optimized switch with inline operations
+	// Optimized switch with inline operations - uses pushBool for zero allocation
 	switch operator {
 	case code.OpEqual:
-		return vm.Push(left == right)
+		return vm.pushBool(left == right)
 	case code.OpNotEqual:
-		return vm.Push(left != right)
+		return vm.pushBool(left != right)
 	case code.OpGreaterThan:
-		return vm.Push(left > right)
+		return vm.pushBool(left > right)
 	case code.OpGreaterThanOrEqual:
-		return vm.Push(left >= right)
+		return vm.pushBool(left >= right)
 	default:
 		return fmt.Errorf("unknown comparison operator: %v", operator)
 	}
@@ -189,9 +188,9 @@ func (vm *VM) executeNumberComparisonOperation(operator code.Opcode, left, right
 func (vm *VM) executeStringComparisonOperation(operator code.Opcode, left, right string) error {
 	switch operator {
 	case code.OpEqual:
-		return vm.Push(left == right)
+		return vm.pushBool(left == right)
 	case code.OpNotEqual:
-		return vm.Push(left != right)
+		return vm.pushBool(left != right)
 	default:
 		return fmt.Errorf("unknown string comparison operator: %v", operator)
 	}
@@ -265,6 +264,34 @@ func (vm *VM) executeUnaryBitwiseNotOperation(operand any) error {
 	return vm.pushFloat64(float64(^int64(value)))
 }
 
+// executeComparisonOperationValues - zero-alloc comparison using Value types
+func (vm *VM) executeComparisonOperationValues(operator code.Opcode, left, right Value) error {
+	// Fast path: same types (most common)
+	if left.Typ == right.Typ {
+		switch left.Typ {
+		case TypeFloat:
+			return vm.executeNumberComparisonOperation(operator, left.FloatVal, right.FloatVal)
+		case TypeString:
+			return vm.executeStringComparisonOperation(operator, left.StrVal, right.StrVal)
+		case TypeBool:
+			return vm.executeBooleanComparisonOperation(operator, left.BoolVal, right.BoolVal)
+		case TypeNull:
+			// null == null is true, null != null is false
+			switch operator {
+			case code.OpEqual:
+				return vm.pushBoolValue(true)
+			case code.OpNotEqual:
+				return vm.pushBoolValue(false)
+			default:
+				return fmt.Errorf("cannot compare null values with %v", operator)
+			}
+		}
+	}
+
+	// Mixed types or TypeAny - fall back to any comparison
+	return vm.executeComparisonOperation(operator, left.ToAny(), right.ToAny())
+}
+
 func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right any) error {
 	switch l := left.(type) {
 	case float64:
@@ -294,7 +321,7 @@ func (vm *VM) buildArray(length int) []any {
 	startIndex := vm.sp - length
 	elements := make([]any, length)
 	for i := 0; i < length; i++ {
-		elements[i] = vm.stack[startIndex+i]
+		elements[i] = vm.stack[startIndex+i].ToAny()
 	}
 	vm.sp = startIndex
 	return elements
@@ -303,11 +330,12 @@ func (vm *VM) buildArray(length int) []any {
 func (vm *VM) buildObject(startIndex, endIndex int) (map[string]any, error) {
 	object := make(map[string]any)
 	for i := startIndex; i < endIndex; i += 2 {
-		key, ok := vm.stack[i].(string)
+		keyVal := vm.stack[i].ToAny()
+		key, ok := keyVal.(string)
 		if !ok {
-			return nil, fmt.Errorf("expected string key, got %T", vm.stack[i])
+			return nil, fmt.Errorf("expected string key, got %T", keyVal)
 		}
-		object[key] = vm.stack[i+1]
+		object[key] = vm.stack[i+1].ToAny()
 	}
 	vm.sp = startIndex
 	return object, nil
@@ -384,9 +412,10 @@ func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
 		return fmt.Errorf("function index out of bounds: %d", funcIndex)
 	}
 
-	functionName, ok := vm.constants[funcIndex].(string)
+	funcNameVal := vm.constants[funcIndex]
+	functionName, ok := funcNameVal.AsString()
 	if !ok {
-		return fmt.Errorf("function name at constant index %d is not a string, got %T", funcIndex, vm.constants[funcIndex])
+		return fmt.Errorf("function name at constant index %d is not a string, got %v", funcIndex, funcNameVal.ToAny())
 	}
 	function, exists := vm.functionContext[functionName]
 	if !exists {
@@ -425,6 +454,24 @@ func isTruthy(val any) bool {
 		return len(v) > 0
 	default:
 		return val != nil
+	}
+}
+
+// isTruthyValue - zero-alloc truthiness check for Value types
+func isTruthyValue(val Value) bool {
+	switch val.Typ {
+	case TypeBool:
+		return val.BoolVal
+	case TypeFloat:
+		return val.FloatVal != 0
+	case TypeString:
+		return val.StrVal != ""
+	case TypeNull:
+		return false
+	case TypeAny:
+		return isTruthy(val.AnyVal)
+	default:
+		return false
 	}
 }
 

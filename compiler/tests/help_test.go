@@ -7,6 +7,7 @@ import (
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/compiler"
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/types"
 )
 
 func parse(input string) parser.Node {
@@ -44,7 +45,7 @@ func testInstructions(expected []code.Instructions, actual code.Instructions) er
 func testConstants(
 	t *testing.T,
 	expected []any,
-	actual []any,
+	actual []types.Value,
 ) error {
 	if len(expected) != len(actual) {
 		return fmt.Errorf("wrong number of constants. got=%d, want=%d",
@@ -54,14 +55,16 @@ func testConstants(
 		if constant == nil { // sentinel: skip validation for this constant (e.g., InstructionBlock)
 			continue
 		}
+		// Convert Value to any for comparison
+		actualAny := actual[i].ToAny()
 		switch constant := constant.(type) {
 		case float64:
 		case int:
-			if err := testNumerLiteral(float64(constant), actual[i]); err != nil {
+			if err := testNumerLiteral(float64(constant), actualAny); err != nil {
 				return fmt.Errorf("test case %d: %s", i, err)
 			}
 		case string:
-			if err := testStringLiteral(constant, actual[i]); err != nil {
+			if err := testStringLiteral(constant, actualAny); err != nil {
 				return fmt.Errorf("test case %d: %s", i, err)
 			}
 		default:
@@ -113,12 +116,12 @@ func testStringLiteral(expected string, actual any) error {
 func runCompilerTestCases(t *testing.T, cases []compilerTestCase) {
 	for i, tc := range cases {
 		program := parse(tc.input)
-		compiler := compiler.New()
-		err := compiler.Compile(program)
+		comp := compiler.New()
+		err := comp.Compile(program)
 		if err != nil {
 			t.Fatalf("Test case %d: Compile error: %s", i, err)
 		}
-		byteCode := compiler.ByteCode()
+		byteCode := comp.ByteCode()
 		err = testConstants(t, tc.expectedConstants, byteCode.Constants)
 		if err != nil {
 			t.Fatalf("Test case %d: %s", i, err)

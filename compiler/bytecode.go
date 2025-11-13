@@ -2,11 +2,12 @@ package compiler
 
 import (
 	"github.com/maniartech/uexl_go/code"
+	"github.com/maniartech/uexl_go/types"
 )
 
 type ByteCode struct {
 	Instructions code.Instructions
-	Constants    []any
+	Constants    []types.Value
 	ContextVars  []string
 	SystemVars   []any
 }

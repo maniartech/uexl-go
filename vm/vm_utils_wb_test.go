@@ -31,8 +31,8 @@ func TestVM_Top_withItems(t *testing.T) {
 
 func TestVM_Push_stackOverflow(t *testing.T) {
 	vm := &VM{
-		stack: make([]any, 1024), // StackSize
-		sp:    1024,              // Already at capacity
+		stack: make([]Value, 1024), // StackSize
+		sp:    1024,                // Already at capacity
 	}
 
 	// This should return an error
@@ -49,7 +49,7 @@ func TestVM_Pop(t *testing.T) {
 	vm.Push(3)
 
 	popped := vm.Pop()
-	if popped != 3 {
+	if popped != 3.0 { // UExL converts all numbers to float64
 		t.Errorf("expected 3, got %v", popped)
 	}
 	if vm.sp != 2 {
@@ -66,10 +66,10 @@ func TestVM_LastPoppedStackElem_withItems(t *testing.T) {
 
 	// Should return element at sp-1 (the element at the current top, which is 2)
 	elem := vm.LastPoppedStackElem()
-	if elem != 2 { // The current top element after pop
+	if elem != 2.0 { // UExL converts all numbers to float64
 		t.Errorf("expected 2, got %v", elem)
 	}
-	if popped != 3 {
+	if popped != 3.0 { // UExL converts all numbers to float64
 		t.Errorf("expected popped=3, got %v", popped)
 	}
 }

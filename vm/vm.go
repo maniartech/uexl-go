@@ -29,18 +29,18 @@ func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode, contextVarsValues
 
 	if len(vm.contextVars) > 0 && contextValuesChanged {
 		if vm.contextVarCache == nil || cap(vm.contextVarCache) < len(vm.contextVars) {
-			vm.contextVarCache = make([]any, len(vm.contextVars))
+			vm.contextVarCache = make([]Value, len(vm.contextVars))
 		} else {
 			vm.contextVarCache = vm.contextVarCache[:len(vm.contextVars)]
 		}
 
 		for i, varName := range vm.contextVars {
 			if value, exists := contextVarsValues[varName]; exists {
-				// Store actual value (can be nil, which is valid)
-				vm.contextVarCache[i] = value
+				// Store actual value as Value (can be nil, which is valid)
+				vm.contextVarCache[i] = newAnyValue(value)
 			} else {
 				// Store sentinel to indicate missing variable
-				vm.contextVarCache[i] = contextVarNotProvided
+				vm.contextVarCache[i] = newAnyValue(contextVarNotProvided)
 			}
 		}
 	}
@@ -76,7 +76,8 @@ func (vm *VM) run() error {
 		switch opcode {
 		case code.OpConstant:
 			constIndex := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			err := vm.Push(vm.constants[constIndex])
+			// Push Value directly from constants - zero allocation!
+			err := vm.pushValue(vm.constants[constIndex])
 			if err != nil {
 				return err
 			}
@@ -86,12 +87,15 @@ func (vm *VM) run() error {
 			// Fast path: use pre-resolved cache (O(1) array access)
 			if int(varIndex) < len(vm.contextVarCache) {
 				value := vm.contextVarCache[varIndex]
-				if _, isMissing := value.(contextVarMissing); isMissing {
-					// Variable was not provided in context
-					return fmt.Errorf("context variable %q not found", vm.contextVars[varIndex])
+				// Check if sentinel value (stored as AnyVal)
+				if value.IsAny() {
+					if _, isMissing := value.AnyVal.(contextVarMissing); isMissing {
+						// Variable was not provided in context
+						return fmt.Errorf("context variable %q not found", vm.contextVars[varIndex])
+					}
 				}
-				// Push the value (can be nil, which is valid)
-				if err := vm.Push(value); err != nil {
+				// Push the Value directly (zero-alloc!)
+				if err := vm.pushValue(value); err != nil {
 					return err
 				}
 			} else {
@@ -137,9 +141,8 @@ func (vm *VM) run() error {
 			}
 			frame.ip += 1
 		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan, code.OpGreaterThanOrEqual:
-			right := vm.Pop()
-			left := vm.Pop()
-			err := vm.executeComparisonOperation(opcode, left, right)
+			right, left := vm.pop2Values()
+			err := vm.executeComparisonOperationValues(opcode, left, right)
 			if err != nil {
 				return err
 			}
@@ -156,10 +159,10 @@ func (vm *VM) run() error {
 			frame.ip = int(pos)
 		case code.OpJumpIfTruthy:
 			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			value := vm.Pop()
-			if isTruthy(value) {
+			value := vm.popValue()
+			if isTruthyValue(value) {
 				// keep the value as the result of the chain
-				if err := vm.Push(value); err != nil {
+				if err := vm.pushValue(value); err != nil {
 					return err
 				}
 				frame.ip = int(pos)
@@ -168,10 +171,10 @@ func (vm *VM) run() error {
 			}
 		case code.OpJumpIfFalsy:
 			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			value := vm.Pop()
-			if !isTruthy(value) {
+			value := vm.popValue()
+			if !isTruthyValue(value) {
 				// Push the falsy value as the result of the chain
-				if err := vm.Push(value); err != nil {
+				if err := vm.pushValue(value); err != nil {
 					return err
 				}
 				frame.ip = int(pos)
@@ -191,7 +194,7 @@ func (vm *VM) run() error {
 			}
 		case code.OpJumpIfNullish:
 			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			if vm.sp > 0 && vm.stack[vm.sp-1] == nil {
+			if vm.sp > 0 && vm.stack[vm.sp-1].IsNull() {
 				frame.ip = int(pos)
 				continue
 			}
@@ -305,9 +308,10 @@ func (vm *VM) run() error {
 			aliasIdx := code.ReadUint16(frame.instructions[frame.ip+3 : frame.ip+5])
 			blockIdx := code.ReadUint16(frame.instructions[frame.ip+5 : frame.ip+7])
 
-			pipeType := vm.constants[pipeTypeIdx].(string)
+			pipeTypeVal := vm.constants[pipeTypeIdx]
+			pipeType, _ := pipeTypeVal.AsString() // Extract string from Value
 			alias := vm.systemVars[aliasIdx].(string)
-			block := vm.constants[blockIdx] // Should be *compiler.InstructionBlock or nil
+			block := vm.constants[blockIdx].ToAny() // Convert Value to any for compatibility
 
 			input := vm.Pop()
 

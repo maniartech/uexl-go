@@ -5,6 +5,7 @@ import (
 
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/types"
 )
 
 func (c *Compiler) currentInstructions() code.Instructions {
@@ -39,21 +40,22 @@ func New() *Compiler {
 		previousInstruction: EmmittedInstruction{},
 	}
 	return &Compiler{
-		constants:   []any{},
+		constants:   []types.Value{},
 		scopes:      []CompilationScope{mainScope},
 		scopeIndex:  0,
 		contextVars: []string{},
 	}
 }
 
-func NewWithState(constants []any) *Compiler {
+func NewWithState(constants []types.Value) *Compiler {
 	compiler := New()
 	compiler.constants = constants
 	return compiler
 }
 
 func (c *Compiler) addConstant(node any) int {
-	c.constants = append(c.constants, node)
+	// Convert any to Value to avoid boxing when VM accesses constants
+	c.constants = append(c.constants, types.NewAnyValue(node))
 	return len(c.constants) - 1
 }
 

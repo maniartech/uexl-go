@@ -40,10 +40,10 @@ type Frame struct {
 }
 
 type VM struct {
-	constants         []any
+	constants         []Value
 	contextVars       []string
 	contextVarsValues map[string]any
-	contextVarCache   []any          // Pre-resolved context var values for O(1) access
+	contextVarCache   []Value        // Pre-resolved context var values for O(1) access
 	lastContextValues map[string]any // Cache the last context values pointer to detect changes
 	systemVars        []any
 	aliasVars         map[string]any
@@ -63,7 +63,7 @@ type VM struct {
 	}
 	pipeFastScopeActive bool // Flag indicating fast-path is active (reduces branch cost)
 
-	stack     []any
+	stack     []Value
 	sp        int
 	frames    []*Frame
 	framesIdx int
@@ -83,7 +83,7 @@ func New(libCtx LibContext) *VM {
 		pipeHandlers:    libCtx.PipeHandlers,
 		frames:          make([]*Frame, MaxFrames),
 		pipeScopes:      make([]map[string]any, 0),
-		stack:           make([]any, StackSize),
+		stack:           make([]Value, StackSize),
 		aliasVars:       make(map[string]any),
 	}
 
@@ -101,19 +101,28 @@ func (vm *VM) Push(node any) error {
 	if vm.sp >= StackSize {
 		return fmt.Errorf("stack overflow")
 	}
-	vm.stack[vm.sp] = node
+	vm.stack[vm.sp] = newAnyValue(node)
 	vm.sp++
 	return nil
 }
 
-// Type-specific push methods to avoid interface boxing overhead
-// These eliminate runtime.convT* calls by storing typed values directly
+// pushValue pushes a Value directly onto the stack (zero allocation)
+func (vm *VM) pushValue(val Value) error {
+	if vm.sp >= StackSize {
+		return fmt.Errorf("stack overflow")
+	}
+	vm.stack[vm.sp] = val
+	vm.sp++
+	return nil
+}
+
+// Type-specific push methods for zero-allocation primitive storage
 
 func (vm *VM) pushFloat64(val float64) error {
 	if vm.sp >= StackSize {
 		return fmt.Errorf("stack overflow")
 	}
-	vm.stack[vm.sp] = val
+	vm.stack[vm.sp] = newFloatValue(val)
 	vm.sp++
 	return nil
 }
@@ -122,7 +131,7 @@ func (vm *VM) pushString(val string) error {
 	if vm.sp >= StackSize {
 		return fmt.Errorf("stack overflow")
 	}
-	vm.stack[vm.sp] = val
+	vm.stack[vm.sp] = newStringValue(val)
 	vm.sp++
 	return nil
 }
@@ -131,7 +140,7 @@ func (vm *VM) pushBool(val bool) error {
 	if vm.sp >= StackSize {
 		return fmt.Errorf("stack overflow")
 	}
-	vm.stack[vm.sp] = val
+	vm.stack[vm.sp] = newBoolValue(val)
 	vm.sp++
 	return nil
 }
@@ -141,16 +150,16 @@ func (vm *VM) Pop() any {
 		return nil
 	}
 	vm.sp--
-	node := vm.stack[vm.sp]
-	vm.stack[vm.sp] = nil // Clear the reference
-	return node
+	val := vm.stack[vm.sp]
+	vm.stack[vm.sp] = Value{} // Clear the value
+	return val.ToAny()
 }
 
 func (vm *VM) LastPoppedStackElem() any {
 	if vm.sp == 0 {
 		return nil
 	}
-	return vm.stack[vm.sp-1]
+	return vm.stack[vm.sp-1].ToAny()
 }
 
 func (vm *VM) Top() any {
@@ -159,7 +168,38 @@ func (vm *VM) Top() any {
 		return nil
 	}
 	// Return the top element without removing it
+	return vm.stack[vm.sp-1].ToAny()
+}
+
+// popValue pops a Value from the stack (for opcode handlers that work with Value directly)
+func (vm *VM) popValue() Value {
+	if vm.sp == 0 {
+		return newNullValue()
+	}
+	vm.sp--
+	val := vm.stack[vm.sp]
+	vm.stack[vm.sp] = Value{} // Clear the value
+	return val
+}
+
+// peekValue returns the top Value without popping (for opcode handlers)
+func (vm *VM) peekValue() Value {
+	if vm.sp == 0 {
+		return newNullValue()
+	}
 	return vm.stack[vm.sp-1]
+}
+
+// pop2Values pops two values from stack (common in binary operations)
+func (vm *VM) pop2Values() (right, left Value) {
+	right = vm.popValue()
+	left = vm.popValue()
+	return
+}
+
+// pushBoolValue pushes a boolean value (zero-alloc)
+func (vm *VM) pushBoolValue(b bool) error {
+	return vm.pushValue(newBoolValue(b))
 }
 
 func (vm *VM) pushPipeScope() {

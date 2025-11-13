@@ -6,10 +6,11 @@ import (
 
 	"github.com/maniartech/uexl_go/code"
 	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl_go/types"
 )
 
 type Compiler struct {
-	constants   []any
+	constants   []types.Value
 	contextVars []string
 	SystemVars  []any
 	scopes      []CompilationScope

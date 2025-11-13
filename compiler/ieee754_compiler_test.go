@@ -86,26 +86,27 @@ func TestIEEE754CompilerConstants(t *testing.T) {
 				t.Fatalf("[case %d] Compiler error for %s: %s", i+1, tt.input, err)
 			}
 
-			bytecode := comp.ByteCode()
-			constants := bytecode.Constants
+		bytecode := comp.ByteCode()
+		constants := bytecode.Constants
 
-			foundNaN := false
-			foundInf := false
-			foundNegInf := false
+		foundNaN := false
+		foundInf := false
+		foundNegInf := false
 
-			for _, constant := range constants {
-				if f, ok := constant.(float64); ok {
-					if math.IsNaN(f) {
-						foundNaN = true
-					} else if math.IsInf(f, 1) {
-						foundInf = true
-					} else if math.IsInf(f, -1) {
-						foundNegInf = true
-					}
+		for _, constant := range constants {
+			// Convert Value to any and check if it's float64
+			if f, ok := constant.AsFloat(); ok {
+				if math.IsNaN(f) {
+					foundNaN = true
+				} else if math.IsInf(f, 1) {
+					foundInf = true
+				} else if math.IsInf(f, -1) {
+					foundNegInf = true
 				}
 			}
+		}
 
-			if tt.hasNaN && !foundNaN {
+		if tt.hasNaN && !foundNaN {
 				t.Errorf("[case %d] Expected NaN in constants for: %s", i+1, tt.input)
 			}
 			if tt.hasInf && !foundInf {
