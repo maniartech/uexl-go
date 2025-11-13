@@ -41,7 +41,7 @@ All `*_test.go` files have been successfully moved from the parser root director
 - This ensures tests are external black-box tests
 
 ### Import Issues
-- Added proper imports: `"github.com/maniartech/uexl_go/parser"`
+- Added proper imports: `"github.com/maniartech/uexl/parser"`
 - Updated all type references to use qualified names (e.g., `parser.NewTokenizer`)
 
 ### Access Issues
@@ -80,10 +80,10 @@ All tests now pass successfully:
 
 ```bash
 ❯ go test ./parser/...
-?       github.com/maniartech/uexl_go/parser    [no test files]
-ok      github.com/maniartech/uexl_go/parser/constants  0.839s
-ok      github.com/maniartech/uexl_go/parser/errors     1.056s
-ok      github.com/maniartech/uexl_go/parser/tests      0.993s
+?       github.com/maniartech/uexl/parser    [no test files]
+ok      github.com/maniartech/uexl/parser/constants  0.839s
+ok      github.com/maniartech/uexl/parser/errors     1.056s
+ok      github.com/maniartech/uexl/parser/tests      0.993s
 ```
 
 ## 🎯 **Benefits of This Organization**
@@ -97,7 +97,7 @@ ok      github.com/maniartech/uexl_go/parser/tests      0.993s
 ## 📝 **Test Coverage Status**
 
 - **Constants Package**: 100% coverage ✅
-- **Errors Package**: 100% coverage ✅  
+- **Errors Package**: 100% coverage ✅
 - **Tests Package**: Test-only package (no statements to cover) ✅
 - **Main Parser Package**: Tests moved to external package for better organization ✅
 

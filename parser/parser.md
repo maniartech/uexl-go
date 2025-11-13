@@ -336,7 +336,7 @@ package main
 import (
     "fmt"
     "log"
-    "github.com/maniartech/uexl_go/parser"
+    "github.com/maniartech/uexl/parser"
 )
 
 func main() {

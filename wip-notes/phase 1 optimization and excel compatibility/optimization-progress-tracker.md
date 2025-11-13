@@ -227,8 +227,8 @@ Expression: (a + b) * c - d / e  (5 arithmetic operations)
 **All Tests Pass:** ✅
 ```bash
 $ go test ./...
-ok      github.com/maniartech/uexl_go   0.866s
-ok      github.com/maniartech/uexl_go/vm        0.900s
+ok      github.com/maniartech/uexl   0.866s
+ok      github.com/maniartech/uexl/vm        0.900s
 ALL TESTS PASSING
 ```
 
@@ -423,8 +423,8 @@ Range: 120.4-126.3 ns/op
 **All Tests Pass:** ✅
 ```bash
 $ go test ./...
-ok      github.com/maniartech/uexl_go   0.920s
-ok      github.com/maniartech/uexl_go/vm        1.155s
+ok      github.com/maniartech/uexl   0.920s
+ok      github.com/maniartech/uexl/vm        1.155s
 ALL TESTS PASSING
 ```
 
@@ -552,8 +552,8 @@ Updated string operations to use `pushString()`:
 **All Tests Pass:** ✅
 ```bash
 $ go test ./... -timeout 30s
-ok      github.com/maniartech/uexl_go   0.461s
-ok      github.com/maniartech/uexl_go/vm        0.488s
+ok      github.com/maniartech/uexl   0.461s
+ok      github.com/maniartech/uexl/vm        0.488s
 ALL TESTS PASSING
 ```
 

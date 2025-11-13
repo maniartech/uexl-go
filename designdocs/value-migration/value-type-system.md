@@ -386,7 +386,7 @@ package main
 import (
     "fmt"
     "unsafe"
-    "github.com/maniartech/uexl_go/types"
+    "github.com/maniartech/uexl/types"
 )
 
 func main() {

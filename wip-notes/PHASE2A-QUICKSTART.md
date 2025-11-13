@@ -8,10 +8,10 @@
 ### ✅ All Tests Pass
 ```bash
 $ go test ./... -race
-ok      github.com/maniartech/uexl_go
-ok      github.com/maniartech/uexl_go/compiler
-ok      github.com/maniartech/uexl_go/parser
-ok      github.com/maniartech/uexl_go/vm
+ok      github.com/maniartech/uexl
+ok      github.com/maniartech/uexl/compiler
+ok      github.com/maniartech/uexl/parser
+ok      github.com/maniartech/uexl/vm
 ```
 
 ### 📊 Performance Baseline
