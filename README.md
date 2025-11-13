@@ -86,41 +86,74 @@ This basic example demonstrates how to use UExL to evaluate simple arithmetic ex
 
 ## Features
 
+- **Excel-Compatible Operators**: Supports both traditional programming syntax (`**`, `!=`) and Excel-style operators (`^` for power, `<>` for not-equals)
+- **Lua-Style Bitwise Operators**: Use `~` for XOR and bitwise NOT operations
+- **Flexible Syntax**: Choose operator styles based on your background (Excel, Python, JavaScript, C, Lua)
+- **Pipe Operations**: Transform data using intuitive pipe syntax with operators like `|map:`, `|filter:`, `|reduce:`
+- **Type Safety**: Strong type checking with explicit error handling
+- **High Performance**: Zero-allocation VM handlers with optimized bytecode execution
+- **Comprehensive Testing**: 1,200+ tests ensuring correctness and reliability
+
 (List the key features of UExL.)
 
 ## Operator Precedence
 
-| Operators | Type             | Associativity   |
-|-----------|------------------|-----------------|
-| `(` `)`   | Parentheses      | Left to Right   |
-| `.`       | Dot              | Left to Right   |
-| `%`       | Modulus          | Left to Right   |
-| `*` `/`   | Multiplicative   | Left to Right   |
-| `+` `-`   | Additive         | Left to Right   |
-| `<<` `>>` | Bitwise Shift    | Left to Right   |
-| `<` `>` `<=` `>=` | Comparison | Left to Right |
-| `==` `!=` | Equality         | Left to Right   |
-| `&` `\|` `^` | Bitwise       | Left to Right   |
-| `&&` `\|\|` | Logical        | Left to Right   |
-| `\|:`     | Pipe             | Left to Right   |
+| Operators | Type             | Associativity   | Notes |
+|-----------|------------------|-----------------|-------|
+| `(` `)`   | Parentheses      | Left to Right   | |
+| `.` `[]` `?.` `?[]` | Access | Left to Right | Property/Index/Optional |
+| `**` `^`  | Power            | Right to Left   | Excel: `^`, Python/JS: `**` |
+| `-` `!` `~` (unary) | Unary | Right to Left | Negation, NOT, Bitwise NOT |
+| `%`       | Modulus          | Left to Right   | |
+| `*` `/`   | Multiplicative   | Left to Right   | |
+| `+` `-`   | Additive         | Left to Right   | |
+| `<<` `>>` | Bitwise Shift    | Left to Right   | |
+| `??`      | Nullish Coalescing | Left to Right | |
+| `<` `>` `<=` `>=` | Comparison | Left to Right | |
+| `==` `!=` `<>` | Equality    | Left to Right   | Excel: `<>`, C/Python/JS: `!=` |
+| `&`       | Bitwise AND      | Left to Right   | |
+| `~`       | Bitwise XOR      | Left to Right   | Lua-style |
+| `\|`      | Bitwise OR       | Left to Right   | |
+| `&&`      | Logical AND      | Left to Right   | |
+| `\|\|`    | Logical OR       | Left to Right   | |
+| `?:`      | Conditional      | Right to Left   | Ternary |
+| `\|:`     | Pipe             | Left to Right   | |
 
 ## Examples
 
 ```go
+// Basic arithmetic
+result, err := uexl.Eval("10 + 20")  // Returns 30
+
+// Power operators (both styles work)
+result, err := uexl.Eval("2 ^ 8")    // Excel style: Returns 256
+result, err := uexl.Eval("2 ** 8")   // Python/JS style: Returns 256
+
+// Bitwise operations
+result, err := uexl.Eval("5 ~ 3")    // XOR: Returns 6
+result, err := uexl.Eval("~5")       // NOT: Returns -6
+
+// Not-equals (both styles work)
+result, err := uexl.Eval("5 <> 3")   // Excel style: Returns true
+result, err := uexl.Eval("5 != 3")   // C/Python/JS style: Returns true
+
+// Pipe operations
 result, err := uexl.Eval("10 + 20 |: $1 * 2") // Returns 60
 
 if err != nil {
     log.Fatal(err)
 }
 
-exprc, err := uexl.Compile("10 + 20 |: abc * 2")
+// Compile and run with context
+exprc, err := uexl.Compile("base ^ 2 * rate")
 if err != nil {
     log.Fatal(err)
 }
 
-result, err := uexl.Run(exprc, map[]{
-  "abc": 30,
+result, err := uexl.Run(exprc, map[string]any{
+  "base": 10,
+  "rate": 2,
 })
 
-fmt.Println("Result:", result)
+fmt.Println("Result:", result)  // Output: Result: 200
 ```

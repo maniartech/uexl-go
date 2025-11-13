@@ -7,17 +7,17 @@ Understanding operator precedence is crucial for writing correct and predictable
 |------------|-------------|-------------|---------------|
 | 1 | `()` | Grouping | Left-to-right |
 | 2 | `.` `[]` `?.` `?[ ]` | Property/Index/Optional access (objects, arrays, strings) | Left-to-right |
-| 3 | `**` | Exponentiation/Power | Right-to-left |
-| 4 | `-` (unary), `!` | Negation, Logical NOT | Right-to-left |
+| 3 | `**` `^` | Exponentiation/Power | Right-to-left |
+| 4 | `-` (unary), `!`, `~` (unary) | Negation, Logical NOT, Bitwise NOT | Right-to-left |
 | 5 | `%` | Modulo | Left-to-right |
 | 6 | `*` `/` | Multiplication, Division | Left-to-right |
 | 7 | `+` `-` | Addition, Subtraction | Left-to-right |
 | 8 | `<<` `>>` | Bitwise Shift | Left-to-right |
 | 9 | `??` | Nullish coalescing | Left-to-right |
 | 10 | `<` `>` `<=` `>=` | Comparison | Left-to-right |
-| 11 | `==` `!=` | Equality (exact for primitives; deep for arrays/objects) | Left-to-right |
+| 11 | `==` `!=` `<>` | Equality (exact for primitives; deep for arrays/objects) | Left-to-right |
 | 12 | `&` | Bitwise AND | Left-to-right |
-| 13 | `^` | Bitwise XOR | Left-to-right |
+| 13 | `~` | Bitwise XOR | Left-to-right |
 | 14 | `|` | Bitwise OR | Left-to-right |
 | 15 | `&&` | Logical AND | Left-to-right |
 | 16 | `||` | Logical OR | Left-to-right |
@@ -58,12 +58,13 @@ You can chain any number of unary operators:
 
 All consecutive unary operators are evaluated right-to-left, meaning the rightmost operator is applied first.
 
-## Power Operator (`**`)
-The power operator has its own precedence level and is right-associative, which is important for mathematical correctness:
+## Power Operator (`**` and `^`)
+The power operator has two forms: `**` (Python/JavaScript style) and `^` (Excel style). Both have the same precedence and are right-associative, which is important for mathematical correctness:
 
 ### Right-Associativity of Power
 ```
 2**3**2      // Evaluates as 2**(3**2) = 2**9 = 512
+2^3^2        // Evaluates as 2^(3^2) = 2^9 = 512
              // NOT as (2**3)**2 = 8**2 = 64
 ```
 
@@ -71,20 +72,26 @@ The power operator has its own precedence level and is right-associative, which 
 The power operator has higher precedence than multiplication and also higher precedence than unary operators:
 ```
 2*3**2       // Evaluates as 2*(3**2) = 2*9 = 18
+2*3^2        // Evaluates as 2*(3^2) = 2*9 = 18
 -2**3        // Evaluates as -(2**3) = -8
+-2^3         // Evaluates as -(2^3) = -8
 (-2)**3      // Evaluates as (-2)**3 = -8
+(-2)^3       // Evaluates as (-2)^3 = -8
 ```
 
 ## Bitwise vs Logical Operations
 Note the distinction between bitwise and logical operators:
 ```
-5 ^ 3        // Bitwise XOR: 6 (binary: 101 ^ 011 = 110)
+5 ~ 3        // Bitwise XOR: 6 (binary: 101 ~ 011 = 110)
 5 ** 3       // Power: 125 (5 to the power of 3)
+5 ^ 3        // Power: 125 (Excel style)
 true && false // Logical AND: false
 5 & 3        // Bitwise AND: 1 (binary: 101 & 011 = 001)
+~5           // Bitwise NOT: -6 (binary: ~0101 = 1010 in two's complement)
 
 ## Equality notes
-- Only `==` and `!=` exist; there is no `===`/`!==`.
+- Only `==` and `!=`/`<>` exist; there is no `===`/`!==`.
+- Both `!=` and `<>` are equivalent not-equals operators (C/Python/JS style vs Excel style).
 - Equality is exact for primitives (no cross-type coercion) and deep for arrays/objects.
 - Use `!!x` to convert any value to a boolean via truthiness.
 - Use `??` and `?.` for nullish flows; equality does not treat "missing" specially.
@@ -125,8 +132,13 @@ x > 10 && y < 20 // Comparison before logical AND
 !!value          // Boolean conversion !(!(value))
 !-x              // NOT of negation: !(-(x))
 2**3**2          // 512: right-associative power 2**(3**2)
+2^3^2            // 512: right-associative power 2^(3^2)
 2*3**2           // 18: power before multiplication 2*(3**2)
-5 ^ 3            // 6: bitwise XOR
+2*3^2            // 18: power before multiplication 2*(3^2)
+5 ~ 3            // 6: bitwise XOR
+~5               // -6: bitwise NOT
+5 <> 3           // true: not equals (Excel style)
+5 != 3           // true: not equals (C/Python/JS style)
 "hello"[1]       // "e": string index access
 0 || 10          // 10: logical OR replaces falsy 0
 0 ?? 10          // 0: nullish keeps valid falsy 0

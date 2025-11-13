@@ -24,6 +24,11 @@
 - [Examples](examples.md)
 - [Using UExL in Golang](golang/overview.md)
 
+## Quick Start Guides
+
+- [Quick Start for Excel Users](uexl-for-excel-users.md)
+- [Quick Start for Python/JavaScript Users](uexl-for-python-js-users.md)
+
 ## Internals
 
 - [Tokenizer internals](internals/tokenizer-internals.md)

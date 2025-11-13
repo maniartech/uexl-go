@@ -11,13 +11,13 @@ Operators allow you to perform calculations, make decisions, and manipulate data
 - **Unary:** Operate on a single value, such as negation or logical NOT.
   - Example: `-x`, `!flag`, `--x` (numeric double negation), `!!value` (boolean conversion)
 - **Arithmetic:** Perform mathematical calculations.
-  - Example: `a + b`, `x - 1`, `y * 2`, `z / 3`, `n % 2`, `base**exponent`
+  - Example: `a + b`, `x - 1`, `y * 2`, `z / 3`, `n % 2`, `base**exponent`, `base^exponent`
 - **Bitwise:** Manipulate individual bits in numbers.
-  - Example: `a & b`, `x | y`, `n ^ m`, `~value`, `a << 2`, `b >> 1`
+  - Example: `a & b`, `x | y`, `n ~ m` (XOR), `~value` (NOT), `a << 2`, `b >> 1`
 - **Comparison:** Compare values for ordering.
   - Example: `x < 10`, `score >= 50`
 - **Equality:** Test if values are equal or not.
-  - Example: `a == b`, `x != y` (exact for primitives; deep for arrays/objects)
+  - Example: `a == b`, `x != y`, `x <> y` (exact for primitives; deep for arrays/objects)
 - **Logical:** Combine values by truthiness with short-circuiting.
   - Example: `x && y`, `a || b` (truthiness-based)
   - Nullish coalescing: `a ?? b` keeps valid falsy values and only falls back for nullish
@@ -37,8 +37,10 @@ user.age >= 18 ? "adult" : "minor"
 !!value  // Boolean conversion: !(!(value))
 // When special numeric literals are enabled:
 -Inf     // Unary minus applied to Inf (negative infinity)
-2**3     // Power operation: 8
-5 ^ 3    // XOR operation: 6
+2**3     // Power operation: 8 (Python/JavaScript style)
+2^3      // Power operation: 8 (Excel style)
+5 ~ 3    // XOR operation: 6 (Lua style)
+~5       // Bitwise NOT: -6
 0 || 10  // Logical OR (truthiness): 10 (replaces falsy 0)
 0 ?? 10  // Nullish: 0 (keeps valid falsy)
 user?.name ?? "Anonymous"  // Nullish-aware access and fallback
@@ -59,8 +61,12 @@ user.name == "Alice"
 --10         // Double negation
 !!false      // Boolean conversion
 !!!value     // Triple NOT
-2**8         // Power: 256
-7 ^ 3        // XOR: 4
+2**8         // Power: 256 (Python/JS style)
+2^8          // Power: 256 (Excel style)
+7 ~ 3        // XOR: 4
+~7           // NOT: -8
+5 <> 3       // Not equals: true (Excel style)
+5 != 3       // Not equals: true (C/Python/JS style)
 ```
 
 Understanding operators unlocks the full power of UExL expressions. In the next chapter, we'll dive into operator precedence and associativity.
