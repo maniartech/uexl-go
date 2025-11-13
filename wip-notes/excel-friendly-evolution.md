@@ -646,13 +646,13 @@ go test ./... -race
   func BenchmarkExcel_BitwiseNot(b *testing.B) {
       // Test ~ NOT operator performance
       runBenchmark(b, "~value", map[string]any{"value": 5.0})
-      // Target: <80 ns/op, 32B/4allocs (creates intermediate value)
+      // Target: <10 ns/op, 0 allocs (inline stack operation, must match other bitwise ops)
   }
 
   func BenchmarkExcel_NotEquals(b *testing.B) {
       // Test <> not-equals performance
       runBenchmark(b, "a <> b", map[string]any{"a": 5.0, "b": 3.0})
-      // Target: <50 ns/op, 0 allocs (boolean result)
+      // Target: <5 ns/op, 0 allocs (boolean result, already optimized)
   }
 
   func BenchmarkExcel_CaseInsensitive(b *testing.B) {
@@ -695,16 +695,21 @@ go test ./... -race
   ```
   Expected results (based on optimization patterns):
 
-  ✅ Power (^):        <100 ns/op, 32B/4allocs (creates value)
-  ✅ Bitwise XOR (~):  <120 ns/op, 32B/4allocs (similar to arithmetic)
-  ✅ Bitwise NOT (~):  <80 ns/op, 32B/4allocs (unary operation)
-  ✅ Not-equals (<>):  <50 ns/op, 0 allocs (boolean result)
-  ✅ Case literals:    Same as lowercase (no overhead)
+  ✅ Power (^):        <10 ns/op, 0 allocs (inline value operation)
+  ✅ Bitwise XOR (~):  <10 ns/op, 0 allocs (matches existing bitwise ops)
+  ✅ Bitwise NOT (~):  <10 ns/op, 0 allocs (unary bitwise operation)
+  ✅ Not-equals (<>):  <5 ns/op, 0 allocs (boolean result, already optimized)
 
-  If any operation is >20% slower than target:
+  CRITICAL: All operations MUST be zero allocations
+  - Use direct stack manipulation (no interface boxing)
+  - Use type-specific push methods (pushFloat64, pushBool)
+  - Profile confirms 0 B/op, 0 allocs/op
+
+  If any operation shows allocations or >20 ns/op:
   - Profile with -cpuprofile
   - Apply type-specific optimization pattern
-  - Verify using pushFloat64/pushBool/pushString
+  - Verify using pushFloat64/pushBool (not push(any))
+  - Check for interface boxing in hot path
   ```
 
 **Validation:**

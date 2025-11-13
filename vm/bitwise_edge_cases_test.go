@@ -24,7 +24,7 @@ func TestBitwiseEdgeCasesFloatToIntConversion(t *testing.T) {
 		{"42.9 & 7", "error"},   // Should error: non-integer operand
 		{"-42.9 & 7", "error"},  // Should error: non-integer operand
 		{"5.1 | 2.8", "error"},  // Should error: non-integer operand
-		{"10.7 ^ 3.2", "error"}, // Should error: non-integer operand
+		{"10.7 ~ 3.2", "error"}, // Should error: non-integer operand (changed from ^)
 
 		// Zero and edge cases
 		{"0.0 & 5", 0.0},
@@ -43,7 +43,7 @@ func TestBitwiseEdgeCasesFloatToIntConversion(t *testing.T) {
 			if tc.input == "5.1 | 2.8" {
 				tc.expected = "bitwise operations require integerish operands (no decimals), got 5.1 and 2.8"
 			}
-			if tc.input == "10.7 ^ 3.2" {
+			if tc.input == "10.7 ~ 3.2" { // changed from ^
 				tc.expected = "bitwise operations require integerish operands (no decimals), got 10.7 and 3.2"
 			}
 			errorTests = append(errorTests, tc)

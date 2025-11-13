@@ -259,15 +259,15 @@ func TestBitwiseOperations(t *testing.T) {
 	tests := []vmTestCase{
 		{"5 & 3", 1.0},             // 0101 & 0011 = 0001
 		{"5 | 3", 7.0},             // 0101 | 0011 = 0111
-		{"5 ^ 3", 6.0},             // 0101 ^ 0011 = 0110
+		{"5 ~ 3", 6.0},             // 0101 ~ 0011 = 0110 (changed from ^)
 		{"8 << 2", 32.0},           // 1000 << 2 = 100000
 		{"32 >> 3", 4.0},           // 100000 >> 3 = 100
 		{"15 & 7", 7.0},            // 1111 & 0111 = 0111
 		{"15 | 7", 15.0},           // 1111 | 0111 = 1111
-		{"15 ^ 7", 8.0},            // 1111 ^ 0111 = 1000
+		{"15 ~ 7", 8.0},            // 1111 ~ 0111 = 1000 (changed from ^)
 		{"1 << 4", 16.0},           // 0001 << 4 = 10000
 		{"16 >> 2", 4.0},           // 10000 >> 2 = 100
-		{"(5 & 3) | (2 ^ 1)", 3.0}, // (1) | (3) = 3
+		{"(5 & 3) | (2 ~ 1)", 3.0}, // (1) | (3) = 3 (changed from ^)
 	}
 	runVmTests(t, tests)
 
@@ -275,12 +275,36 @@ func TestBitwiseOperations(t *testing.T) {
 	errorTests := []vmTestCase{
 		{"5.5 & 3", "bitwise operations require integerish operands (no decimals), got 5.5 and 3"},
 		{"5 | 3.2", "bitwise operations require integerish operands (no decimals), got 5 and 3.2"},
-		{"5 ^ 3.8", "bitwise operations require integerish operands (no decimals), got 5 and 3.8"},
+		{"5 ~ 3.8", "bitwise operations require integerish operands (no decimals), got 5 and 3.8"}, // changed from ^
 		{"8.2 << 2", "bitwise operations require integerish operands (no decimals), got 8.2 and 2"},
 		{"32 >> 3.1", "bitwise operations require integerish operands (no decimals), got 32 and 3.1"},
 	}
 	runVmErrorTests(t, errorTests)
 }
+
+func TestUnaryBitwiseNot(t *testing.T) {
+	tests := []vmTestCase{
+		{"~0", -1.0},   // ~0000 = 1111...1111 (all bits set = -1 in two's complement)
+		{"~1", -2.0},   // ~0001 = 1111...1110 = -2
+		{"~5", -6.0},   // ~0101 = 1111...1010 = -6
+		{"~(-1)", 0.0}, // ~1111...1111 = 0000 = 0
+		{"~(-2)", 1.0}, // ~1111...1110 = 0001 = 1
+		{"~10", -11.0}, // ~1010 = ...10101 = -11
+		{"~~5", 5.0},   // Double NOT returns original value
+		{"~~(-1)", -1.0},
+		{"~(5 & 3)", -2.0}, // ~(0101 & 0011) = ~0001 = -2
+	}
+	runVmTests(t, tests)
+
+	// test for bitwise NOT with non-integer values should result in error
+	errorTests := []vmTestCase{
+		{"~5.5", "bitwise operations require integerish operands (no decimals), got 5.5"},
+		{"~3.2", "bitwise operations require integerish operands (no decimals), got 3.2"},
+		{"~(-1.5)", "bitwise operations require integerish operands (no decimals), got -1.5"},
+	}
+	runVmErrorTests(t, errorTests)
+}
+
 func TestBooleanLiterals(t *testing.T) {
 	tests := []vmTestCase{
 		{"true", true},

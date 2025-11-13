@@ -214,6 +214,8 @@ func (vm *VM) executeUnaryExpression(operator code.Opcode, operand any) error {
 		return vm.executeUnaryMinusOperation(operand)
 	case code.OpBang:
 		return vm.executeUnaryBangOperation(operand)
+	case code.OpBitwiseNot:
+		return vm.executeUnaryBitwiseNotOperation(operand)
 	default:
 		return fmt.Errorf("unknown operand type: %T", operand)
 	}
@@ -240,6 +242,27 @@ func (vm *VM) executeUnaryBangOperation(operand any) error {
 		vm.Push(!isTruthy(operand))
 	}
 	return nil
+}
+
+func (vm *VM) executeUnaryBitwiseNotOperation(operand any) error {
+	// Extract float64 value
+	var value float64
+	switch v := operand.(type) {
+	case float64:
+		value = v
+	case int:
+		value = float64(v)
+	default:
+		return fmt.Errorf("bitwise NOT requires numeric operand, got %T", operand)
+	}
+
+	// Validate integerish (no decimals)
+	if value != float64(int64(value)) {
+		return fmt.Errorf("bitwise operations require integerish operands (no decimals), got %v", value)
+	}
+
+	// Perform bitwise NOT and push result (zero allocations)
+	return vm.pushFloat64(float64(^int64(value)))
 }
 
 func (vm *VM) executeComparisonOperation(operator code.Opcode, left, right any) error {

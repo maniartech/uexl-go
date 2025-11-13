@@ -39,6 +39,11 @@ func TestNumberArithmetic(t *testing.T) {
 			code.Make(code.OpConstant, 1),
 			code.Make(code.OpPow),
 		}},
+		{"2 ^ 3", []any{2.0, 3.0}, []code.Instructions{ // Excel-compatible power operator
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpConstant, 1),
+			code.Make(code.OpPow),
+		}},
 		{"1 + 2 * 3", []any{1.0, 2.0, 3.0}, []code.Instructions{
 			code.Make(code.OpConstant, 0),
 			code.Make(code.OpConstant, 1),
@@ -124,6 +129,11 @@ func TestBooleanLiteralsAndOperations(t *testing.T) {
 			code.Make(code.OpFalse),
 			code.Make(code.OpNotEqual),
 		}},
+		{"1 <> 2", []any{1.0, 2.0}, []code.Instructions{ // Excel-compatible not-equals
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpConstant, 1),
+			code.Make(code.OpNotEqual),
+		}},
 		{"!true == false", []any{}, []code.Instructions{
 			code.Make(code.OpTrue),
 			code.Make(code.OpBang),
@@ -171,15 +181,15 @@ func TestBitwiseOperators(t *testing.T) {
 			code.Make(code.OpConstant, 1),
 			code.Make(code.OpBitwiseOr),
 		}},
-		{"5 ^ 6", []any{5.0, 6.0}, []code.Instructions{
+		{"5 ~ 6", []any{5.0, 6.0}, []code.Instructions{ // Changed from ^ to ~ for XOR
 			code.Make(code.OpConstant, 0),
 			code.Make(code.OpConstant, 1),
 			code.Make(code.OpBitwiseXor),
 		}},
-		// {"~7", []any{7.0}, []code.Instructions{
-		// 	code.Make(code.OpConstant, 0),
-		// 	code.Make(code.OpBitwiseNot),
-		// }},
+		{"~7", []any{7.0}, []code.Instructions{ // Unary NOT now works
+			code.Make(code.OpConstant, 0),
+			code.Make(code.OpBitwiseNot),
+		}},
 		{"8 << 2", []any{8.0, 2.0}, []code.Instructions{
 			code.Make(code.OpConstant, 0),
 			code.Make(code.OpConstant, 1),
@@ -191,7 +201,7 @@ func TestBitwiseOperators(t *testing.T) {
 			code.Make(code.OpShiftRight),
 		}},
 		// Complex equations
-		{"(1 & 2) | (3 ^ 4)", []any{1.0, 2.0, 3.0, 4.0}, []code.Instructions{
+		{"(1 & 2) | (3 ~ 4)", []any{1.0, 2.0, 3.0, 4.0}, []code.Instructions{ // Changed ^ to ~ for XOR
 			code.Make(code.OpConstant, 0),
 			code.Make(code.OpConstant, 1),
 			code.Make(code.OpBitwiseAnd),
@@ -219,7 +229,7 @@ func TestBitwiseOperators(t *testing.T) {
 			code.Make(code.OpShiftRight),
 			code.Make(code.OpBitwiseAnd),
 		}},
-		{"((1 | 2) & 3) ^ (4 << 1)", []any{1.0, 2.0, 3.0, 4.0, 1.0}, []code.Instructions{
+		{"((1 | 2) & 3) ~ (4 << 1)", []any{1.0, 2.0, 3.0, 4.0, 1.0}, []code.Instructions{ // Changed ^ to ~ for XOR
 			code.Make(code.OpConstant, 0),
 			code.Make(code.OpConstant, 1),
 			code.Make(code.OpBitwiseOr),
@@ -585,9 +595,9 @@ func TestPipeExpression(t *testing.T) {
 	cases := []compilerTestCase{
 		// Single pipe expression: only one OpPipe emitted; predicate captured in InstructionBlock constant
 		{`[1,2] |map: $item * 2`, []any{1.0, 2.0, "map", 2.0, nil}, []code.Instructions{
-			code.Make(code.OpConstant, 0), // 1.0
-			code.Make(code.OpConstant, 1), // 2.0
-			code.Make(code.OpArray, 2),    // build initial array
+			code.Make(code.OpConstant, 0),   // 1.0
+			code.Make(code.OpConstant, 1),   // 2.0
+			code.Make(code.OpArray, 2),      // build initial array
 			code.Make(code.OpPipe, 2, 0, 4), // pipeTypeIdx=2 ("map"), aliasIdx=0 (""), blockIdx=4 (InstructionBlock)
 		}},
 		// Multiple pipes: two OpPipe instructions, each with its own block constants

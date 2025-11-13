@@ -122,8 +122,8 @@ func (c *Compiler) Compile(node parser.Node) error {
 			c.emit(code.OpMod)
 		case "==":
 			c.emit(code.OpEqual)
-		case "!=":
-			c.emit(code.OpNotEqual)
+		case "!=", "<>":
+			c.emit(code.OpNotEqual) // <> is Excel-compatible alias
 		case ">", "<":
 			c.emit(code.OpGreaterThan)
 		case ">=", "<=":
@@ -133,7 +133,9 @@ func (c *Compiler) Compile(node parser.Node) error {
 		case "|":
 			c.emit(code.OpBitwiseOr)
 		case "^":
-			c.emit(code.OpBitwiseXor)
+			c.emit(code.OpPow) // Changed from OpBitwiseXor - Excel compatibility
+		case "~":
+			c.emit(code.OpBitwiseXor) // Moved from ^ - Lua-style context-dependent
 		case "<<":
 			c.emit(code.OpShiftLeft)
 		case ">>":

@@ -144,7 +144,7 @@ func (vm *VM) run() error {
 				return err
 			}
 			frame.ip += 1
-		case code.OpMinus, code.OpBang:
+		case code.OpMinus, code.OpBang, code.OpBitwiseNot:
 			operand := vm.Pop()
 			err := vm.executeUnaryExpression(opcode, operand)
 			if err != nil {

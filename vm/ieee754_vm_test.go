@@ -160,8 +160,8 @@ func TestIEEE754BitwiseErrors(t *testing.T) {
 		{"1 & NaN", "bitwise requires finite integers"},
 		{"Inf | 1", "bitwise requires finite integers"},
 		{"1 | Inf", "bitwise requires finite integers"},
-		{"NaN ^ 1", "bitwise requires finite integers"},
-		{"1 ^ NaN", "bitwise requires finite integers"},
+		{"NaN ~ 1", "bitwise requires finite integers"}, // changed from ^
+		{"1 ~ NaN", "bitwise requires finite integers"}, // changed from ^
 		{"Inf << 1", "bitwise requires finite integers"},
 		{"1 << Inf", "bitwise requires finite integers"},
 		{"NaN >> 1", "bitwise requires finite integers"},
