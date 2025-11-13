@@ -1,20 +1,17 @@
-# UExL Performance Documentation
+# UExL Documentation
 
 ## Overview
 
-This directory contains essential documentation about UExL's **zero-allocation architecture** and **performance optimization strategies**. These documents explain how UExL achieved industry-leading performance while maintaining type safety and zero panics.
+This directory contains user-facing documentation and design documentation.
 
-## Quick Navigation
+## Documentation Structure
 
-### 🚀 **Start Here**
-- **[development-guidelines.md](development-guidelines.md)** - **CRITICAL RULES** for maintaining zero allocations
-- **[performance-optimization.md](performance-optimization.md)** - Complete optimization journey from 266ns to 227ns
+### Design Documentation
+- **[../designdocs/value-migration/](../designdocs/value-migration/)** - Zero-allocation architecture (completed)
+- **[../designdocs/performance/](../designdocs/performance/)** - Comprehensive optimization plan (100+ targets, future work)
 
-### 🏗️ **Architecture Deep Dives**
-- **[value-type-system.md](value-type-system.md)** - The Value struct and why it enables zero allocations
-
-### 📚 **Additional Resources**
-- **[../designdocs/performance/](../designdocs/performance/)** - Comprehensive optimization plan for future work (100+ targets)
+### Topic-Specific Documentation
+- **[handling-nullish-col.md](handling-nullish-col.md)** - Nullish coalescing semantics
 
 ---
 
