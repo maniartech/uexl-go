@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/maniartech/uexl_go/code"
-	"github.com/maniartech/uexl_go/compiler"
-	"github.com/maniartech/uexl_go/parser"
-	"github.com/maniartech/uexl_go/types"
+	"github.com/maniartech/uexl/code"
+	"github.com/maniartech/uexl/compiler"
+	"github.com/maniartech/uexl/parser"
+	"github.com/maniartech/uexl/types"
 )
 
 func parse(input string) parser.Node {

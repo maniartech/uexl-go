@@ -3,7 +3,7 @@ package compiler
 import (
 	"testing"
 
-	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl/parser"
 )
 
 func TestCompiler_compileShortCircuitChain_empty(t *testing.T) {

@@ -3,7 +3,7 @@ package uexl_go
 import (
 	"testing"
 
-	"github.com/maniartech/uexl_go/vm"
+	"github.com/maniartech/uexl/vm"
 )
 
 // Benchmark data generators for pipe operations

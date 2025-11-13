@@ -3,7 +3,7 @@ package uexl_go
 import (
 	"testing"
 
-	"github.com/maniartech/uexl_go/vm"
+	"github.com/maniartech/uexl/vm"
 )
 
 // Micro-benchmarks to verify zero-allocation primitive operations

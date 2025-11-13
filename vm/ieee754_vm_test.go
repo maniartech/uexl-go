@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maniartech/uexl_go/compiler"
-	"github.com/maniartech/uexl_go/parser"
-	"github.com/maniartech/uexl_go/vm"
+	"github.com/maniartech/uexl/compiler"
+	"github.com/maniartech/uexl/parser"
+	"github.com/maniartech/uexl/vm"
 )
 
 // TestIEEE754Arithmetic tests arithmetic operations with NaN and Inf values

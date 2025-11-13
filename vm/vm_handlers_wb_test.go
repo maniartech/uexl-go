@@ -3,7 +3,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/maniartech/uexl_go/code"
+	"github.com/maniartech/uexl/code"
 )
 
 func TestGetContextValue_NilContext(t *testing.T) {

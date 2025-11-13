@@ -3,7 +3,7 @@ package compiler
 import (
 	"testing"
 
-	"github.com/maniartech/uexl_go/types"
+	"github.com/maniartech/uexl/types"
 )
 
 func TestNewCompiler(t *testing.T) {

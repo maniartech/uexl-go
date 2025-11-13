@@ -3,7 +3,7 @@ package parser_test
 import (
 	"testing"
 
-	p "github.com/maniartech/uexl_go/parser"
+	p "github.com/maniartech/uexl/parser"
 	"github.com/stretchr/testify/assert"
 )
 

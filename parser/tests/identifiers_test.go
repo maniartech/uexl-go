@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maniartech/uexl_go/parser"
-	"github.com/maniartech/uexl_go/parser/constants"
+	"github.com/maniartech/uexl/parser"
+	"github.com/maniartech/uexl/parser/constants"
 	"github.com/stretchr/testify/assert"
 )
 

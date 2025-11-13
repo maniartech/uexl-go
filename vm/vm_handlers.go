@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/maniartech/uexl_go/code"
+	"github.com/maniartech/uexl/code"
 )
 
 func (vm *VM) getContextValue(name string) (any, error) {

@@ -1,4 +1,4 @@
-module github.com/maniartech/uexl_go
+module github.com/maniartech/uexl
 
 go 1.22
 

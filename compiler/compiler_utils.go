@@ -3,9 +3,9 @@ package compiler
 import (
 	"encoding/binary"
 
-	"github.com/maniartech/uexl_go/code"
-	"github.com/maniartech/uexl_go/parser"
-	"github.com/maniartech/uexl_go/types"
+	"github.com/maniartech/uexl/code"
+	"github.com/maniartech/uexl/parser"
+	"github.com/maniartech/uexl/types"
 )
 
 func (c *Compiler) currentInstructions() code.Instructions {

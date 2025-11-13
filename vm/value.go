@@ -1,6 +1,6 @@
 package vm
 
-import "github.com/maniartech/uexl_go/types"
+import "github.com/maniartech/uexl/types"
 
 // Re-export Value and related types from types package for backward compatibility
 type Value = types.Value

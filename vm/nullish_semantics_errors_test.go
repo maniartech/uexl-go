@@ -3,9 +3,9 @@ package vm_test
 import (
 	"testing"
 
-	"github.com/maniartech/uexl_go/compiler"
-	"github.com/maniartech/uexl_go/parser"
-	"github.com/maniartech/uexl_go/vm"
+	"github.com/maniartech/uexl/compiler"
+	"github.com/maniartech/uexl/parser"
+	"github.com/maniartech/uexl/vm"
 )
 
 // runVmExpectError compiles and runs the expression and expects a non-nil error.

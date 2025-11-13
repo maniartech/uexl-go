@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/maniartech/uexl_go/code"
-	"github.com/maniartech/uexl_go/compiler"
+	"github.com/maniartech/uexl/code"
+	"github.com/maniartech/uexl/compiler"
 )
 
 // tryFastMapArithmetic detects and optimizes simple arithmetic patterns like $item * 2

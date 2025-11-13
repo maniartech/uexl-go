@@ -3,7 +3,7 @@ package uexl_go
 import (
 	"testing"
 
-	"github.com/maniartech/uexl_go/vm"
+	"github.com/maniartech/uexl/vm"
 )
 
 // Benchmark ONLY constant loading to verify zero allocations

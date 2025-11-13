@@ -3,8 +3,8 @@ package vm
 import (
 	"fmt"
 
-	"github.com/maniartech/uexl_go/code"
-	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl/code"
+	"github.com/maniartech/uexl/parser"
 )
 
 const StackSize = 1024

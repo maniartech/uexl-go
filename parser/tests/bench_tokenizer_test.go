@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	p "github.com/maniartech/uexl_go/parser"
-	"github.com/maniartech/uexl_go/parser/constants"
+	p "github.com/maniartech/uexl/parser"
+	"github.com/maniartech/uexl/parser/constants"
 )
 
 // runBench runs the tokenizer over the entire input once per iteration and reports allocs and bytes.

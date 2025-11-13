@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl/parser"
 )
 
 func TestPlayground(t *testing.T) {

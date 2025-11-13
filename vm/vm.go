@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/maniartech/uexl_go/code"
-	"github.com/maniartech/uexl_go/compiler"
+	"github.com/maniartech/uexl/code"
+	"github.com/maniartech/uexl/compiler"
 )
 
 func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode, contextVarsValues map[string]any) {

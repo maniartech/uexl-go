@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl/parser"
 )
 
 func demonstratePanicFixes() {

@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/maniartech/uexl_go/compiler"
-	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl/compiler"
+	"github.com/maniartech/uexl/parser"
 )
 
 // TestIEEE754CompilerConstantFolding tests that the compiler correctly handles

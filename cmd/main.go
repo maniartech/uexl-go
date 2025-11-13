@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/maniartech/uexl_go/internal/utils"
-	"github.com/maniartech/uexl_go/parser"
+	"github.com/maniartech/uexl/internal/utils"
+	"github.com/maniartech/uexl/parser"
 )
 
 // for testing purpose
