@@ -1,9 +1,9 @@
 # UExL System-Wide Optimization Scope
 
-> **Complete Inventory of 100+ Optimization Targets**
+> **Complete Inventory of Optimization Targets — Audited Against Source Code**
 
-**Last Updated:** October 17, 2025
-**Status:** Planning Phase Complete - Ready for Systematic Implementation
+**Last Updated:** February 28, 2026
+**Status:** ~53% Complete — Many optimizations implemented but were undocumented
 
 ---
 
@@ -23,52 +23,55 @@ This is **NOT** a targeted optimization of specific operators. This is a **COMPR
 
 | Category | Targets | Optimized | Remaining | Progress |
 |----------|---------|-----------|-----------|----------|
-| **VM Core** | 6 components | 2 ✅ | 4 🔴 | 33% |
-| **Operators** | 6 categories | 1 ✅ | 5 🔴 | 17% |
+| **VM Core** | 6 components | 4 ✅ | 2 🔴 | 67% |
+| **Operators** | 6 categories | 3 ✅ | 3 🔴 | 50% |
 | **Index/Access** | 4 operations | 0 | 4 🔴 | 0% |
-| **Pipes** | 11 handlers | 1 ✅ | 10 🔴 | 9% |
-| **Built-ins** | 50+ functions | 0 | 50+ 🔴 | 0% |
-| **Type System** | 4 operations | 0 | 4 🔴 | 0% |
-| **Memory Mgmt** | 6 components | 1 ✅ | 5 🔴 | 17% |
-| **Compiler** | 5 optimizations | 0 | 5 🟡 | 0% |
-| **Control Flow** | 5 opcodes | 0 | 5 🔴 | 0% |
+| **Pipes** | 12 handlers | 11 ✅ | 1 🔴 | 92% |
+| **Built-ins** | 5 functions | 0 | 5 🔴 | 0% |
+| **Type System** | 4 operations | 2 ✅ | 2 🔴 | 50% |
+| **Memory Mgmt** | 6 components | 3 ✅ | 3 🔴 | 50% |
+| **Compiler** | 5 optimizations | 2 ✅ | 3 🟡 | 40% |
+| **Control Flow** | 5 opcodes | 4 ✅ | 1 🔴 | 80% |
 | **Special Ops** | 6 operations | 0 | 6 🔴 | 0% |
-| **TOTAL** | **100+** | **5** | **95+** | **~5%** |
+| **TOTAL** | **~55** | **~29** | **~26** | **~53%** |
 
-### **Current Performance Baseline**
+### **Current Performance Baseline** (from `root_bench_phase1_fixed.txt`)
 
 ```
-Boolean expressions:     62 ns/op   0 allocs   ✅ OPTIMIZED
-Arithmetic operations:   ~80 ns/op  0 allocs   🔴 NOT OPTIMIZED
-String operations:       ~100 ns/op 0 allocs   🔴 NOT OPTIMIZED
-Pipe operations (map):   ~1000 ns/op 0 allocs  ✅ OPTIMIZED
-Pipe operations (other): ~1500 ns/op 0 allocs  🔴 NOT OPTIMIZED
-Array indexing:          ~50 ns/op  0 allocs   🔴 NOT OPTIMIZED
-Function calls:          varies     varies     🔴 NOT OPTIMIZED
+Boolean expressions:     75.84 ns/op   0 B/op    0 allocs   ✅ OPTIMIZED
+String compare:          56.72 ns/op   0 B/op    0 allocs   ✅ OPTIMIZED
+String concat:           79.71 ns/op   32 B/op   2 allocs   🟡 PARTIAL (inner path typed, dispatch still boxed)
+Arithmetic operations:   131.5 ns/op   32 B/op   4 allocs   🔴 NOT OPTIMIZED (dispatch path uses Pop→any)
+Map pipe (100 elems):    2,204 ns/op   2,616 B/op 102 allocs ✅ Scope/frame reuse done
+Filter pipe (100 elems): 4,509 ns/op   2,280 B/op 10 allocs  ✅ Scope/frame reuse done
+Reduce pipe (100 elems): 5,093 ns/op   896 B/op  102 allocs  ✅ Scope/frame reuse done
+Sort pipe (100 elems):   31,655 ns/op  5,472 B/op 8 allocs   ✅ Scope/frame reuse done
+Compilation Boolean:     6,125 ns/op   2,352 B/op 70 allocs  🔴 NOT OPTIMIZED (one-time cost)
 ```
 
 **Competitive Position:**
-- ✅ Boolean: **41% faster** than expr (105ns), **51% faster** than cel-go (127ns)
-- 🔴 Other operations: **NOT YET BENCHMARKED** against competitors
+- ✅ Boolean: **28% faster** than expr (105ns), **40% faster** than cel-go (127ns)
+- ✅ String compare: **46% faster** than expr, **55% faster** than cel-go
+- 🔴 Arithmetic: slower than expr due to boxing overhead in dispatch path
 
 ---
 
 ## 🗂️ Complete Optimization Inventory
 
-### **1. VM Core Operations** (`vm/vm.go`)
+### **1. VM Core Operations** (`vm/vm.go`, `vm/vm_utils.go`)
 
 **Priority:** 🔴 CRITICAL - Affects ALL operations
 
 | # | Component | Current State | Optimization Target | Impact | Status |
 |---|-----------|---------------|---------------------|--------|--------|
-| 1.1 | **Instruction dispatch loop** | Switch-based opcode handling | Jump table or type-specialized dispatch | HIGH | 🔴 TODO |
-| 1.2 | **Stack operations** | Push/Pop with bounds checking | Inline hot paths, eliminate redundant checks | HIGH | 🔴 TODO |
-| 1.3 | **Frame management** | pushFrame/popFrame overhead | Frame pooling with sync.Pool | MEDIUM | 🔴 TODO |
-| 1.4 | **Constant loading** | Map lookup + type assertion | Direct typed access, pre-cast constants | MEDIUM | 🔴 TODO |
-| 1.5 | **Context variable caching** | Array-based cache (optimized) | - | - | ✅ DONE |
-| 1.6 | **Cache invalidation** | Pointer comparison (optimized) | - | - | ✅ DONE |
+| 1.1 | **Instruction dispatch loop** | Switch-based opcode handling in `run()` | Jump table (limited by Go) or superinstructions | HIGH | 🔴 TODO |
+| 1.2 | **Stack operations** | Type-specific `pushFloat64()`, `pushString()`, `pushBool()`, `pushValue()` exist alongside generic `Push(any)`. Comparisons use `pop2Values()` returning `Value`. | Eliminate remaining `Push(any)`/`Pop()` calls from hot paths (arithmetic, logical, string ops still use boxed Pop) | MEDIUM | 🟡 PARTIAL |
+| 1.3 | **Frame management** | `NewFrame()` heap-allocates per call. Frame 0 reused across `Run()`. Pipe handlers reuse frame object (reset ip/basePointer). No `sync.Pool`. | Frame pooling with sync.Pool for non-base frames | MEDIUM | 🔴 TODO |
+| 1.4 | **Constant loading** | Constants pool is `[]types.Value` (typed). Loaded via `vm.constants[constIndex]` direct array access → `pushValue()`. Zero allocation for primitives. | — Already optimized | — | ✅ DONE |
+| 1.5 | **Context variable caching** | Pre-resolved `[]Value` cache with O(1) array access | — | — | ✅ DONE |
+| 1.6 | **Cache invalidation** | `reflect.ValueOf().Pointer()` comparison + length check | — | — | ✅ DONE |
 
-**Expected Gain:** 10-20% improvement across ALL operations
+**Remaining gain:** 5-10% from eliminating `Push(any)`/`Pop()` on hot paths + frame pooling
 
 ---
 
@@ -76,16 +79,18 @@ Function calls:          varies     varies     🔴 NOT OPTIMIZED
 
 **Priority:** 🟡 HIGH - Direct user impact
 
-| # | Operator Category | Functions | Current Issue | Target Pattern | Impact | Status |
-|---|-------------------|-----------|---------------|----------------|--------|--------|
-| 2.1 | **Arithmetic** | `executeBinaryArithmeticOperation` | Accepts `any`, type assertions inside | Type-specific: `executeNumberArithmetic(op, l float64, r float64)` | HIGH | 🔴 TODO |
-| 2.2 | **Comparison** | `executeNumberComparisonOperation`, `executeStringComparisonOperation`, `executeBooleanComparisonOperation` | ✅ Already type-specific | - | - | ✅ DONE |
-| 2.3 | **Logical** | `executeBinaryExpression` (&&, \|\|) | Generic dispatch | Boolean-specific shortcuts | MEDIUM | 🔴 TODO |
-| 2.4 | **Bitwise** | Embedded in `executeBinaryExpression` | Not separated, `any` types | `executeBitwiseOperation(op, l int64, r int64)` | LOW | 🔴 TODO |
-| 2.5 | **String** | `executeStringBinaryOperation`, `executeStringConcat` | Accepts `any`, type assertions | `executeStringAddition(l string, r string)` | MEDIUM | 🔴 TODO |
-| 2.6 | **Unary** | `executeUnaryMinusOperation`, `executeUnaryBangOperation` | Accepts `any`, type assertions | `executeNumberNegate(v float64)`, `executeBooleanNegate(v bool)` | LOW | 🔴 TODO |
+| # | Operator Category | Current State | Remaining Work | Impact | Status |
+|---|-------------------|---------------|----------------|--------|--------|
+| 2.1 | **Arithmetic** | Inner path IS type-specific: `executeNumberArithmetic(op, left float64, right float64)` at L72 uses `pushFloat64()`. **But** dispatch from `run()` still calls `vm.Pop()` → `executeBinaryExpression(op, left any, right any)` → type switch → typed handler. | Bypass `Pop()→any` path: use `pop2Values()` in `run()` for `OpAdd`/`OpSub`/`OpMul`/`OpDiv` like comparisons do | HIGH | 🟡 PARTIAL |
+| 2.2 | **Comparison** | Fully optimized: `executeComparisonOperationValues(op, Value, Value)` at L199 dispatches by `Value.Typ`. Uses `pop2Values()` — zero alloc. | Minor: `executeBooleanComparisonOperation` uses `vm.Push` (boxed) instead of `pushBool` at L179 | — | ✅ DONE |
+| 2.3 | **Logical** | Inner handler is typed: `executeBooleanBinaryOperation(op, bool, bool)` at L137 uses `pushBool`. Short-circuit paths use `isTruthyValue()`. But run loop dispatches through `vm.Pop()` → `executeBinaryExpression`. | Route logical ops through `pop2Values()` in `run()` | MEDIUM | 🟡 PARTIAL |
+| 2.4 | **Bitwise** | Inside `executeNumberArithmetic` which receives `float64` directly. Operands are typed. | Only reached through `any` dispatch path — same fix as 2.1 | LOW | 🟡 PARTIAL |
+| 2.5 | **String** | Inner path exists: `executeStringAddition(left, right string)` at L120 uses `pushString()`. Also `executeStringConcat(count)` at L290 with `strings.Builder` for 3+ strings. | Still reached through `any` dispatch. `executeStringConcat` pops via `vm.Pop()` (boxed). | MEDIUM | 🟡 PARTIAL |
+| 2.6 | **Unary** | `executeUnaryMinusOperation(any)`, `executeUnaryBangOperation(any)`, `executeUnaryBitwiseNotOperation(any)` all take `any`. `executeUnaryBitwiseNotOperation` uses `pushFloat64` (good); the other two use `vm.Push` (boxed). | Create typed unary handlers + bypass `Pop()` in run loop | LOW | 🔴 TODO |
 
-**Expected Gain:** 5-15% per operator category
+**Key bottleneck:** The outer dispatch path. All typed inner handlers exist but are reached through `executeBinaryExpression(op, left any, right any)`. The fix is to use `pop2Values()` in the run loop for arithmetic/logical/string ops (same pattern already used by comparisons).
+
+**Expected Gain:** 15-25% for arithmetic (131ns with 4 allocs → target ~80ns with 0 allocs)
 
 ---
 
@@ -106,111 +111,76 @@ Function calls:          varies     varies     🔴 NOT OPTIMIZED
 
 ### **4. Pipe Operations** (`vm/pipes.go`)
 
-**Priority:** 🟡 HIGH - User-visible feature
+**Priority:** ✅ LARGELY COMPLETE
 
-| # | Pipe Handler | Current State | Optimization Needed | Impact | Status |
-|---|--------------|---------------|---------------------|--------|--------|
-| 4.1 | `MapPipeHandler` | ✅ Scope/frame reuse implemented | - | - | ✅ DONE |
-| 4.2 | `FilterPipeHandler` | Creates new scope per iteration | Apply scope reuse pattern from Map | HIGH | 🔴 TODO |
-| 4.3 | `ReducePipeHandler` | Creates new scope per iteration | Apply scope reuse pattern from Map | HIGH | 🔴 TODO |
-| 4.4 | `FindPipeHandler` | Creates new scope per iteration | Apply scope reuse pattern from Map | MEDIUM | 🔴 TODO |
-| 4.5 | `SomePipeHandler` | Creates new scope per iteration | Apply scope reuse pattern from Map | MEDIUM | 🔴 TODO |
-| 4.6 | `EveryPipeHandler` | Creates new scope per iteration | Apply scope reuse pattern from Map | MEDIUM | 🔴 TODO |
-| 4.7 | `UniquePipeHandler` | Standard implementation | Optimize deduplication logic | LOW | 🔴 TODO |
-| 4.8 | `SortPipeHandler` | Standard implementation | Optimize comparator function calls | LOW | 🔴 TODO |
-| 4.9 | `GroupByPipeHandler` | Standard implementation | Optimize key extraction & grouping | MEDIUM | 🔴 TODO |
-| 4.10 | `WindowPipeHandler` | Standard implementation | Optimize window creation & iteration | LOW | 🔴 TODO |
-| 4.11 | `ChunkPipeHandler` | Standard implementation | Optimize chunk allocation | LOW | 🔴 TODO |
+All iterating pipe handlers now use the optimized pattern: push one scope via `pushPipeScope()`, create one frame via `NewFrame()`, reset frame per iteration. The `pipeFastScope` struct (defined in `vm/vm_utils.go`) provides direct field access for `$item`, `$index`, `$acc`, `$window`, `$chunk`, `$last` — bypassing map overhead for common pipe variables.
 
-**Expected Gain:** 15-30% for pipe operations (1500ns → 1000ns target)
+| # | Pipe Handler | Scope/Frame Reuse | Notes | Status |
+|---|--------------|-------------------|-------|--------|
+| 4.1 | `DefaultPipeHandler` (L46) | N/A — single execution, not iterating | — | ✅ OK |
+| 4.2 | `MapPipeHandler` (L62) | ✅ Yes | Also has `tryFastMapArithmetic` fast path (hardcoded for `$item * 2.0` benchmark — should be removed or generalized) | ✅ DONE |
+| 4.3 | `FilterPipeHandler` (L101) | ✅ Yes | — | ✅ DONE |
+| 4.4 | `ReducePipeHandler` (L143) | ✅ Yes | — | ✅ DONE |
+| 4.5 | `FindPipeHandler` (L185) | ✅ Yes | — | ✅ DONE |
+| 4.6 | `SomePipeHandler` (L222) | ✅ Yes | — | ✅ DONE |
+| 4.7 | `EveryPipeHandler` (L262) | ✅ Yes | — | ✅ DONE |
+| 4.8 | `UniquePipeHandler` (L301) | N/A — no predicate block | Uses `fmt.Sprintf` for key generation (allocates). Only pipe without iteration block. | 🔴 TODO |
+| 4.9 | `SortPipeHandler` (L318) | ✅ Yes | — | ✅ DONE |
+| 4.10 | `GroupByPipeHandler` (L366) | ✅ Yes | — | ✅ DONE |
+| 4.11 | `WindowPipeHandler` (L404) | ✅ Yes | — | ✅ DONE |
+| 4.12 | `ChunkPipeHandler` (L443) | ✅ Yes | — | ✅ DONE |
+| 4.13 | `FlatMapPipeHandler` (L483) | ✅ Yes | Not in previous inventory | ✅ DONE |
+
+**NOTE:** `pushPipeScope()` still allocates a `map[string]any` even when only fast-path variables (`$item`, `$index`, etc.) are used via `pipeFastScope`. The map goes unused for simple pipes — could be lazily allocated.
+
+**Remaining gain:** Minimal for scope/frame reuse (already done). Lazy map allocation in `pushPipeScope` could save ~96 bytes/pipe call.
 
 ---
 
 ### **5. Built-in Functions** (`vm/builtins.go`)
 
-**Priority:** 🟠 MEDIUM - 50+ functions to optimize
+**Priority:** 🟠 MEDIUM - Only 5 functions currently exist
 
-#### **5.1 String Functions** (16 functions)
+> **IMPORTANT:** Only 5 built-in functions are currently implemented in the codebase. The previous version of this document listed 50+ functions — most don't exist yet. Unimplemented functions belong in a **feature implementation** tracker, not an optimization document.
 
-| Function | Current Implementation | Optimization Target | Status |
-|----------|------------------------|---------------------|--------|
-| `len()` | Type assertion per call | Inline or type-specific | 🔴 TODO |
-| `substr()` | Type assertions + bounds checks | Pre-check types, optimize bounds | 🔴 TODO |
-| `indexOf()` | Generic string search | Use stdlib optimized `strings.Index` | 🔴 TODO |
-| `lastIndexOf()` | Generic string search | Use stdlib optimized `strings.LastIndex` | 🔴 TODO |
-| `contains()` | Type assertions | Inline with `strings.Contains` | 🔴 TODO |
-| `startsWith()` | Type assertions | Inline with `strings.HasPrefix` | 🔴 TODO |
-| `endsWith()` | Type assertions | Inline with `strings.HasSuffix` | 🔴 TODO |
-| `toLowerCase()` | Type assertions | Inline with `strings.ToLower` | 🔴 TODO |
-| `toUpperCase()` | Type assertions | Inline with `strings.ToUpper` | 🔴 TODO |
-| `trim()` | Type assertions | Inline with `strings.TrimSpace` | 🔴 TODO |
-| `trimStart()` | Type assertions | Inline with `strings.TrimLeft` | 🔴 TODO |
-| `trimEnd()` | Type assertions | Inline with `strings.TrimRight` | 🔴 TODO |
-| `replace()` | Type assertions | Use `strings.ReplaceAll` | 🔴 TODO |
-| `split()` | Type assertions + allocation | Pre-allocate result slice if possible | 🔴 TODO |
-| `join()` | Type assertions + concatenation | Use `strings.Builder` | 🔴 TODO |
-| `repeat()` | Type assertions | Use `strings.Repeat` | 🔴 TODO |
+#### **5.1 Existing Functions** (all use `args ...any` signature, unoptimized)
 
-#### **5.2 Array Functions** (10 functions)
+| Function | Line | Current Implementation | Optimization Target | Status |
+|----------|------|------------------------|---------------------|--------|
+| `len()` | L18 | Type assertion per call, returns via `any` | Accept `Value` args, inline for arrays/strings | 🔴 TODO |
+| `substr()` | L32 | Type assertions + bounds checks + rune conversion | Accept typed args, cache rune conversion | 🔴 TODO |
+| `contains()` | L52 | Type assertions, delegates to `strings.Contains` | Accept typed args, eliminate assertion | 🔴 TODO |
+| `set()` | L64 | Type assertions for map/key/value | Accept typed args | 🔴 TODO |
+| `str()` | L93 | Type switch for conversion | Accept `Value` arg | 🔴 TODO |
 
-| Function | Current Implementation | Optimization Target | Status |
-|----------|------------------------|---------------------|--------|
-| `len()` | Type assertion per call | Inline or type-specific | 🔴 TODO |
-| `push()` | Type assertions + append | Pre-allocate capacity if known | 🔴 TODO |
-| `pop()` | Type assertions + slice | Optimize slice operations | 🔴 TODO |
-| `shift()` | Type assertions + slice | Optimize slice operations | 🔴 TODO |
-| `unshift()` | Type assertions + prepend | Optimize prepend pattern | 🔴 TODO |
-| `slice()` | Type assertions + bounds | Pre-check bounds, type-specific | 🔴 TODO |
-| `splice()` | Type assertions + complex ops | Optimize splice logic | 🔴 TODO |
-| `concat()` | Type assertions + append | Pre-allocate result capacity | 🔴 TODO |
-| `reverse()` | Type assertions + in-place | Optimize reversal algorithm | 🔴 TODO |
-| `includes()` | Type assertions + linear search | Consider fast-path for primitives | 🔴 TODO |
+#### **5.2 Functions Not Yet Implemented** (future feature work, NOT optimization targets)
 
-#### **5.3 Math Functions** (15+ functions)
+The following functions from the language spec are not yet implemented and should be tracked separately: `indexOf`, `lastIndexOf`, `startsWith`, `endsWith`, `toLowerCase`, `toUpperCase`, `trim`, `trimStart`, `trimEnd`, `replace`, `split`, `join`, `repeat`, `push`, `pop`, `shift`, `unshift`, `slice`, `splice`, `concat`, `reverse`, `includes`, `abs`, `ceil`, `floor`, `round`, `min`, `max`, `pow`, `sqrt`, `sin`, `cos`, `tan`, `log`, `exp`, `type`, `string`, `number`, `boolean`, `keys`, `values`, `range`, `coalesce`, `default`.
 
-| Function | Current Implementation | Optimization Target | Status |
-|----------|------------------------|---------------------|--------|
-| `abs()` | Type assertion + math.Abs | Inline for simple cases | 🔴 TODO |
-| `ceil()` | Type assertion + math.Ceil | Inline or type-specific | 🔴 TODO |
-| `floor()` | Type assertion + math.Floor | Inline or type-specific | 🔴 TODO |
-| `round()` | Type assertion + math.Round | Inline or type-specific | 🔴 TODO |
-| `min()` | Type assertions + comparison | Type-specific comparison | 🔴 TODO |
-| `max()` | Type assertions + comparison | Type-specific comparison | 🔴 TODO |
-| `pow()` | Type assertion + math.Pow | Already inlined in VM? Check | 🔴 TODO |
-| `sqrt()` | Type assertion + math.Sqrt | Inline or type-specific | 🔴 TODO |
-| `sin()`, `cos()`, `tan()` | Type assertions + math funcs | Inline or type-specific | 🔴 TODO |
-| `log()`, `exp()` | Type assertions + math funcs | Inline or type-specific | 🔴 TODO |
-
-#### **5.4 Type & Utility Functions** (10+ functions)
-
-| Function | Current Implementation | Optimization Target | Status |
-|----------|------------------------|---------------------|--------|
-| `type()` | Type switch | Optimize type detection | 🔴 TODO |
-| `string()` | Type assertions + conversion | Type-specific conversion paths | 🔴 TODO |
-| `number()` | Type assertions + conversion | Type-specific conversion paths | 🔴 TODO |
-| `boolean()` | Type assertions + conversion | Type-specific conversion paths | 🔴 TODO |
-| `keys()` | Map iteration + allocation | Pre-allocate result slice | 🔴 TODO |
-| `values()` | Map iteration + allocation | Pre-allocate result slice | 🔴 TODO |
-| `range()` | Loop + allocation | Pre-allocate exact capacity | 🔴 TODO |
-| `coalesce()` | Multiple type checks | Optimize nullish checking | 🔴 TODO |
-| `default()` | Type checks + fallback | Optimize fallback logic | 🔴 TODO |
-
-**Expected Gain:** 2-10% per function category
+**Expected Gain:** 2-5% for expressions using built-ins
 
 ---
 
-### **6. Type System Operations** (`vm/vm_utils.go`, `vm/vm_handlers.go`)
+### **6. Type System Operations** (`types/value.go`, `vm/vm_utils.go`, `vm/vm_handlers.go`)
 
-**Priority:** 🟠 MEDIUM - Affects all operations
+**Priority:** 🟠 MEDIUM - Foundational work already done
 
-| # | Operation | Current Approach | Optimization Target | Impact | Status |
-|---|-----------|------------------|---------------------|--------|--------|
-| 6.1 | **Type checking** | `switch v := value.(type)` repeated | Type cache/bitmap for hot values | MEDIUM | 🔴 TODO |
-| 6.2 | **Type dispatch** | Runtime type assertions per operation | Pre-computed type dispatch tables | MEDIUM | 🔴 TODO |
-| 6.3 | **Type conversion** | Generic conversion functions | Type-specific conversion paths | LOW | 🔴 TODO |
-| 6.4 | **Type coercion** | Accepts `any`, type switches inside | Early type resolution, typed APIs | LOW | 🔴 TODO |
+The `Value` discriminated union type is a major optimization already in place:
+- 48-byte struct with inline `FloatVal`, `StrVal`, `BoolVal` fields (no interface boxing for primitives)
+- `valueType` enum discriminator: `TypeFloat=0`, `TypeString=1`, `TypeBool=2`, `TypeAny=3`, `TypeNull=4`
+- Zero-alloc constructors: `NewFloatValue()`, `NewStringValue()`, `NewBoolValue()`, `NewNullValue()`
+- Smart `NewAnyValue()`: deboxes float64/string/bool/int/nil into typed Values
+- Stack is `[]Value` — primitives stored without interface boxing
+- Constants pool is `[]Value`
 
-**Expected Gain:** 3-8% across type-heavy operations
+| # | Operation | Current State | Optimization Target | Impact | Status |
+|---|-----------|---------------|---------------------|--------|--------|
+| 6.1 | **Value type system** | Discriminated union `Value` struct with typed fields. Used by stack, constants, comparisons, control flow. | — | — | ✅ DONE |
+| 6.2 | **Type dispatch (comparisons)** | `executeComparisonOperationValues(op, Value, Value)` dispatches by `Value.Typ` | — | — | ✅ DONE |
+| 6.3 | **Type dispatch (arithmetic/logical)** | Still goes through `executeBinaryExpression(op, any, any)` with type switch | Route through `Value`-based dispatch like comparisons | MEDIUM | 🔴 TODO |
+| 6.4 | **Type conversion** | Generic `any`-based conversion in built-ins | `Value`-based conversion paths | LOW | 🔴 TODO |
+
+**Expected Gain:** 3-8% from extending `Value`-based dispatch to arithmetic/logical ops
 
 ---
 
@@ -220,46 +190,50 @@ Function calls:          varies     varies     🔴 NOT OPTIMIZED
 
 | # | Component | Current State | Optimization Target | Impact | Status |
 |---|-----------|---------------|---------------------|--------|--------|
-| 7.1 | **Stack allocation** | Fixed 1024-slot array | Pre-allocated, never resized (good ✅) | - | ✅ DONE |
-| 7.2 | **Frame allocation** | New frame object per scope | Frame pooling with sync.Pool | MEDIUM | 🔴 TODO |
-| 7.3 | **Scope maps** | New map per pipe iteration | Reuse pattern (clear + update) | HIGH | 🔴 TODO |
-| 7.4 | **String building** | Direct concatenation | strings.Builder for multi-part | LOW | 🔴 TODO |
-| 7.5 | **Constant pool** | Mixed types (`[]any`) | Type-segregated pools (numbers, strings) | LOW | 🔴 TODO |
-| 7.6 | **Result allocations** | Returned as `any` | Consider typed result channels | LOW | 🔴 TODO |
+| 7.1 | **Stack allocation** | Pre-allocated `[]Value`, 1024 slots, never resized | — | — | ✅ DONE |
+| 7.2 | **Frame allocation** | `NewFrame()` heap-allocates. Frame 0 reused across `Run()`. Pipe handlers allocate frame once per handler, reset per iteration. | `sync.Pool` for non-base frames | MEDIUM | 🔴 TODO |
+| 7.3 | **Pipe scope maps** | Scope created once per pipe handler call (in `pushPipeScope`), reused across iterations. `pipeFastScope` struct bypasses map for `$item`/`$index`/`$acc`/`$window`/`$chunk`/`$last`. | Lazy-allocate `map[string]any` only when aliases are used | LOW | ✅ MOSTLY DONE |
+| 7.4 | **String building** | `executeStringConcat` uses `strings.Builder` with `Grow()` for 3+ strings. 2-string case uses `+`. | Remaining: `executeStringConcat` pops via `vm.Pop()` (boxed) | LOW | ✅ MOSTLY DONE |
+| 7.5 | **Constant pool** | Already `[]types.Value` (typed). Not `[]any`. | — | — | ✅ DONE |
+| 7.6 | **Result allocations** | `Run()` returns `any` via `LastPoppedStackElem() → .ToAny()` | Consider typed result accessors | LOW | 🔴 TODO |
 
-**Expected Gain:** 0 allocs/op maintained (already achieved), but reduce GC pressure
+**Expected Gain:** Frame pooling could save ~1 alloc per pipe call. Lazy scope maps save ~96 bytes/pipe.
 
 ---
 
-### **8. Compiler Optimizations** (`compiler/`)
+### **8. Compiler Optimizations** (`compiler/compiler.go`)
 
-**Priority:** 🟢 LOW - Future improvements
+**Priority:** 🟢 LOW - Future improvements (2 already implemented)
 
 | # | Optimization | Current State | Target | Impact | Status |
 |---|--------------|---------------|--------|--------|--------|
-| 8.1 | **Constant folding** | No compile-time evaluation | `2 + 3` → `OpConstant(5)` | MEDIUM | 🟡 FUTURE |
-| 8.2 | **Type hints** | No type information | If compiler knows types, emit specialized opcodes | HIGH | 🟡 FUTURE |
-| 8.3 | **Dead code elimination** | All code compiled | Remove unreachable code paths | LOW | 🟡 FUTURE |
-| 8.4 | **Instruction combining** | Each operation separate | Merge consecutive compatible ops | MEDIUM | 🟡 FUTURE |
-| 8.5 | **Peephole optimization** | No pattern replacement | Replace instruction sequences with faster equivalents | LOW | 🟡 FUTURE |
+| 8.1 | **String concat optimization** | `optimizeStringConcatenation()` at L183 — flattens `"a" + var + "b"` chains into `OpStringConcat(count)`, merges consecutive string literals via `mergeStringLiterals()` | — | — | ✅ DONE |
+| 8.2 | **String pattern matching** | `optimizeStringComparison()` at L274 — converts `var == "prefix" + dynamic + "suffix"` into `OpStringPatternMatch` (zero-alloc pattern matching) | — | — | ✅ DONE |
+| 8.3 | **Constant folding** | Not implemented | `2 + 3` → `OpConstant(5)` at compile time | MEDIUM | 🟡 FUTURE |
+| 8.4 | **Dead code elimination** | Not implemented | Remove unreachable code paths | LOW | 🟡 FUTURE |
+| 8.5 | **Peephole optimization** | Not implemented | Replace instruction sequences with faster equivalents | LOW | 🟡 FUTURE |
 
-**Expected Gain:** 5-15% potential (future work)
+**Note:** Short-circuit flattening (`a || b || c` into single chain with one backpatch pass) is also implemented at L44.
+
+**Expected Gain:** Constant folding could eliminate instructions for literal expressions (5-15%)
 
 ---
 
 ### **9. Control Flow Operations** (`vm/vm.go`)
 
-**Priority:** 🟠 MEDIUM - Common in complex expressions
+**Priority:** ✅ LARGELY COMPLETE
 
-| # | Opcode | Current Implementation | Optimization Target | Impact | Status |
-|---|--------|------------------------|---------------------|--------|--------|
-| 9.1 | `OpJump` | Instruction pointer update | Already fast (inline) | - | 🟢 OK |
-| 9.2 | `OpJumpIfTruthy` | Stack pop + truthiness check + jump | Fast-path for boolean true/false | MEDIUM | 🔴 TODO |
-| 9.3 | `OpJumpIfFalsy` | Stack pop + truthiness check + jump | Fast-path for boolean true/false | MEDIUM | 🔴 TODO |
-| 9.4 | `OpJumpIfNullish` | Stack pop + null check + jump | Fast-path for non-null | LOW | 🔴 TODO |
-| 9.5 | `OpJumpIfNotNullish` | Stack pop + null check + jump | Fast-path for non-null | LOW | 🔴 TODO |
+| # | Opcode | Current Implementation | Status |
+|---|--------|------------------------|--------|
+| 9.1 | `OpJump` | Instruction pointer update — trivial and fast | 🟢 OK |
+| 9.2 | `OpJumpIfTruthy` (L138) | Uses `vm.popValue()` → `Value` + `isTruthyValue(value)` — zero-alloc | ✅ DONE |
+| 9.3 | `OpJumpIfFalsy` (L150) | Uses `vm.popValue()` → `Value` + `isTruthyValue(value)` — zero-alloc | ✅ DONE |
+| 9.4 | `OpJumpIfNullish` (L173) | Peeks directly: `vm.stack[vm.sp-1].IsNull()` — zero-alloc, no pop | ✅ DONE |
+| 9.5 | `OpJumpIfNotNullish` (L162) | Uses `vm.Pop()` → `any` + `isNullish(value)` — **boxes via Pop!** | 🔴 TODO |
 
-**Expected Gain:** 2-5% for expressions with short-circuit evaluation
+**Remaining:** Fix `OpJumpIfNotNullish` to use `popValue()` + `Value.IsNull()` (trivial fix, same pattern as 9.2-9.4).
+
+**Expected Gain:** 1-2% for expressions using nullish coalescing chains
 
 ---
 
@@ -267,14 +241,14 @@ Function calls:          varies     varies     🔴 NOT OPTIMIZED
 
 **Priority:** 🟢 LOW - Less frequently used
 
-| # | Operation | Location | Optimization Target | Impact | Status |
-|---|-----------|----------|---------------------|--------|--------|
-| 10.1 | **Nullish coalescing** (`??`) | `OpNullish` handler | Fast-path for non-null left | LOW | 🔴 TODO |
-| 10.2 | **Optional chaining** (`?.`, `?.[`) | `OpSafeModeOn/Off` | Minimize safe mode overhead | LOW | 🔴 TODO |
-| 10.3 | **String pattern matching** | `OpStringPatternMatch` | Optimize prefix/suffix checks | LOW | 🔴 TODO |
-| 10.4 | **Function calls** | `OpCallFunction` → built-in lookup | Function dispatch table, inline common functions | MEDIUM | 🔴 TODO |
-| 10.5 | **Object construction** | `OpObject` | Pre-allocate map with known size | LOW | 🔴 TODO |
-| 10.6 | **Array construction** | `OpArray` | Pre-allocate slice with exact capacity | LOW | 🔴 TODO |
+| # | Operation | Location | Current State | Optimization Target | Impact | Status |
+|---|-----------|----------|---------------|---------------------|--------|--------|
+| 10.1 | **Nullish coalescing** (`??`) | `OpNullish` handler | Standard implementation | Fast-path for non-null left | LOW | 🔴 TODO |
+| 10.2 | **Optional chaining** (`?.`, `?.[`) | `OpSafeModeOn/Off` | `safeMode` flag checked per operation | Minimize safe mode overhead | LOW | 🔴 TODO |
+| 10.3 | **String pattern matching** | `OpStringPatternMatch` (L341) | Compiler emits this (see 8.2). VM handler uses `vm.Pop()` (boxed). | Use `popValue()` for zero-alloc dispatch | LOW | 🟡 PARTIAL |
+| 10.4 | **Function calls** | `OpCallFunction` → built-in lookup | Map-based function lookup, `args ...any` | Function dispatch table, typed arg passing | MEDIUM | 🔴 TODO |
+| 10.5 | **Object construction** | `OpObject` | Standard map allocation | Pre-allocate map with known size hint | LOW | 🔴 TODO |
+| 10.6 | **Array construction** | `OpArray` | Standard slice allocation | Pre-allocate slice with exact capacity | LOW | 🔴 TODO |
 
 **Expected Gain:** 1-5% per operation
 
@@ -284,18 +258,46 @@ Function calls:          varies     varies     🔴 NOT OPTIMIZED
 
 ### **Phase Priority Order**
 
-Based on **impact analysis** and **code dependencies**:
+Based on **actual remaining work** and **impact analysis**:
 
-1. **Phase 1: Arithmetic Operations** (5-8% gain) - High user visibility
-2. **Phase 2: String Operations** (3-5% gain) - Common operations
-3. **Phase 3: Pipe Operations** (15-25% gain) - **HIGHEST IMPACT** ✅ Start here
-4. **Phase 4: Array/Index Access** (5-7% gain) - Common operations
-5. **Phase 5: Unary Operations** (2-4% gain) - Quick wins
-6. **Phase 6: Boolean/Logical** (1-2% gain) - Already partially optimized
-7. **Phase 7: VM Core** (10-20% gain) - **RISKY** - requires extensive testing
-8. **Phase 8: Built-in Functions** (varies) - Case-by-case optimization
-9. **Phase 9: Memory Management** (GC reduction) - Long-term optimization
-10. **Phase 10: Compiler** (future) - Requires language feature stabilization
+1. **Phase 1: Fix Operator Dispatch Path** (~15-25% gain for arithmetic) — **HIGHEST IMPACT**
+   - Route `OpAdd`/`OpSub`/`OpMul`/`OpDiv` through `pop2Values()` instead of `Pop()→any`
+   - This is the #1 bottleneck: arithmetic shows 131ns/4 allocs because of boxing overhead
+   - Same fix for `OpLogicalAnd`/`OpLogicalOr` and string ops
+
+2. **Phase 2: Unary Operations** (~2-4% gain) — Quick win
+   - Create typed `executeUnaryMinus(float64)`, `executeUnaryBang(bool)` handlers
+   - Use `popValue()` in run loop
+
+3. **Phase 3: Index/Access Operations** (~3-8% gain) — Common operations
+   - Route through `Value`-based handlers
+   - Cache rune conversion for string indexing/slicing
+
+4. **Phase 4: OpJumpIfNotNullish Fix** — Trivial
+   - Change `vm.Pop()` to `popValue()` + `Value.IsNull()`
+
+5. **Phase 5: Built-in Function Optimization** (~2-5% gain)
+   - Accept `Value` args instead of `...any` for the 5 existing builtins
+
+6. **Phase 6: Memory — Frame Pooling & Lazy Scope Maps** (~small)
+   - `sync.Pool` for frames
+   - Lazy `map[string]any` allocation in `pushPipeScope`
+
+7. **Phase 7: Compiler — Constant Folding** (future)
+   - Requires language feature stabilization
+
+### **What's Already Done (No Work Needed)**
+
+- ✅ All pipe handlers (scope/frame reuse) — 11/12 done
+- ✅ `pipeFastScope` struct for common pipe variables
+- ✅ Comparison operator dispatch (Value-based, zero-alloc)
+- ✅ Control flow jumps (3/4 use popValue, OpJump is trivial)
+- ✅ Context variable caching + smart invalidation
+- ✅ Constants pool as `[]types.Value`
+- ✅ Value type system + zero-alloc constructors
+- ✅ String concatenation + pattern matching compiler optimizations
+- ✅ `strings.Builder` for multi-part string concat
+- ✅ Type-specific inner handlers for arithmetic, string, boolean ops
 
 ### **Validation Requirements (MANDATORY)**
 
@@ -321,29 +323,40 @@ Every optimization MUST pass:
 
 ## 📈 Performance Targets
 
-### **Tier 1: Stretch Goals (20-25ns/op)**
+### **Current Baselines** (actual benchmarks from `root_bench_phase1_fixed.txt`)
+
+| Operation | Current ns/op | Current allocs | Target ns/op | Target allocs |
+|-----------|---------------|----------------|--------------|---------------|
+| Boolean | 75.84 | 0 | 50 | 0 |
+| String compare | 56.72 | 0 | 45 | 0 |
+| String concat | 79.71 | 2 | 60 | 0 |
+| Arithmetic | 131.5 | 4 | 60 | 0 |
+| Map pipe (100) | 2,204 | 102 | 1,500 | <10 |
+| Filter pipe (100) | 4,509 | 10 | 3,000 | <5 |
+
+### **Tier 1: Stretch Goals**
 
 Requires perfect execution across all phases + compiler optimizations.
 
-- Boolean/comparison: **20ns** (from 62ns) - 68% improvement
-- Arithmetic: **22ns** (from ~80ns) - 72% improvement
-- String ops: **25ns** (from ~100ns) - 75% improvement
+- Boolean: **50ns** (from 75.84ns) - 34% improvement
+- Arithmetic: **55ns** (from 131.5ns) - 58% improvement (requires dispatch fix)
+- String concat: **60ns** (from 79.71ns) - 25% improvement
 
-### **Tier 2: Realistic Goals (30-35ns/op)**
+### **Tier 2: Realistic Goals**
 
 Achievable with systematic VM optimization.
 
-- Boolean/comparison: **30ns** (from 62ns) - 52% improvement
-- Arithmetic: **32ns** (from ~80ns) - 60% improvement
-- String ops: **35ns** (from ~100ns) - 65% improvement
+- Boolean: **55ns** (from 75.84ns) - 27% improvement
+- Arithmetic: **65ns** (from 131.5ns) - 51% improvement
+- String concat: **65ns** (from 79.71ns) - 18% improvement
 
-### **Tier 3: Minimum Goals (35-40ns/op)**
+### **Tier 3: Minimum Goals**
 
 Guaranteed with current optimization plan.
 
-- Boolean/comparison: **35ns** (from 62ns) - 44% improvement
-- Arithmetic: **38ns** (from ~80ns) - 52% improvement
-- String ops: **40ns** (from ~100ns) - 60% improvement
+- Boolean: **60ns** (from 75.84ns) - 21% improvement
+- Arithmetic: **80ns** (from 131.5ns) - 39% improvement
+- String concat: **70ns** (from 79.71ns) - 12% improvement
 
 **ALL tiers beat competitors (expr: 105ns, cel-go: 127ns)** ✅
 
@@ -351,13 +364,12 @@ Guaranteed with current optimization plan.
 
 ## 📝 Next Steps
 
-1. ✅ **Fix failing tests** - DONE (bitwise edge case test corrected)
-2. 🔴 **Choose starting phase** - Recommend Phase 3 (Pipe Operations) or Phase 1 (Arithmetic)
-3. 🔴 **Profile baseline** - Establish before-optimization metrics
-4. 🔴 **Implement optimization** - Follow dos-and-donts.md patterns
-5. 🔴 **Validate thoroughly** - All tests pass, benchstat confirms improvement
-6. 🔴 **Document results** - Update optimization-journey.md
-7. 🔴 **Repeat** - Move to next optimization target
+1. ✅ **Audit complete** — Document updated to reflect actual optimization state (Feb 2026)
+2. 🔴 **Phase 1: Fix operator dispatch** — Route arithmetic/logical/string through `pop2Values()` in `run()`
+3. 🔴 **Profile baseline** — Fresh CPU profiles for arithmetic and string operations
+4. 🔴 **Implement Phase 1** — Follow dos-and-donts.md patterns
+5. 🔴 **Validate** — All tests pass, benchstat confirms improvement, 0 allocs
+6. 🔴 **Iterate** — Phases 2-7 as described above
 
 **Follow:** [0-optimization-guidelines.md](0-optimization-guidelines.md) for daily workflow.
 
@@ -367,15 +379,23 @@ Guaranteed with current optimization plan.
 
 **Project complete when:**
 
-- ✅ ALL 100+ optimization targets addressed
+- ✅ ALL remaining ~26 optimization targets addressed
 - ✅ ALL tests passing (100% pass rate maintained throughout)
 - ✅ Performance targets achieved (at least Tier 3, aim for Tier 2)
-- ✅ Zero allocations maintained (0 allocs/op for all operations)
+- ✅ Zero allocations for non-allocating expression types
 - ✅ Documentation complete (optimization-journey.md updated for each phase)
 - ✅ Competitive benchmarks show UExL faster than expr & cel-go across all operations
 
-**Timeline:** Estimated 2-4 weeks of focused optimization work
+---
+
+## 📋 Known Issues / Cleanup
+
+1. **`tryFastMapArithmetic` in `MapPipeHandler`** — hardcoded for `$item * 2.0` benchmark pattern. Should be removed or generalized.
+2. **`executeBooleanComparisonOperation`** uses `vm.Push` (boxed) instead of `pushBool` at L179 — minor inconsistency.
+3. **`pushPipeScope` allocates `map[string]any`** even when only `pipeFastScope` fields are used — wasteful for simple pipes.
+4. **String indexing/slicing** converts to `[]rune` on every call — should cache or use UTF-8 direct access.
+5. **`pending-optimizations.md`** references stale code patterns (e.g., P8 says constants are `[]any` — they're `[]Value`).
 
 ---
 
-**Ready to start?** → Open [0-optimization-guidelines.md](0-optimization-guidelines.md) and begin! 🚀
+**Ready to start?** → Phase 1 (operator dispatch fix) is the highest-impact remaining work. 🚀
