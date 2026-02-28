@@ -537,25 +537,26 @@ func (vm *VM) executeStringConcat(count int) error {
 
 	// Fast path for 2-string concatenation (most common case)
 	if count == 2 {
-		right := vm.Pop()
-		left := vm.Pop()
+		right := vm.popValue()
+		left := vm.popValue()
 
-		leftStr, leftOk := left.(string)
-		rightStr, rightOk := right.(string)
-
-		if leftOk && rightOk {
-			// Both are strings - use simple concatenation
-			return vm.Push(leftStr + rightStr)
+		if left.Typ == TypeString && right.Typ == TypeString {
+			return vm.pushString(left.StrVal + right.StrVal)
 		}
 
 		// One or both need conversion
-		if !leftOk {
-			leftStr = fmt.Sprintf("%v", left)
+		var leftStr, rightStr string
+		if left.Typ == TypeString {
+			leftStr = left.StrVal
+		} else {
+			leftStr = fmt.Sprintf("%v", left.ToAny())
 		}
-		if !rightOk {
-			rightStr = fmt.Sprintf("%v", right)
+		if right.Typ == TypeString {
+			rightStr = right.StrVal
+		} else {
+			rightStr = fmt.Sprintf("%v", right.ToAny())
 		}
-		return vm.Push(leftStr + rightStr)
+		return vm.pushString(leftStr + rightStr)
 	}
 
 	// General case for 3+ strings
@@ -564,13 +565,13 @@ func (vm *VM) executeStringConcat(count int) error {
 	stringValues := make([]string, count)
 
 	for i := count - 1; i >= 0; i-- {
-		val := vm.Pop()
-		if str, ok := val.(string); ok {
-			stringValues[i] = str
-			totalLen += len(str)
+		val := vm.popValue()
+		if val.Typ == TypeString {
+			stringValues[i] = val.StrVal
+			totalLen += len(val.StrVal)
 		} else {
 			// Convert non-string to string
-			str = fmt.Sprintf("%v", val)
+			str := fmt.Sprintf("%v", val.ToAny())
 			stringValues[i] = str
 			totalLen += len(str)
 		}
@@ -583,7 +584,7 @@ func (vm *VM) executeStringConcat(count int) error {
 		builder.WriteString(str)
 	}
 
-	return vm.Push(builder.String())
+	return vm.pushString(builder.String())
 }
 
 // executeStringPatternMatch optimizes string comparison patterns like:
@@ -601,53 +602,53 @@ func (vm *VM) executeStringPatternMatch(prefixIdx, suffixIdx int) error {
 
 	// Stack has: [target, prefix, middle, suffix] from bottom to top
 	// Pop in reverse order
-	suffix := vm.Pop()
-	middle := vm.Pop()
-	prefix := vm.Pop()
-	target := vm.Pop()
+	suffixVal := vm.popValue()
+	middleVal := vm.popValue()
+	prefixVal := vm.popValue()
+	targetVal := vm.popValue()
 
 	// Convert all values to strings (fast path for strings)
 	var targetStr, prefixStr, middleStr, suffixStr string
 
-	if str, ok := target.(string); ok {
-		targetStr = str
+	if targetVal.Typ == TypeString {
+		targetStr = targetVal.StrVal
 	} else {
-		targetStr = fmt.Sprintf("%v", target)
+		targetStr = fmt.Sprintf("%v", targetVal.ToAny())
 	}
 
-	if str, ok := prefix.(string); ok {
-		prefixStr = str
+	if prefixVal.Typ == TypeString {
+		prefixStr = prefixVal.StrVal
 	} else {
-		prefixStr = fmt.Sprintf("%v", prefix)
+		prefixStr = fmt.Sprintf("%v", prefixVal.ToAny())
 	}
 
-	if str, ok := middle.(string); ok {
-		middleStr = str
+	if middleVal.Typ == TypeString {
+		middleStr = middleVal.StrVal
 	} else {
-		middleStr = fmt.Sprintf("%v", middle)
+		middleStr = fmt.Sprintf("%v", middleVal.ToAny())
 	}
 
-	if str, ok := suffix.(string); ok {
-		suffixStr = str
+	if suffixVal.Typ == TypeString {
+		suffixStr = suffixVal.StrVal
 	} else {
-		suffixStr = fmt.Sprintf("%v", suffix)
+		suffixStr = fmt.Sprintf("%v", suffixVal.ToAny())
 	}
 
 	// Zero-allocation pattern matching
 	// Check total length first
 	expectedLen := len(prefixStr) + len(middleStr) + len(suffixStr)
 	if len(targetStr) != expectedLen {
-		return vm.Push(false)
+		return vm.pushBool(false)
 	}
 
 	// Check prefix match (length already validated above)
 	if len(prefixStr) > 0 && targetStr[:len(prefixStr)] != prefixStr {
-		return vm.Push(false)
+		return vm.pushBool(false)
 	}
 
 	// Check suffix match (length already validated above)
 	if len(suffixStr) > 0 && targetStr[len(targetStr)-len(suffixStr):] != suffixStr {
-		return vm.Push(false)
+		return vm.pushBool(false)
 	}
 
 	// Check middle match
@@ -656,8 +657,8 @@ func (vm *VM) executeStringPatternMatch(prefixIdx, suffixIdx int) error {
 	if middleStart <= middleEnd {
 		actualMiddle := targetStr[middleStart:middleEnd]
 		result := actualMiddle == middleStr
-		return vm.Push(result)
+		return vm.pushBool(result)
 	}
 
-	return vm.Push(false)
+	return vm.pushBool(false)
 }
