@@ -515,7 +515,9 @@ func isTruthy(val any) bool {
 	}
 }
 
-// isTruthyValue - zero-alloc truthiness check for Value types
+// isTruthyValue - zero-alloc truthiness check for Value types.
+// Merging TypeAny+default into one case saves ~5 AST nodes vs separate cases,
+// keeping this function within Go's inlining budget of 80.
 func isTruthyValue(val Value) bool {
 	switch val.Typ {
 	case TypeBool:
@@ -526,10 +528,8 @@ func isTruthyValue(val Value) bool {
 		return val.StrVal != ""
 	case TypeNull:
 		return false
-	case TypeAny:
-		return isTruthy(val.AnyVal)
 	default:
-		return false
+		return isTruthy(val.AnyVal)
 	}
 }
 

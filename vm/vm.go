@@ -214,7 +214,7 @@ func (vm *VM) run() error {
 			}
 			frame.ip += 1
 		case code.OpNull:
-			if err := vm.pushValue(newNullValue()); err != nil {
+			if err := vm.pushValue(Value{Typ: TypeNull}); err != nil {
 				return err
 			}
 			frame.ip += 1
@@ -247,7 +247,7 @@ func (vm *VM) run() error {
 			left := vm.Pop()
 			if err := vm.executeIndexExpression(left, index, optional); err != nil {
 				if vm.safeMode {
-					if perr := vm.pushValue(newNullValue()); perr != nil {
+					if perr := vm.pushValue(Value{Typ: TypeNull}); perr != nil {
 						return perr
 					}
 				} else {
@@ -275,7 +275,7 @@ func (vm *VM) run() error {
 			target := vm.Pop()
 			if err := vm.executeMemberAccess(target, prop); err != nil {
 				if vm.safeMode {
-					if perr := vm.pushValue(newNullValue()); perr != nil {
+					if perr := vm.pushValue(Value{Typ: TypeNull}); perr != nil {
 						return perr
 					}
 				} else {

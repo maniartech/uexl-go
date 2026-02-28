@@ -1,7 +1,7 @@
 package vm
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/maniartech/uexl/code"
 	"github.com/maniartech/uexl/parser"
@@ -18,6 +18,11 @@ var Null = parser.NullLiteral{}
 type contextVarMissing struct{}
 
 var contextVarNotProvided = contextVarMissing{}
+
+// Pre-allocated sentinel error — avoids fmt.Errorf allocation per call,
+// enabling push/pop methods to stay within Go's inlining budget (80 AST nodes).
+// Inspired by fasthttp's pre-allocated error pattern.
+var errStackOverflow = errors.New("stack overflow")
 
 type VMFunctions map[string]func(args ...any) (any, error)
 type PipeHandler func(
@@ -99,7 +104,7 @@ func NewFrame(instructions code.Instructions, basePointer int) *Frame {
 
 func (vm *VM) Push(node any) error {
 	if vm.sp >= StackSize {
-		return fmt.Errorf("stack overflow")
+		return errStackOverflow
 	}
 	vm.stack[vm.sp] = newAnyValue(node)
 	vm.sp++
@@ -109,7 +114,7 @@ func (vm *VM) Push(node any) error {
 // pushValue pushes a Value directly onto the stack (zero allocation)
 func (vm *VM) pushValue(val Value) error {
 	if vm.sp >= StackSize {
-		return fmt.Errorf("stack overflow")
+		return errStackOverflow
 	}
 	vm.stack[vm.sp] = val
 	vm.sp++
@@ -117,30 +122,32 @@ func (vm *VM) pushValue(val Value) error {
 }
 
 // Type-specific push methods for zero-allocation primitive storage
+// These use inline struct literals instead of var-based constructors,
+// keeping AST node count below Go's inlining budget of 80.
 
 func (vm *VM) pushFloat64(val float64) error {
 	if vm.sp >= StackSize {
-		return fmt.Errorf("stack overflow")
+		return errStackOverflow
 	}
-	vm.stack[vm.sp] = newFloatValue(val)
+	vm.stack[vm.sp] = Value{Typ: TypeFloat, FloatVal: val}
 	vm.sp++
 	return nil
 }
 
 func (vm *VM) pushString(val string) error {
 	if vm.sp >= StackSize {
-		return fmt.Errorf("stack overflow")
+		return errStackOverflow
 	}
-	vm.stack[vm.sp] = newStringValue(val)
+	vm.stack[vm.sp] = Value{Typ: TypeString, StrVal: val}
 	vm.sp++
 	return nil
 }
 
 func (vm *VM) pushBool(val bool) error {
 	if vm.sp >= StackSize {
-		return fmt.Errorf("stack overflow")
+		return errStackOverflow
 	}
-	vm.stack[vm.sp] = newBoolValue(val)
+	vm.stack[vm.sp] = Value{Typ: TypeBool, BoolVal: val}
 	vm.sp++
 	return nil
 }
@@ -171,35 +178,39 @@ func (vm *VM) Top() any {
 	return vm.stack[vm.sp-1].ToAny()
 }
 
-// popValue pops a Value from the stack (for opcode handlers that work with Value directly)
+// popValue pops a Value from the stack (for opcode handlers that work with Value directly).
+// No dead-value clearing — stack slots below sp are never read, avoiding unnecessary writes.
+// This follows fasthttp's principle: "Do not allocate objects — just reuse them."
 func (vm *VM) popValue() Value {
 	if vm.sp == 0 {
-		return newNullValue()
+		return Value{Typ: TypeNull}
 	}
 	vm.sp--
-	val := vm.stack[vm.sp]
-	vm.stack[vm.sp] = Value{} // Clear the value
-	return val
+	return vm.stack[vm.sp]
 }
 
 // peekValue returns the top Value without popping (for opcode handlers)
 func (vm *VM) peekValue() Value {
 	if vm.sp == 0 {
-		return newNullValue()
+		return Value{Typ: TypeNull}
 	}
 	return vm.stack[vm.sp-1]
 }
 
-// pop2Values pops two values from stack (common in binary operations)
+// pop2Values pops two values from stack (common in binary operations).
+// Inlined by the compiler when popValue is also inlineable.
 func (vm *VM) pop2Values() (right, left Value) {
-	right = vm.popValue()
-	left = vm.popValue()
+	// Inline popValue logic directly to ensure this stays within inlining budget
+	vm.sp--
+	right = vm.stack[vm.sp]
+	vm.sp--
+	left = vm.stack[vm.sp]
 	return
 }
 
 // pushBoolValue pushes a boolean value (zero-alloc)
 func (vm *VM) pushBoolValue(b bool) error {
-	return vm.pushValue(newBoolValue(b))
+	return vm.pushValue(Value{Typ: TypeBool, BoolVal: b})
 }
 
 func (vm *VM) pushPipeScope() {
