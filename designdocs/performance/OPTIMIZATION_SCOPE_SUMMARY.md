@@ -362,14 +362,68 @@ Guaranteed with current optimization plan.
 
 ---
 
-## 📝 Next Steps
+## 📝 Development Phases — Tracked
 
-1. ✅ **Audit complete** — Document updated to reflect actual optimization state (Feb 2026)
-2. 🔴 **Phase 1: Fix operator dispatch** — Route arithmetic/logical/string through `pop2Values()` in `run()`
-3. 🔴 **Profile baseline** — Fresh CPU profiles for arithmetic and string operations
-4. 🔴 **Implement Phase 1** — Follow dos-and-donts.md patterns
-5. 🔴 **Validate** — All tests pass, benchstat confirms improvement, 0 allocs
-6. 🔴 **Iterate** — Phases 2-7 as described above
+> Each phase follows: baseline benchmark → implement → test → benchstat validate → commit
+
+### Phase 1: Fix Binary Operator Dispatch Path ⚡ HIGHEST IMPACT
+**Target:** Arithmetic 131ns/4allocs → ~65ns/0allocs, String concat 79ns/2allocs → ~60ns/0allocs
+**Files:** `vm/vm.go` (run loop), `vm/vm_handlers.go` (new `executeBinaryExpressionValues`)
+
+- [ ] Capture baseline: `go test -bench=BenchmarkVM -benchmem -count=10 > phase1_before.txt`
+- [ ] Create `executeBinaryExpressionValues(op, Value, Value)` — dispatch by `Value.Typ` to existing typed handlers
+- [ ] Change `run()` dispatch: `Pop()→any` → `pop2Values()→Value` for `OpAdd/Sub/Mul/Div/Mod/Pow/Bitwise/Logical`
+- [ ] All tests pass: `go test ./...`
+- [ ] Capture after: `go test -bench=BenchmarkVM -benchmem -count=10 > phase1_after.txt`
+- [ ] Validate: `benchstat phase1_before.txt phase1_after.txt` — p<0.05, ≥15% arithmetic gain, 0 allocs
+
+### Phase 2: Fix Unary Operator Dispatch
+**Target:** Eliminate `Pop()→any` for `OpMinus/OpBang/OpBitwiseNot`
+**Files:** `vm/vm.go` (run loop), `vm/vm_handlers.go` (new `executeUnaryExpressionValue`)
+
+- [ ] Create `executeUnaryExpressionValue(op, Value)` — dispatch by `Value.Typ`
+- [ ] Change `run()`: `Pop()→any` → `popValue()→Value` for unary ops
+- [ ] All tests pass + benchmark validates improvement
+
+### Phase 3: Fix OpJumpIfNotNullish ⚡ TRIVIAL
+**Target:** Eliminate boxing in nullish coalescing chains
+**Files:** `vm/vm.go` (one case block)
+
+- [ ] Change `vm.Pop()` + `isNullish(any)` → `vm.popValue()` + `Value.IsNull()` + `vm.pushValue()`
+- [ ] All tests pass
+
+### Phase 4: Fix Remaining Boxed Pushes 🧹 CLEANUP
+**Target:** Consistency — all hot-path push/pop uses typed methods
+**Files:** `vm/vm_handlers.go`
+
+- [ ] `executeBooleanComparisonOperation`: `vm.Push(bool)` → `vm.pushBool(bool)`
+- [ ] `executeStringConcat`: `vm.Pop()` → `vm.popValue()` + `.StrVal`
+- [ ] `executeUnaryMinusOperation` / `executeUnaryBangOperation`: `vm.Push` → typed push (if not already fixed by Phase 2)
+- [ ] All tests pass
+
+### Phase 5: Index/Access Operations
+**Target:** Route `OpIndex/OpMemberAccess` through `Value`-based handlers
+**Files:** `vm/indexing.go`, `vm/slicing.go`, `vm/vm_handlers.go`
+
+- [ ] Create `Value`-based index dispatch (eliminate double type switch)
+- [ ] Cache `[]rune` for string indexing/slicing
+- [ ] All tests pass + benchmark validates
+
+### Phase 6: Built-in Function Signatures
+**Target:** Accept `[]Value` instead of `...any` for 5 existing builtins
+**Files:** `vm/builtins.go`
+
+- [ ] Migrate `len`, `substr`, `contains`, `set`, `str` to typed args
+- [ ] All tests pass + benchmark validates
+
+### Phase 7: Memory — Frame Pool & Lazy Scope Maps
+**Target:** Reduce allocations in pipe execution paths
+**Files:** `vm/vm_utils.go`, `vm/pipes.go`
+
+- [ ] `sync.Pool` for `Frame` objects (non-base frames)
+- [ ] Lazy `map[string]any` allocation in `pushPipeScope`
+- [ ] Remove `tryFastMapArithmetic` hardcoded benchmark path
+- [ ] All tests pass + benchmark validates
 
 **Follow:** [0-optimization-guidelines.md](0-optimization-guidelines.md) for daily workflow.
 
