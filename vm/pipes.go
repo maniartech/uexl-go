@@ -4,35 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/maniartech/uexl/code"
 	"github.com/maniartech/uexl/compiler"
 )
-
-// tryFastMapArithmetic detects and optimizes simple arithmetic patterns like $item * 2
-func tryFastMapArithmetic(arr []any, instructions code.Instructions) []any {
-	// Pattern: OpIdentifier [id] OpConstant [idx] OpMul
-	// This is: $item * constant (7 bytes total)
-	if len(instructions) == 7 && // OpIdentifier (3 bytes) + OpConstant (3 bytes) + OpMul (1 byte)
-		instructions[0] == byte(code.OpIdentifier) &&
-		instructions[3] == byte(code.OpConstant) &&
-		instructions[6] == byte(code.OpMul) {
-
-		// Fast vectorized multiplication
-		result := make([]any, len(arr))
-		for i, item := range arr {
-			if num, ok := item.(float64); ok {
-				result[i] = num * 2.0 // Hardcoded for benchmark case
-			} else {
-				// Fallback to normal processing for non-numeric types
-				return nil
-			}
-		}
-		return result
-	}
-
-	// No fast path found
-	return nil
-}
 
 var DefaultPipeHandlers = PipeHandlers{
 	"map":     MapPipeHandler,
@@ -81,10 +54,7 @@ func MapPipeHandler(input any, block any, alias string, vm *VM) (any, error) {
 		return nil, fmt.Errorf("map pipe expects a predicate block")
 	}
 
-	// Fast path optimization: Detect simple arithmetic patterns
-	if fastResult := tryFastMapArithmetic(arr, blk.Instructions); fastResult != nil {
-		return fastResult, nil
-	}
+	// Fast path optimization removed: tryFastMapArithmetic was a benchmark cheat
 
 	result := make([]any, len(arr))
 

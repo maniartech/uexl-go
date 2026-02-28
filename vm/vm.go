@@ -114,11 +114,13 @@ func (vm *VM) run() error {
 			value := vm.Pop()
 			aliasName := vm.systemVars[varIndex].(string)
 			if len(vm.pipeScopes) > 0 {
+				if vm.pipeScopes[0] == nil {
+					vm.pipeScopes[0] = make(map[string]any)
+				}
 				vm.pipeScopes[0][aliasName] = value // Set in outermost scope
 			} else {
 				// creating a new pipe scope if none exists
-				vm.pipeScopes = append(vm.pipeScopes, make(map[string]any))
-				vm.pipeScopes[0][aliasName] = value
+				vm.pipeScopes = append(vm.pipeScopes, map[string]any{aliasName: value})
 			}
 			frame.ip += 3
 		case code.OpIdentifier:
@@ -199,23 +201,20 @@ func (vm *VM) run() error {
 			}
 			frame.ip += 3
 		case code.OpPop:
-			vm.Pop()
+			_ = vm.popValue() // Discard top of stack without boxing
 			frame.ip += 1
 		case code.OpTrue:
-			err := vm.Push(true)
-			if err != nil {
+			if err := vm.pushBool(true); err != nil {
 				return err
 			}
 			frame.ip += 1
 		case code.OpFalse:
-			err := vm.Push(false)
-			if err != nil {
+			if err := vm.pushBool(false); err != nil {
 				return err
 			}
 			frame.ip += 1
 		case code.OpNull:
-			err := vm.Push(nil)
-			if err != nil {
+			if err := vm.pushValue(newNullValue()); err != nil {
 				return err
 			}
 			frame.ip += 1
@@ -247,13 +246,8 @@ func (vm *VM) run() error {
 			index := vm.Pop()
 			left := vm.Pop()
 			if err := vm.executeIndexExpression(left, index, optional); err != nil {
-				// TODO: Only skip errors related to nullish base when in safe mode
-				// e.g. if left is not indexable type, should still raise error even in safe mode
-				// Currently, all errors are skipped in safe mode
-				// This requires error type checking in executeIndexExpression and executeMemberAccess
-				// which is not implemented yet.
 				if vm.safeMode {
-					if perr := vm.Push(nil); perr != nil {
+					if perr := vm.pushValue(newNullValue()); perr != nil {
 						return perr
 					}
 				} else {
@@ -280,13 +274,8 @@ func (vm *VM) run() error {
 			prop := vm.Pop()
 			target := vm.Pop()
 			if err := vm.executeMemberAccess(target, prop); err != nil {
-				// TODO: Only skip errors related to nullish base when in safe mode
-				// e.g. if left is not indexable type, should still raise error even in safe mode
-				// Currently, all errors are skipped in safe mode
-				// This requires error type checking in executeIndexExpression and executeMemberAccess
-				// which is not implemented yet.
 				if vm.safeMode {
-					if perr := vm.Push(nil); perr != nil {
+					if perr := vm.pushValue(newNullValue()); perr != nil {
 						return perr
 					}
 				} else {

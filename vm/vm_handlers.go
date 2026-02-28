@@ -471,7 +471,15 @@ func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
 	if !exists {
 		return fmt.Errorf("function %s not found in context", functionName)
 	}
-	args := make([]any, numArgs)
+
+	// Stack-allocated buffer for common case (<=4 args) to avoid heap allocation
+	var argsBuf [4]any
+	var args []any
+	if numArgs <= 4 {
+		args = argsBuf[:numArgs]
+	} else {
+		args = make([]any, numArgs)
+	}
 	for i := 0; i < int(numArgs); i++ {
 		if vm.sp == 0 {
 			return fmt.Errorf("not enough arguments on stack for function %s", functionName)

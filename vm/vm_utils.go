@@ -203,7 +203,8 @@ func (vm *VM) pushBoolValue(b bool) error {
 }
 
 func (vm *VM) pushPipeScope() {
-	vm.pipeScopes = append(vm.pipeScopes, make(map[string]any))
+	// Lazy allocation: push nil scope, map created on demand in setPipeVar
+	vm.pipeScopes = append(vm.pipeScopes, nil)
 	// Activate fast-path for common pipe operations
 	vm.pipeFastScopeActive = true
 }
@@ -242,7 +243,11 @@ func (vm *VM) setPipeVar(name string, value any) {
 	}
 	// Fall back to map for custom variables (aliases, etc.)
 	if len(vm.pipeScopes) > 0 {
-		vm.pipeScopes[len(vm.pipeScopes)-1][name] = value
+		top := len(vm.pipeScopes) - 1
+		if vm.pipeScopes[top] == nil {
+			vm.pipeScopes[top] = make(map[string]any)
+		}
+		vm.pipeScopes[top][name] = value
 	}
 }
 
@@ -266,6 +271,9 @@ func (vm *VM) getPipeVar(name string) (any, bool) {
 	}
 	// Fall back to map for custom variables (aliases, etc.)
 	for i := len(vm.pipeScopes) - 1; i >= 0; i-- {
+		if vm.pipeScopes[i] == nil {
+			continue
+		}
 		if val, ok := vm.pipeScopes[i][name]; ok {
 			return val, true
 		}
