@@ -133,9 +133,8 @@ func (vm *VM) run() error {
 			}
 			frame.ip += 3
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv, code.OpMod, code.OpPow, code.OpBitwiseAnd, code.OpBitwiseOr, code.OpBitwiseXor, code.OpShiftLeft, code.OpShiftRight, code.OpLogicalAnd, code.OpLogicalOr:
-			right := vm.Pop()
-			left := vm.Pop()
-			err := vm.executeBinaryExpression(opcode, left, right)
+			right, left := vm.pop2Values()
+			err := vm.executeBinaryExpressionValues(opcode, left, right)
 			if err != nil {
 				return err
 			}
@@ -148,8 +147,8 @@ func (vm *VM) run() error {
 			}
 			frame.ip += 1
 		case code.OpMinus, code.OpBang, code.OpBitwiseNot:
-			operand := vm.Pop()
-			err := vm.executeUnaryExpression(opcode, operand)
+			operand := vm.popValue()
+			err := vm.executeUnaryExpressionValue(opcode, operand)
 			if err != nil {
 				return err
 			}
@@ -183,9 +182,9 @@ func (vm *VM) run() error {
 			}
 		case code.OpJumpIfNotNullish:
 			pos := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
-			value := vm.Pop()
-			if !isNullish(value) {
-				if err := vm.Push(value); err != nil {
+			value := vm.popValue()
+			if !value.IsNull() {
+				if err := vm.pushValue(value); err != nil {
 					return err
 				}
 				frame.ip = int(pos)

@@ -19,7 +19,29 @@ func (vm *VM) getContextValue(name string) (any, error) {
 	return value, nil
 }
 
-// executeBinaryExpression evaluates the binary expression using Value types from stack
+// executeBinaryExpressionValues evaluates binary expressions using Value types directly (zero-alloc)
+// This is the optimized dispatch path — mirrors executeComparisonOperationValues
+func (vm *VM) executeBinaryExpressionValues(operator code.Opcode, left, right Value) error {
+	// Fast path: same types (most common)
+	if left.Typ == right.Typ {
+		switch left.Typ {
+		case TypeFloat:
+			return vm.executeNumberArithmetic(operator, left.FloatVal, right.FloatVal)
+		case TypeString:
+			if operator == code.OpAdd {
+				return vm.executeStringAddition(left.StrVal, right.StrVal)
+			}
+			return vm.executeStringBinaryOperation(operator, left.StrVal, right.StrVal)
+		case TypeBool:
+			return vm.executeBooleanBinaryOperation(operator, left.BoolVal, right.BoolVal)
+		}
+	}
+
+	// Mixed types or TypeAny — fall back to any-based dispatch
+	return vm.executeBinaryExpression(operator, left.ToAny(), right.ToAny())
+}
+
+// executeBinaryExpression evaluates the binary expression using any types (legacy fallback for mixed/complex types)
 func (vm *VM) executeBinaryExpression(operator code.Opcode, left, right any) error {
 	switch leftVal := left.(type) {
 	case float64, int:
@@ -199,11 +221,39 @@ func (vm *VM) executeStringComparisonOperation(operator code.Opcode, left, right
 func (vm *VM) executeBooleanComparisonOperation(operator code.Opcode, left, right bool) error {
 	switch operator {
 	case code.OpEqual:
-		return vm.Push(left == right)
+		return vm.pushBool(left == right)
 	case code.OpNotEqual:
-		return vm.Push(left != right)
+		return vm.pushBool(left != right)
 	default:
 		return fmt.Errorf("unknown boolean comparison operator: %v", operator)
+	}
+}
+
+// executeUnaryExpressionValue dispatches unary operations using Value types directly (zero-alloc)
+func (vm *VM) executeUnaryExpressionValue(operator code.Opcode, operand Value) error {
+	switch operator {
+	case code.OpMinus:
+		if operand.Typ == TypeFloat {
+			return vm.pushFloat64(-operand.FloatVal)
+		}
+		return vm.executeUnaryMinusOperation(operand.ToAny())
+	case code.OpBang:
+		if operand.Typ == TypeBool {
+			return vm.pushBool(!operand.BoolVal)
+		}
+		// For non-bool, use truthiness check on Value directly
+		return vm.pushBool(!isTruthyValue(operand))
+	case code.OpBitwiseNot:
+		if operand.Typ == TypeFloat {
+			v := operand.FloatVal
+			if v != float64(int64(v)) {
+				return fmt.Errorf("bitwise operations require integerish operands (no decimals), got %v", v)
+			}
+			return vm.pushFloat64(float64(^int64(v)))
+		}
+		return vm.executeUnaryBitwiseNotOperation(operand.ToAny())
+	default:
+		return fmt.Errorf("unknown unary operator: %v", operator)
 	}
 }
 
