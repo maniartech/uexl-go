@@ -7,20 +7,14 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// isASCII reports whether s contains only ASCII bytes (fast-path for all Unicode functions).
-func isASCII(s string) bool {
-	for i := 0; i < len(s); i++ {
-		if s[i] >= 0x80 {
-			return false
-		}
-	}
-	return true
-}
-
 // ---- Measure ----------------------------------------------------------------
 
 // RuneLength returns the number of Unicode code points in s.
+// Uses an ASCII fast-path: for pure ASCII, runes == bytes.
 func RuneLength(s string) int {
+	if isASCII(s) {
+		return len(s)
+	}
 	return utf8.RuneCountInString(s)
 }
 
@@ -47,11 +41,23 @@ func RuneSlice(s string, start, length int) (string, error) {
 	if length < 0 {
 		return "", fmt.Errorf("runeSubstr: length must be non-negative, got %d", length)
 	}
-	runes := []rune(s)
-	n := len(runes)
 	if start < 0 {
 		start = 0
 	}
+	if isASCII(s) {
+		// Byte == rune for ASCII — substring is a zero-copy slice.
+		n := len(s)
+		if start >= n {
+			return "", nil
+		}
+		end := start + length
+		if end > n {
+			end = n
+		}
+		return s[start:end], nil
+	}
+	runes := []rune(s)
+	n := len(runes)
 	if start >= n {
 		return "", nil
 	}
@@ -98,10 +104,11 @@ func GraphemeSlice(s string, start, length int) (string, error) {
 	from := -1
 	to := 0
 	for gr.Next() {
+		s1, e1 := gr.Positions()
 		if from == -1 {
-			from, _ = gr.Positions()
+			from = s1
 		}
-		_, to = gr.Positions()
+		to = e1
 		length--
 		if length == 0 {
 			break
@@ -117,11 +124,21 @@ func GraphemeSlice(s string, start, length int) (string, error) {
 
 // CollectRunes returns each Unicode code point in s as a single-rune string,
 // packed into a []any slice ready for the VM.
+// ASCII fast-path uses zero-copy string slices. Unicode path uses range directly,
+// avoiding an intermediate []rune allocation.
 func CollectRunes(s string) []any {
-	runes := []rune(s)
-	result := make([]any, len(runes))
-	for i, r := range runes {
-		result[i] = string(r)
+	if isASCII(s) {
+		result := make([]any, len(s))
+		for i := range s {
+			result[i] = s[i : i+1] // zero-copy: slice into original string
+		}
+		return result
+	}
+	// range s decodes runes directly — no []rune intermediate allocation.
+	// Over-allocate by byte length (upper bound on rune count).
+	result := make([]any, 0, len(s))
+	for _, r := range s {
+		result = append(result, string(r))
 	}
 	return result
 }
@@ -136,14 +153,11 @@ func CollectGraphemes(s string) []any {
 		}
 		return result
 	}
-	var clusters []string
+	// Append directly to []any — avoids building an intermediate []string.
+	result := make([]any, 0, len(s)/2) // heuristic: ≥2 UTF-8 bytes per non-ASCII grapheme
 	gr := uniseg.NewGraphemes(s)
 	for gr.Next() {
-		clusters = append(clusters, gr.Str())
-	}
-	result := make([]any, len(clusters))
-	for i, c := range clusters {
-		result[i] = c
+		result = append(result, gr.Str())
 	}
 	return result
 }
