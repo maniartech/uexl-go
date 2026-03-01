@@ -75,7 +75,7 @@ func (vm *VM) sliceArray(arr []any, start, end, step any) error {
 }
 
 func (vm *VM) sliceString(str string, start, end, step any) error {
-	runes := []rune(str)
+	b := []byte(str)
 	st, err := vm.parseSliceStep(step)
 	if err != nil {
 		return err
@@ -85,9 +85,9 @@ func (vm *VM) sliceString(str string, start, end, step any) error {
 	var defaultStart, defaultEnd int
 	if st > 0 {
 		defaultStart = 0
-		defaultEnd = len(runes)
+		defaultEnd = len(b)
 	} else {
-		defaultStart = len(runes) - 1
+		defaultStart = len(b) - 1
 		defaultEnd = -1
 	}
 
@@ -101,25 +101,25 @@ func (vm *VM) sliceString(str string, start, end, step any) error {
 		return err
 	}
 
-	s = vm.adjustSliceIndex(s, len(runes))
+	s = vm.adjustSliceIndex(s, len(b))
 	if e != -1 {
-		e = vm.adjustSliceIndex(e, len(runes))
+		e = vm.adjustSliceIndex(e, len(b))
 	}
 
-	var result []rune
+	var result []byte
 	if st > 0 {
 		if s >= e {
 			return vm.Push("")
 		}
 		for i := s; i < e; i += st {
-			result = append(result, runes[i])
+			result = append(result, b[i])
 		}
 	} else {
 		if s <= e {
 			return vm.Push("")
 		}
 		for i := s; i > e; i += st {
-			result = append(result, runes[i])
+			result = append(result, b[i])
 		}
 	}
 

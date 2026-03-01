@@ -81,8 +81,7 @@ func (vm *VM) executeStringIndex(str string, index any) error {
 		return fmt.Errorf("string index must be an integer, got %f", idxVal)
 	}
 
-	runes := []rune(str)
-	max := len(runes)
+	max := len(str)
 	if intIdx < 0 {
 		intIdx = max + intIdx
 	}
@@ -91,5 +90,5 @@ func (vm *VM) executeStringIndex(str string, index any) error {
 		return fmt.Errorf("string index out of bounds: %d", intIdx)
 	}
 
-	return vm.Push(string(runes[intIdx]))
+	return vm.Push(str[intIdx : intIdx+1])
 }

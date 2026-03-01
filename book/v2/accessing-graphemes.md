@@ -1,197 +1,247 @@
-# Accessing Graphemes within Strings (v2)
+# Accessing Strings at Different Unicode Levels (v2)
 
-Working with human text requires care: what users perceive as a single "character" can be composed of multiple Unicode code points (e.g., a base letter plus one or more combining marks). Indexing by raw bytes or even by code points can split these. Grapheme clusters model user‑perceived characters.
+Working with text requires choosing the right unit of processing: bytes for protocols and storage limits, code points (runes) for Unicode scalar operations, and grapheme clusters for user-visible characters.
 
-This note describes the recommended v2 semantics for grapheme‑aware operations in UExL using string views and grapheme-aware defaults.
+This document describes UExL v2's approach: a set of explicit, composable built-in functions that operate at clearly-named Unicode levels, with zero hidden state and full compatibility with user-defined functions (UDFs).
 
-## Background: Bytes vs Code Points vs Graphemes
+## Background: The Three Unicode Levels
 
-- **Byte**: A raw unit of storage. Not meaningful for text indexing in Unicode.
-- **Code point (rune)**: A single Unicode scalar value. Many scripts require multiple code points for one displayed "character."
-- **Grapheme cluster**: One user‑perceived character, possibly composed of multiple code points (as defined by Unicode Text Segmentation, UAX #29).
+| Level | Unit | Go term | Use for |
+|-------|------|---------|----------|
+| **Bytes** | Raw storage unit | `byte` | Protocols, encoding, storage limits |
+| **Code points** | Unicode scalar value | `rune` | Identifiers, ASCII processing, character classification |
+| **Grapheme clusters** | User-perceived character (1+ code points) | — (UAX #29) | Display, UI text, safe truncation |
 
-**Examples:**
-
-- `"café"`: The "é" can be a single code point U+00E9.
-- `"éclair"`: The initial "é" can be two code points: U+0065 ("e") + U+0301 (COMBINING ACUTE ACCENT).
-
-## Advantages of Grapheme-Aware Defaults
-
-### International Text Safety
-
-- **Prevents text corruption**: Never splits user-perceived characters
-- **Consistent behavior**: Same results across all Unicode scripts and languages
-- **Future-proof**: Works with new Unicode additions (emoji, combining marks, etc.)
-
-### Predictable Operations
-
-- **Intuitive length**: `len("👨‍👩‍👧‍👦")` returns 1 (one family emoji), not 7 code points
-- **Safe truncation**: `"naïve"[0:3]` gives "naï", not "naï" + partial character
-- **Reliable indexing**: `"éclair"[0]` always returns complete "é", never broken pieces
-
-### Developer Experience
-
-- **Correct by default**: No need to remember Unicode complexities for common operations
-- **Explicit optimization**: Use views only when performance requires it
-- **Composable**: All existing UExL operations work seamlessly with any view
-- **No rewrite needed**: Existing code handles international text correctly automatically
-
-### Cross-Platform Consistency
-
-- **Same behavior everywhere**: Works identically on Go, JavaScript, Python, Java hosts
-- **No platform surprises**: Eliminates differences in how platforms handle Unicode
-- **Portable expressions**: UExL code behaves the same regardless of host language
-
-### Comparison with Other Approaches
-
-| Operation | UExL v2 (Grapheme-aware) | Traditional (Code points/Bytes) |
-|-----------|-------------------------|--------------------------------|
-| `len("naïve")` | 5 (always correct) | 5 or 6 (depends on encoding) |
-| `"éclair"[0]` | "é" (complete) | "e" or broken char (unsafe) |
-| `"👨‍👩‍👧‍👦".length` | 1 (family emoji) | 7 (fragmented) |
-| Performance | Fast for ASCII, safe for Unicode | Fast but breaks international text |
-| Migration | Zero code changes needed | Requires Unicode library adoption |
-
-## UExL v2 String Processing Approach
-
-UExL v2 provides a view-based approach to string processing that works with all existing operations:
-
-### Default Behavior: Grapheme-Aware
-
-By default, UExL string operations work at the grapheme (user-perceived character) level:
-
-- `len("éclair")` - Returns 6 (grapheme count)
-- `"éclair"[0:3]` - Returns first 3 graphemes as string
-- `"éclair" |map: upper($item)` - Maps over graphemes
-- `contains("naïve", "aï")` - Grapheme-aware search
-
-### String Views for Different Levels
-
-When you need to work at different Unicode levels, use view functions:
-
-- `char("text")` - Code point/rune view
-- `utf8("text")` - UTF-8 byte view
-- `utf16("text")` - UTF-16 code unit view
-
-### Universal Operations on Views
-
-**All existing UExL operations work with any view:**
+**Why they differ — `"café\u0301"` (decomposed é = e + combining acute accent):**
 
 ```javascript
-// Length operations
-len("éclair")           // 6 (graphemes)
-len(char("éclair"))     // 6 (code points)
-len(utf8("éclair"))     // 7 (UTF-8 bytes)
-
-// Indexing operations
-"éclair"[0:3]           // First 3 graphemes: "écl"
-char("éclair")[0:3]     // First 3 code points
-utf8("éclair")[0:3]     // First 3 bytes
-
-// Pipe operations
-"éclair" |map: upper($item)         // Over graphemes
-char("éclair") |filter: $item != "é" // Over code points
-utf8("éclair") |filter: $item < 128  // Over bytes
-
-// String functions
-contains("éclair", "é")             // Grapheme search
-contains(char("éclair"), "é")       // Code point search
+len("café\u0301")           // 8  (UTF-8 bytes — default, Go-compatible)
+graphemeLen("café\u0301")   // 4  (4 visible characters: c, a, f, é)
+len(runes("café\u0301"))    // 5  (rune count via explicit conversion)
 ```
+
+**Examples of where levels diverge:**
+
+- `"café"` with precomposed é (U+00E9): byte=5, rune=4, grapheme=4
+- `"café\u0301"` with decomposed é: byte=8, rune=5, grapheme=4
+- `"👨‍👩‍👧‍👦"` (family emoji): byte=25, rune=7, grapheme=1
+
+## Default Behavior: Byte Level (Go-Compatible)
+
+All four primitive string operations are **byte-based** — matching Go's native `len()`, `str[i]`, and `str[i:j]`. This keeps UExL predictable for Go developers and consistent with UDFs that return byte positions (e.g. `strings.Index`, regexp matches).
+
+```javascript
+// ASCII strings: bytes = runes = graphemes — all levels agree:
+len("hello")           // 5
+"hello"[1]             // "e"
+"hello"[1:4]           // "ell"
+substr("hello", 1, 3)  // "ell"
+
+// Multi-byte Unicode: byte boundaries and rune boundaries diverge:
+len("naïve")           // 6  (ï encodes as 2 UTF-8 bytes)
+"naïve"[2]             // raw 3rd byte (0xAF) — part of ï, not a valid rune alone
+"naïve"[0:4]           // "naï"   (bytes 0–3 happen to land on a valid boundary)
+"naïve"[0:3]           // invalid UTF-8 ⚠️  (splits the 2-byte ï codepoint)
+```
+
+Use `runes(s)` or `graphemes(s)` to work at the character or display level safely.
+
+## Function Reference
+
+### Measure
+
+```javascript
+len(s)                  // UTF-8 byte count — O(1) (default)
+runeLen(s)              // rune (code point) count (new)
+graphemeLen(s)          // grapheme cluster count — UAX #29 segmentation (new)
+len(runes(s))           // rune count via explicit array conversion (same as runeLen)
+```
+
+### Cut
+
+```javascript
+substr(s, start, length)             // byte-level substring (default)
+s[start:end]                         // byte-level slice (default)
+runeSubstr(s, start, length)         // rune-level — safe for Unicode strings (new)
+graphemeSubstr(s, start, length)     // grapheme-level — safe for display (new)
+```
+
+### Explode to Array
+
+```javascript
+runes(s)        // []any of single code point strings
+graphemes(s)    // []any of grapheme cluster strings
+bytes(s)        // []any of byte values as float64
+```
+
+### Reassemble
+
+```javascript
+join(array)          // concatenate elements with "" separator
+join(array, sep)     // concatenate elements with separator
+```
+
+Note: `|join:` pipe stage is still the cleanest choice for a final pipeline step. The `join()` function is needed when joining is required mid-expression or as a function argument.
 
 ## Examples
 
-### Default Grapheme-Aware Behavior
+### Measure at Different Levels
 
 ```javascript
-// Length and indexing (grapheme-aware by default)
-len("éclair")           // 6 (user-perceived characters)
-"éclair"[0]             // "é" (complete grapheme)
-"éclair"[0:3]           // "écl" (first 3 graphemes)
+// Default — byte count (Go-compatible):
+len("naïve")                  // 6  (ï = 2 UTF-8 bytes)
+len("hello")                  // 5  (ASCII: bytes = runes = graphemes)
+len("👨‍👩‍👧‍👦")                // 25 (25 UTF-8 bytes)
 
-// Comparison with code-point view
-len(char("éclair"))     // 6 (code points - same for this example)
-char("éclair")[1]       // "c" (second code point)
-char("café\u0301")[3]   // "́" (combining mark only)
+// For display/UI — visible character count:
+graphemeLen("👨‍👩‍👧‍👦")          // 1  (one visible emoji)
+graphemeLen("café\u0301")     // 4  (c, a, f, é as one grapheme)
+
+// Rune count — explicit via array conversion:
+len(runes("naïve"))           // 5
+```
+
+### Cut and Slice
+
+```javascript
+// Byte-based (default) — safe for ASCII, predictable for all:
+"hello"[1:4]                           // "ell"  (bytes 1–3)
+"hello"[2]                             // "l"    (byte 2)
+substr("naïve", 0, 3)                   // first 3 bytes ⚠️ (may split multi-byte ï)
+
+// Rune-level — explicit via explode + join or runeSubstr (new):
+runes("naïve")[2]                       // "ï"  (3rd rune)
+join(runes("naïve")[0:3])               // "naï"  (first 3 runes, rejoined)
+runeSubstr("naïve", 0, 3)              // "naï"  (rune-level substr — new builtin)
+
+// Safe display truncation — grapheme-level (new):
+graphemeSubstr("café\u0301", 0, 3)      // "caf"   (3 graphemes)
+graphemeSubstr("café\u0301", 0, 4)      // "café\u0301"  (é stays whole)
+graphemeSubstr("👨‍👩‍👧‍👦 hello", 0, 2)  // "👨‍👩‍👧‍👦 "   (2 graphemes, emoji intact)
+```
+
+### Explode → Transform → Reassemble
+
+```javascript
+// Strip combining diacritics (normalize to base letters):
+runes("café\u0301") |filter: $item != "\u0301" |join: ""
+// → "cafe"
+
+// Map upper over visible characters, then rejoin:
+join(graphemes("café\u0301") |map: upper($item), "")
+// → "CAFÉ"
+
+// Mid-expression join (impossible with |join: pipe alone):
+upper(join(runes("café\u0301") |filter: $item != "\u0301", ""))
+// → "CAFE"
+
+// Check all bytes are ASCII:
+bytes(header) |every: $item < 128        // true/false
+
+// byte count via array (same as byteLen):
+len(bytes(str))
 ```
 
 ### Practical Use Cases
 
 ```javascript
-// User interface - safe text processing
-userNames
-  |filter: len($item) >= 2        // At least 2 visual characters
-  |map: $item[0] + "."           // Safe initial extraction
+// 1. Safe display name — max 20 visible characters:
+graphemeSubstr(userName, 0, 20)
 
-// Data processing - code point level when needed
-fileNames
-  |map: char($item)              // Switch to code point view
-  |filter: len($last) <= 255     // Technical filename limits
-  |join: ""                      // Back to string
+// 2. Username slug — lowercase, alpha only, grapheme-safe:
+join(graphemes(lower(userName)) |filter: isAlpha($item), "")
 
-// Protocol/encoding - byte level
-httpHeaders
-  |map: utf8($item)              // Switch to UTF-8 byte view
-  |filter: all($last, $item < 128) // ASCII-only headers
-  |join: ""                      // Back to string
+// 3. Password validation — visual length for UX, byte length for storage:
+len(password) >= 8 && len(password) <= 72
+
+// 4. Per-name processing in a list:
+names |map: join(graphemes($item) |filter: isAlpha($item), "")
+
+// 5. ASCII-only protocol header check:
+bytes(header) |every: $item < 128
+
+// 6. Strip combining marks across a word list:
+words |map: join(runes($item) |filter: $item < "\u0300" || $item > "\u036F", "")
+
+// 7. Initials extraction (grapheme-safe):
+name |split: " " |map: graphemes($item)[0] |join: ". "
+
+// 8. Emoji-safe read-more truncation:
+len(body) > 280 ? graphemeSubstr(body, 0, 279) + "…" : body
+
 ```
 
-### Mixed Operations
+> **Note:** `bytes()` output (float64 values) is intended for analysis and protocol checks only, not for string reassembly in expressions. Use a UDF if you need to reconstruct a string from bytes.
+
+## User-Defined Function (UDF) Integration
+
+UDFs always receive **plain Go strings** — no level information, no special types. This is the complete contract:
+
+```go
+// Host developer writes normal Go — nothing changes:
+functions["upper"] = func(args ...any) (any, error) {
+    return strings.ToUpper(args[0].(string)), nil
+}
+
+functions["truncate"] = func(args ...any) (any, error) {
+    s := args[0].(string)
+    n := int(args[1].(float64))
+    runes := []rune(s)          // host decides their own Unicode level
+    if len(runes) > n {
+        runes = runes[:n]
+    }
+    return string(runes), nil
+}
+```
+
+Level-aware decomposition happens in the UExL expression **before** the UDF is called:
 
 ```javascript
-// Process user text safely, then apply technical constraints
-userName
-  |: $last[0:20]                 // Truncate to 20 graphemes (safe)
-  |: char($last)                 // Switch to code point view
-  |filter: isalnum($item)        // Keep only alphanumeric
-  |join: ""                      // Result: cleaned username
+// UDF gets individual grapheme strings — plain, no awareness needed:
+graphemes(name) |map: myTransform($item)       // myTransform receives "c", "a", "f", "é"
+
+// Level-aware work done in expression, UDF gets clean result:
+myUDF(join(graphemes(name) |filter: isAlpha($item), ""))
+
+// Built-in functions handle level-aware measuring; UDF handles content:
+graphemeLen(userName)          // VM built-in — no UDF needed
+upper(userName)                // UDF gets plain string ✅
 ```
+
+**The rule:** Built-in `grapheme*` functions handle level-aware structural operations. UDFs handle content transformation. No mixing required, no new function signatures needed.
 
 ## Behavior and Edge Cases
 
-- **Index origin**: Zero‑based for all indexing operations
-- **Out of range**: Returns `null` for single-element access; slicing clamps indices
-- **Empty ranges**: Return empty string `""`
-- **Non‑string inputs**: Type error
-- **Immutability**: All operations return new values; strings aren't mutated
-- **Performance**: ASCII-only strings can use fast-path optimizations automatically
+- **Index origin**: Zero-based for all indexing and array operations
+- **Out of range**: `substr`/`graphemeSubstr` clamp indices; single-element access returns `null`
+- **Empty ranges**: Return `""` or `[]`
+- **Non-string inputs**: Type error for `graphemeLen`, `graphemes`, `runes`, `bytes`
+- **`graphemeSubstr` out of range**: indices are clamped to string length
+- **`substr` out of range**: errors (Go-compatible behavior)
+- **ASCII fast-path**: `graphemeLen` and `graphemes` detect ASCII-only strings and skip UAX #29 segmentation (O(n) scan, then O(1) per operation)
+- **Immutability**: All operations return new values; strings are never mutated
 
-## Migration and Design Guidelines
+## Design Principles
 
-### For User-Facing Text
+- **Byte default**: Matches Go — zero surprises for Go developers, no behavioral changes from v1
+- **Explicit over magic**: `graphemeLen` is unambiguous; `runes(s)` makes the conversion explicit
+- **No hidden state**: Pure functions, no tagged values, no level propagation rules
+- **UDF-transparent**: Level awareness lives entirely in expression syntax, never in function signatures
+- **Composable**: `graphemes()` / `runes()` / `bytes()` compose with every existing UExL pipe operation
+- **Dependency-honest**: Default operations need nothing new; grapheme operations require one UAX #29 library, isolated to `grapheme*` functions
+- **The rule:** Built-in `grapheme*` functions handle level-aware structural operations. UDFs handle content transformation.
 
-- **Default operations work correctly**: UExL's grapheme-aware defaults handle international text properly
-- **No special syntax needed**: `len()`, indexing, and pipes work with user-perceived characters
-- **Use for**: names, content, UI labels, search, truncation
+## What Changed from v1
 
-### For Technical/Performance-Critical Code
-
-- **Use view functions when needed**: `char()` for code points, `utf8()` for bytes
-- **Use for**: identifiers, protocols, parsing, ASCII-only data, performance optimization
-
-### Design Principles
-
-- **Correctness by default**: Default behavior serves end users and prevents Unicode bugs
-- **Performance when needed**: View functions provide explicit control without sacrificing safety
-- **Composable**: All operations work with all views, maintaining UExL's pipe-friendly design
-- **No function explosion**: One set of operations, multiple views - simple and consistent
-- **International-first**: Built for global applications from day one, not as an afterthought
-- **Swift-compatible**: Proven architecture used successfully in production systems
-
-## Implementation Guidance (Host)
-
-### Core Requirements
-
-- **Default string operations**: Implement grapheme-aware behavior using Unicode UAX #29 segmentation
-- **View functions**: `char()`, `utf8()`, `utf16()` should return string-like objects that work with all operations
-- **Performance optimization**: Detect ASCII-only strings for fast-path operations when possible
-
-### Implementation Notes
-
-- Use established Unicode libraries (ICU, Go's runes + segmentation library, etc.)
-- View objects should be lightweight wrappers that maintain the original string data
-- Consider lazy evaluation for view conversions
-- Ensure all existing UExL operations (indexing, slicing, pipes, functions) work transparently with views
-
----
-
-This unified approach provides both correctness (grapheme-aware defaults) and performance (explicit views) while maintaining a clean, composable API that works with all existing UExL operations.
+| Operation | v1 | v2 |
+|-----------|-------|------|
+| `len("naïve")` | — | 6 bytes (byte-based) |
+| `"naïve"[2]` | rune-based → `"ï"` | **byte-based** → raw 3rd byte |
+| `"naïve"[0:3]` | rune-based → `"naï"` | **byte-based** → first 3 bytes |
+| `substr("naïve",0,3)` | byte-based | first 3 bytes (unchanged) |
+| `graphemeLen("👨‍👩‍👧‍👦")` | not available | 1 grapheme |
+| `graphemes("café")` | not available | `["c","a","f","é"]` |
+| `runes("café\u0301")` | not available | `["c","a","f","e","́"]` |
+| `bytes("hi")` | not available | `[104, 105]` |
+| `join(arr, sep)` | pipe only | function + pipe |
+| `graphemeSubstr(s,i,n)` | not available | grapheme-safe substring |
