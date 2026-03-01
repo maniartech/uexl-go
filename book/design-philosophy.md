@@ -71,7 +71,7 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 
 ## Related reading
 
-- v2/Null chaining operator: `book/v2/null-chaining-operator.md`
-- v2/Nullish coalescing operator: `book/v2/nullish-coalescing-operator.md`
-- v2/Accessing graphemes: `book/v2/accessing-graphemes.md`
+- Null chaining operator: `book/operators/null-chaining.md`
+- Nullish coalescing operator: `book/operators/nullish-coalescing.md`
+- Strings and Unicode: `book/strings-unicode.md`
 - Mutability and purity: `book/mutability.md`

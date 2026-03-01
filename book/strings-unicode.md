@@ -1,8 +1,8 @@
-# Accessing Strings at Different Unicode Levels (v2)
+# Strings and Unicode
 
 Working with text requires choosing the right unit of processing: bytes for protocols and storage limits, code points (runes) for Unicode scalar operations, and grapheme clusters for user-visible characters.
 
-This document describes UExL v2's approach: a set of explicit, composable built-in functions that operate at clearly-named Unicode levels, with zero hidden state and full compatibility with user-defined functions (UDFs).
+UExL provides explicit, composable built-in functions that operate at clearly-named Unicode levels, with zero hidden state and full compatibility with user-defined functions (UDFs).
 
 ## Background: The Three Unicode Levels
 
@@ -223,7 +223,7 @@ upper(userName)                // UDF gets plain string ✅
 
 ## Design Principles
 
-- **Byte default**: Matches Go — zero surprises for Go developers, no behavioral changes from v1
+- **Byte default**: Matches Go — zero surprises for Go developers, consistent with standard library expectations
 - **Explicit over magic**: `graphemeLen` is unambiguous; `runes(s)` makes the conversion explicit
 - **No hidden state**: Pure functions, no tagged values, no level propagation rules
 - **UDF-transparent**: Level awareness lives entirely in expression syntax, never in function signatures
@@ -231,17 +231,21 @@ upper(userName)                // UDF gets plain string ✅
 - **Dependency-honest**: Default operations need nothing new; grapheme operations require one UAX #29 library, isolated to `grapheme*` functions
 - **The rule:** Built-in `grapheme*` functions handle level-aware structural operations. UDFs handle content transformation.
 
-## What Changed from v1
+## String Operation Reference
 
-| Operation | v1 | v2 |
+This table summarises the semantics of all string operations. The `s[i]` and `s[i:j]` operators are byte-based; the named functions provide explicit Unicode levels.
+
+| Operation | Level | Notes |
 |-----------|-------|------|
-| `len("naïve")` | — | 6 bytes (byte-based) |
-| `"naïve"[2]` | rune-based → `"ï"` | **byte-based** → raw 3rd byte |
-| `"naïve"[0:3]` | rune-based → `"naï"` | **byte-based** → first 3 bytes |
-| `substr("naïve",0,3)` | byte-based | first 3 bytes (unchanged) |
-| `graphemeLen("👨‍👩‍👧‍👦")` | not available | 1 grapheme |
-| `graphemes("café")` | not available | `["c","a","f","é"]` |
-| `runes("café\u0301")` | not available | `["c","a","f","e","́"]` |
-| `bytes("hi")` | not available | `[104, 105]` |
-| `join(arr, sep)` | pipe only | function + pipe |
-| `graphemeSubstr(s,i,n)` | not available | grapheme-safe substring |
+| `len("naïve")` | byte | 6 bytes |
+| `"naïve"[2]` | byte | raw 3rd byte (may split a codepoint) |
+| `"naïve"[0:3]` | byte | first 3 bytes (may split a codepoint) |
+| `substr("naïve",0,3)` | byte | first 3 bytes |
+| `runeLen("naïve")` | rune | 5 code points |
+| `runeSubstr("naïve",0,3)` | rune | `"naï"` — safe for Unicode |
+| `graphemeLen("👨\u200d👩\u200d👧\u200d👦")` | grapheme | 1 visible character |
+| `graphemeSubstr(s,i,n)` | grapheme | display-safe substring |
+| `runes("café\u0301")` | rune | `["c","a","f","e","́"]` |
+| `graphemes("café")` | grapheme | `["c","a","f","é"]` |
+| `bytes("hi")` | byte | `[104, 105]` as float64 |
+| `join(arr, sep)` | — | reassemble any array into a string |

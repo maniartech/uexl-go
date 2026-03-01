@@ -33,8 +33,10 @@ Strings are sequences of characters, enclosed in single or double quotes. Use th
   - `'world'`
   - `"He said, 'hi'"`
 - **Edge Case:** Escape sequences (like `\"`, `\\`) are not supported; use matching quotes to include quotes inside strings.
- - **Indexing:** Use square brackets to access a character by zero-based index: `"abc"[1] // "b"`. Out-of-bounds returns `null`. Strings are immutable.
- - **Unicode Note:** Indexing is by position within the underlying string. For multi-byte or combined characters, `s[i]` may not correspond to a full user-perceived glyph.
+- **Indexing:** Use square brackets to access a character by zero-based **byte** index: `"abc"[1] // "b"`. Out-of-bounds returns `null`. Strings are immutable.
+- **Slicing:** `s[i:j]` returns the substring from byte `i` (inclusive) to byte `j` (exclusive).
+- **`len(s)`** returns the number of **UTF-8 bytes**, not runes or visible characters. For a pure-ASCII string the three counts are identical.
+- **Unicode:** For multi-byte code points or composed characters (e.g. emoji, accented letters), byte-level operations may split a codepoint. Use the explicit Unicode functions `runeLen`, `runeSubstr`, `graphemeLen`, `graphemeSubstr`, `runes()`, `graphemes()` when character-level or display-level semantics are required. See [Strings and Unicode](strings-unicode.md).
 
 ## Booleans
 Booleans represent logical truth—`true` or `false`. Use them in conditions, filters, and logical operations.

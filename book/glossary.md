@@ -7,11 +7,11 @@ A quick reference for UExL terminology and concepts.
 - Null chaining (?.)
   - Also known as optional chaining (JS/TS), null‑aware access (Dart), safe navigation.
   - Short-circuits property/index access when the left-hand side is nullish; returns null.
-  - See: v2/null-chaining-operator.md
+  - See: operators/null-chaining.md
 - Nullish coalescing (??)
   - Returns the left value unless it is nullish; otherwise returns the right.
   - Keeps valid falsy (0, "", false).
-  - See: v2/nullish-coalescing-operator.md
+  - See: operators/nullish-coalescing.md
 - Equality (==, !=)
   - Exact equality for primitives; no cross‑type coercion (e.g., "1" == 1 is false).
   - Deep equality for arrays and objects in both == and !=.
@@ -58,7 +58,7 @@ A quick reference for UExL terminology and concepts.
 - Nullish
   - A value is nullish if it is `null` or unavailable/missing/undefined (e.g., absent key, out‑of‑bounds index, unresolved identifier).
   - Operators (??) and (?. / ?[ ]) treat nullish as “absent” for fallback and short‑circuiting.
-  - See: v2/nullish-coalescing-operator.md and v2/null-chaining-operator.md.
+  - See: operators/nullish-coalescing.md and operators/null-chaining.md.
 
 ## Mutability and purity
 
