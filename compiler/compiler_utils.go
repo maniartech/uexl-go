@@ -216,7 +216,13 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 				c.replaceOperand(jEndPos+1, endPos)
 			} else {
 				c.emit(code.OpConstant, propIdx)
+				if step.safe {
+					c.emit(code.OpSafeModeOn)
+				}
 				c.emit(code.OpMemberAccess)
+				if step.safe {
+					c.emit(code.OpSafeModeOff)
+				}
 			}
 		} else if step.propertyExpr != nil {
 			// Index access
@@ -250,7 +256,13 @@ func (c *Compiler) compileAccessNode(n parser.Node, softenLast bool) error {
 				if err := c.Compile(step.propertyExpr); err != nil {
 					return err
 				}
+				if step.safe {
+					c.emit(code.OpSafeModeOn)
+				}
 				c.emit(code.OpIndex, 0) // optional = false
+				if step.safe {
+					c.emit(code.OpSafeModeOff)
+				}
 			}
 		}
 	}

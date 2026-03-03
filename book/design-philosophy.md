@@ -12,10 +12,13 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 
 1) Strict access by default
 - Property access (`a.b`) and index access (`a[i]`) throw when the key/index doesn’t exist or is out of bounds.
-- The optional forms (`a?.b`, `a?.[i]`) only guard the base from being nullish; they do not soften missing keys/indices. If the base is non‑nullish but the member/index is not present, it’s still an error.
+- The optional forms (`a?.b`, `a?.[i]`) guard the base from being nullish **and** soften a missing key/index. If the base is nullish, or the member/index is absent, the result is null and the rest of the chain is short-circuited.
 
-2) Separate nullish from falsy
-- Nullish coalescing (`a ?? b`) only falls back when `a` is null. It does not treat valid “falsy” values (0, "", false, empty array/object) as missing.
+2) Nullish means null or absent
+- A value is **nullish** if it is `null` or absent (a context variable not provided by the caller).
+- Absent context variables are treated as `null` — they are interchangeable in nullish checks.
+- This mirrors the `null | undefined` convention found in other expression languages, making guards intuitive: `user?.name` works whether `user` is `null` or simply not in the context.
+- Nullish coalescing (`a ?? b`) falls back when `a` is null or absent. It does not treat valid "falsy" values (0, "", false, empty array/object) as nullish.
 - Logical operators (`||`, `&&`, `!`) work on truthiness. They’re for control flow, not for data defaulting.
 
 3) Safe mode with nullish coalescing
@@ -39,9 +42,10 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 ## Explicitness policies (nullish and boolish)
 
 - Strict access by default: property (`. …`) and index (`[i]`) access throw on missing keys or out-of-bounds indices.
-- Optional access only guards the base: `a?.b`, `a?.[i]` prevent errors only when `a` is nullish; they do not soften missing members/indices when `a` exists.
-- Separate nullish from falsy:
-  - Use `a ?? b` to default only when `a` is null; it preserves valid falsy like `0`, `""`, `false`.
+- Optional access guards both a null base and a missing key/index: `a?.b`, `a?.[i]` return null when `a` is nullish **or** the member/index doesn't exist.
+- Nullish means null or absent:
+  - Absent context variables (not provided by the caller) are treated as `null`.
+  - Use `a ?? b` to default only when `a` is null or absent; it preserves valid falsy like `0`, `""`, `false`.
   - Use `||`, `&&`, and `!` for truthiness-based control flow, not for data defaulting.
 - Safe mode with nullish coalescing: `??` provides safety for the immediate property/index access only
   - `x.a.b ?? c` is safe for accessing `b` in `a`, but not for accessing `a` in `x`
@@ -50,15 +54,15 @@ UExL is deliberately explicit about how values are accessed and how defaults are
 ## Practical guidance and examples
 
 - Defaulting with nullish coalescing keeps valid falsy values:
-  - `count ?? 0` → use a default only when `count` is truly null.
+  - `count ?? 0` → use a default only when `count` is null or absent.
 - Avoid using `||` for defaults when falsy values are meaningful:
   - `count || 0` would replace 0 with 0 again (fine) but also replace "" or false, and can be wrong in other contexts.
 - Safe property access with nullish coalescing (immediate access only):
   - `user.name ?? "Anonymous"` → provides fallback when `name` property is missing or null in `user`
   - `data.user.name ?? "Anonymous"` → safe for `name` in `user`, but `user` must exist in `data`
-- Optional access guards only the base being nullish, not missing members:
-  - `(user?.address).city` can still error if `user` exists but `address` is missing.
-  - Use explicit checks or host helpers for existence if you want to treat missing as acceptable.
+- Optional chaining on present but incomplete objects:
+  - `user?.address?.city ?? "unknown"` → `"unknown"` when `user` exists but has no `address` key; `?.` softens both the null base and the absent key.
+  - `(user?.address).city` can still error if `user` exists but `address` is missing — `.city` is a strict access on the null result.
 - Unicode-level operations are explicit about their target level:
   - `len("éclair")` → 6 graphemes (safe for user display)
   - `len(char("éclair"))` → explicit code point count when needed

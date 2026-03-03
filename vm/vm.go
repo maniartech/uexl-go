@@ -87,11 +87,11 @@ func (vm *VM) run() error {
 			// Fast path: use pre-resolved cache (O(1) array access)
 			if int(varIndex) < len(vm.contextVarCache) {
 				value := vm.contextVarCache[varIndex]
-				// Check if sentinel value (stored as AnyVal)
+				// Missing context variables are treated as null (nullish semantics).
+				// This allows ?. and ?? to guard against absent variables naturally.
 				if value.IsAny() {
 					if _, isMissing := value.AnyVal.(contextVarMissing); isMissing {
-						// Variable was not provided in context
-						return fmt.Errorf("context variable %q not found", vm.contextVars[varIndex])
+						value = Value{Typ: TypeNull}
 					}
 				}
 				// Push the Value directly (zero-alloc!)

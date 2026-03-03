@@ -29,15 +29,13 @@ func runVmExpectError(t *testing.T, input string) {
 }
 
 func TestNullishCoalescing_StrictErrorCases(t *testing.T) {
-	// Earlier links must remain strict; only the immediate final access on the left of ?? is softened.
+	// Earlier links without ?. must remain strict; only immediate final access on the left of ?? is softened.
 	cases := []string{
-		// Missing intermediate link
-		`{}` + `?.u?.name ?? "anon"`,
-		// Intermediate exists but is nullish -> still error (earlier link strict)
+		// Intermediate exists but is nullish -> still error (strict access on null)
 		`{"u": null}` + `.u.name ?? "anon"`,
-		// Index on nullish base before final access
+		// Index on nullish base before final access (strict .arr)
 		`{"arr": null}` + `.arr[0] ?? 1`,
-		// Optional chaining guards only base nullish; missing key still errors
+		// Mixed: ?.u softens missing "u" -> null, but .name is strict -> error on null
 		`{}` + `?.u.name ?? "anon"`,
 	}
 	for _, in := range cases {
