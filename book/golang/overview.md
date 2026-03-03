@@ -5,15 +5,13 @@ UExL can be embedded in Go applications to evaluate expressions dynamically.
 ## Installation
 Install the UExL Go package (when available):
 ```
-go get github.com/maniartech/uexl-go
+go get github.com/maniartech/uexl
 ```
 
 ## Importing the Library
 ```go
-import "github.com/maniartech/uexlgo"
+import "github.com/maniartech/uexl"
 ```
-
-## Basic Usage
 ```go
 result, err := uexl.Eval("10 + 20 |: $1 * 2")
 if err != nil {
@@ -27,10 +25,10 @@ fmt.Println(result) // Output: 60
 You can extend UExL in Go by registering custom functions. For example, to register a function named "double":
 
 ```go
-import "github.com/maniartech/uexlgo"
+import "github.com/maniartech/uexl"
 
 // Register a function named "double" that multiplies its argument by 2
-uexlgo.RegisterFunction("double", func(x float64) float64 {
+uexl.RegisterFunction("double", func(x float64) float64 {
     return x * 2
 })
 ```

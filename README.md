@@ -34,7 +34,7 @@ install it using the following instructions.
 To install UExL, run the following command in your terminal:
 
 ```bash
-go get github.com/maniartech/uexl-go
+go get github.com/maniartech/uexl
 ```
 
 This command downloads and installs the UExL package along with its dependencies.
@@ -48,7 +48,7 @@ This command downloads and installs the UExL package along with its dependencies
 First, include UExL in your Go project by importing it:
 
 ```go
-import "github.com/maniartech/uexl-go"
+import "github.com/maniartech/uexl"
 ```
 
 ### Basic Usage
@@ -60,7 +60,7 @@ package main
 
 import (
     "fmt"
-    "github.com/maniartech/uexl-go"
+    "github.com/maniartech/uexl"
     "log"
 )
 
