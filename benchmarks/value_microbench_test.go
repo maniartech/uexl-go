@@ -1,4 +1,4 @@
-package uexl_go
+package benchmarks_test
 
 import (
 	"testing"

@@ -1,0 +1,53 @@
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+tokens: [Operator(-) at 1:1 Number(Inf) at 1:2 EOF() at 1:5]
+goos: windows
+goarch: amd64
+pkg: github.com/maniartech/uexl
+cpu: AMD Ryzen 7 5700G with Radeon Graphics         
+BenchmarkVM_ConstantLoad-16             	172578764	        44.30 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	136482512	        46.08 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	168575899	        34.88 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	136138488	        45.57 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	133855129	        44.46 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	134405295	        44.61 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	135685716	        45.40 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	135580497	        43.65 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	132880311	        45.00 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_ConstantLoad-16             	137498781	        43.78 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Boolean_Current-16          	22206068	       244.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	25076367	       248.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	23941314	       242.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	24252928	       251.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	24087330	       249.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	24434304	       254.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	24665839	       246.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	23872416	       244.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	24342864	       251.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Boolean_Current-16          	24954540	       259.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17042166	       347.5 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17374368	       344.2 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	15977460	       347.3 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17829056	       343.3 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17702456	       344.7 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17477658	       346.8 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17496246	       348.3 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17369443	       349.7 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17648241	       342.2 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_Arithmetic_Current-16       	17410789	       356.5 ns/op	       8 B/op	       1 allocs/op
+BenchmarkVM_String_Current-16           	32982236	       184.9 ns/op	      32 B/op	       2 allocs/op
+BenchmarkVM_String_Current-16           	30848740	       187.3 ns/op	      32 B/op	       2 allocs/op
+BenchmarkVM_String_Current-16           	32583390	       184.2 ns/op	      32 B/op	       2 allocs/op
+BenchmarkVM_String_Current-16           	33394854	       183.9 ns/op	      32 B/op	       2 allocs/op
+BenchmarkVM_String_Current-16           	32011472	       185.6 ns/op	      32 B/op	       2 allocs/op
+BenchmarkVM_String_Current-16           	30859927	       182.6 ns/op	      32 B/op	       2 allocs/op
+BenchmarkVM_String_Current-16           	31552060	       184.5 ns/op	      32 B/op	       2 allocs/op
+BenchmarkVM_String_Current-16           	32108329	       186.6 ns/op	      32 B/op	       2 allocs/op
+BenchmarkVM_String_Current-16           	
