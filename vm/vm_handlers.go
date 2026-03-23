@@ -170,8 +170,7 @@ func (vm *VM) executeStringBinaryOperation(operator code.Opcode, left, right any
 			return fmt.Errorf("string addition requires string operands, got %T and %T", left, right)
 		}
 
-		// For now, use simple concatenation.
-		// TODO: Future optimization could use strings.Builder for concatenation chains
+		// Use simple concatenation for the common case.
 		result := l + r
 		return vm.Push(result)
 	default:
