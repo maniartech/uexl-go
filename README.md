@@ -44,13 +44,44 @@ result, err := uexl.Eval("[1,2,3,4,5] |filter: $item > 2 |map: $item * 10", nil)
 
 ## Why UExL?
 
-| Concern | UExL’s answer |
-|---------|---------------|
-| **Zero panics** | Every error path returns an `error`; the VM never panics |
-| **Goroutine safety** | `Env` and `CompiledExpr` are immutable after construction; VMs are pool-borrowed |
-| **Zero allocations** | 0 allocs/op for primitive evaluation — no GC pressure in hot paths |
-| **Explicit semantics** | `??` (nullish coalescing), `?.` (optional chaining) — no JavaScript-style surprises |
-| **Extensible** | Register custom functions, pipe handlers, and global vars per environment |
+Most Go projects that need runtime expression evaluation end up stitching together a JSON field, a `reflect`-heavy eval library, and a bunch of `interface{}` type assertions — then spending months fighting panics from unexpected input shapes. UExL was built to end that cycle.
+
+### The regex of expression evaluation
+
+Just as regular expressions became the universal standard for text pattern matching — write once, embed anywhere — UExL aims to be the universal standard for expression evaluation. Write a UExL expression in a config file, a database row, or a user-facing rule editor. The same expression evaluates correctly everywhere the engine is embedded, with the same semantics and the same error behaviour.
+
+### Pipes: data transformation without nested calls
+
+Most expression engines give you functions. UExL gives you **pipes** — chainable, readable stages that pass data forward without nesting:
+
+```
+// Instead of: map(filter(orders, ...), ...)
+orders |filter: $item.status == "shipped" |map: $item.total |reduce: ($acc || 0) + $item
+```
+
+Eleven built-in pipe types (`map`, `filter`, `reduce`, `find`, `some`, `every`, `sort`, `unique`, `groupBy`, `chunk`, `window`) cover the vast majority of collection-processing logic without writing a single helper function.
+
+### Explicit semantics — no silent surprises
+
+Real data has valid falsy values: `0`, `""`, `false`. Most expression engines silently replace them with defaults when you least expect it. UExL doesn't:
+
+- `count ?? 0` — falls back **only** when `count` is `null` or absent; `0` is preserved as-is.
+- `user?.address?.city` — returns `null` when `user` is null **or** when `address` is a missing key; no panic, no hidden error swallowing.
+- `x.a.b ?? c` — the `??` makes only `b` safe. If `a` doesn't exist in `x`, that's still an error — earlier chain links stay strict.
+
+### Excel-compatible syntax — familiar to non-engineers
+
+Rule authors and data analysts already know Excel. UExL meets them there: `^` for power, `<>` for not-equals, `?:` for `IF()`, `+` for string concat. You get a language that engineers are happy to embed and business users are happy to write.
+
+### Production Go — safe by construction
+
+| Property | Detail |
+|----------|--------|
+| **Zero panics** | Every error path returns an `error`; the VM never panics on bad input |
+| **Goroutine safety** | `Env` and `CompiledExpr` are immutable after construction; VMs are pool-borrowed per call |
+| **Zero allocations (hot path)** | Boolean and comparison expressions: 0 allocs/op — no GC pressure |
+| **Unicode-aware strings** | Byte, rune, and grapheme-cluster levels — explicit, composable, ASCII fast-path |
+| **Compile-time validation** | Function calls are validated against the env at compile time, not eval time |
 | **One import** | All public types re-exported from the root package; no sub-package imports needed |
 
 ---
@@ -477,8 +508,17 @@ uexl.Eval("17 % 5", nil)            // 2
 
 // ── Strings ──────────────────────────────────────────────────────────────────────────
 uexl.Eval(`"Hello, " + name + "!"`, map[string]any{"name": "World"})
-uexl.Eval(`len("hello")`, nil)      // 5
-uexl.Eval(`upper("uexl")`, nil)     // "UEXL"
+uexl.Eval(`len("hello")`, nil)              // 5  (UTF-8 bytes — default)
+uexl.Eval(`upper("uexl")`, nil)             // "UEXL"
+
+// ── Unicode / grapheme clusters ───────────────────────────────────────────────────────
+// Byte, rune, and grapheme levels are explicit — no hidden surprises.
+uexl.Eval(`len("café")`, nil)               // 5  (UTF-8 bytes)
+uexl.Eval(`runeLen("café")`, nil)           // 4  (code points)
+uexl.Eval(`graphemeLen("café")`, nil)       // 4  (visible characters)
+uexl.Eval(`graphemeLen("👨\u200d👩\u200d👧\u200d👦")`, nil) // 1  (one emoji family)
+uexl.Eval(`graphemeSubstr("café", 0, 3)`, nil)  // "caf"  (safe truncation)
+// → See book/strings-unicode.md for the full Unicode reference.
 
 // ── Nullish coalescing ───────────────────────────────────────────────────────────
 uexl.Eval("config ?? 'default'", map[string]any{"config": nil}) // "default"
