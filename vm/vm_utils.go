@@ -24,26 +24,42 @@ var contextVarNotProvided = contextVarMissing{}
 // Inspired by fasthttp's pre-allocated error pattern.
 var errStackOverflow = errors.New("stack overflow")
 
-type VMFunctions map[string]func(args ...any) (any, error)
+// VMFunction defines the signature for functions that can be called
+// from the VM. It accepts a variable number of arguments and
+// returns a result or an error.
+type VMFunction func(args ...any) (any, error)
+
+// VMFunctions is a registry mapping function names to their implementations.
+type VMFunctions map[string]VMFunction
+
+// PipeHandler defines the signature for pipe handlers, which process data flowing through pipes. It receives the input value, the block of code to execute,
+// the alias for the current item, and a reference to the VM for context.
 type PipeHandler func(
 	input any,
 	block any,
 	alias string,
 	vm *VM) (any, error)
 
+// PipeHandlers is a registry mapping pipe names to their handler functions.
 type PipeHandlers map[string]PipeHandler
 
+// LibContext provides the VM with access to registered functions and pipe handlers.
 type LibContext struct {
 	Functions    VMFunctions
 	PipeHandlers PipeHandlers
 }
 
+// Frame represents an execution context for a function call, containing the instructions to execute,
 type Frame struct {
 	instructions code.Instructions
 	ip           int
 	basePointer  int
 }
 
+// VM represents the virtual machine that executes compiled code. It maintains the execution state,
+// including the stack, frames, context variables, and registered functions and pipe handlers.
+// The VM is designed for efficient execution, with optimizations such as pre-allocated stack and frames,
+// and a fast-path for common pipe variables to minimize overhead.
 type VM struct {
 	constants         []Value
 	contextVars       []string
