@@ -1,4 +1,4 @@
-# build-wasm.ps1 — Build UExL WASM binary and copy wasm_exec.js
+# build-wasm.ps1 — Build UExL browser WASM binary with TinyGo
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\build-wasm.ps1
 # Run from the uexl-go directory.
 
@@ -7,47 +7,57 @@ $ErrorActionPreference = "Stop"
 
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot   = Split-Path -Parent $ScriptDir
-$WasmSrc    = Join-Path $RepoRoot "..\uexl-playground\wasm"
+$WasmSrc    = Join-Path $RepoRoot "cmd\uexl-wasm"
 $PublicDir  = Join-Path $RepoRoot "..\uexl-playground\public"
 $OutFile    = Join-Path $PublicDir "uexl.wasm"
 
-# Resolve GOROOT from go env
-$GoRoot = (go env GOROOT).Trim()
-# Locate wasm_exec.js — path changed in Go 1.21+: lib/wasm/ (was misc/wasm/)
-$WasmExecSrc = Join-Path $GoRoot "lib\wasm\wasm_exec.js"
-if (-not (Test-Path $WasmExecSrc)) {
-    $WasmExecSrc = Join-Path $GoRoot "misc\wasm\wasm_exec.js"
+if (-not (Get-Command tinygo -ErrorAction SilentlyContinue)) {
+    throw "tinygo was not found on PATH. Install TinyGo before running this script."
 }
+
+$TinyGoVersion = (tinygo version 2>$null)
+if (-not $TinyGoVersion) {
+    throw "Unable to determine TinyGo version."
+}
+
+$TinyGoTarget = "wasm"
+$TinyGoOptLevel = "s"
+
+# TinyGo ships the correct browser runtime helper for its wasm target.
+$TinyGoRoot = (tinygo env TINYGOROOT).Trim()
+$WasmExecSrc = Join-Path $TinyGoRoot "targets\wasm_exec.js"
 
 Write-Host "▶ Building UExL WASM..."
 Write-Host "  Source : $WasmSrc"
 Write-Host "  Output : $OutFile"
+Write-Host "  Target : Browser"
+Write-Host "  Tool   : tinygo -target $TinyGoTarget -opt $TinyGoOptLevel -no-debug"
 
 # Ensure output directory exists
 New-Item -ItemType Directory -Force -Path $PublicDir | Out-Null
 
-# Build the WASM binary
-# -s -w  : strip debug symbols + DWARF (~30% size reduction)
-# -trimpath: remove local file paths from binary
+# Build the WASM binary with TinyGo.
 Push-Location $WasmSrc
 try {
-    $env:GOOS    = "js"
-    $env:GOARCH  = "wasm"
-    go build -trimpath -ldflags "-s -w" -o $OutFile .
-    if ($LASTEXITCODE -ne 0) { throw "go build failed with exit code $LASTEXITCODE" }
+    $TinyGoArgs = @(
+        "build"
+        "-o", $OutFile
+        "-target", $TinyGoTarget
+        "-opt", $TinyGoOptLevel
+        "-no-debug"
+        "."
+    )
+    & tinygo @TinyGoArgs
+    if ($LASTEXITCODE -ne 0) { throw "tinygo build failed with exit code $LASTEXITCODE" }
 } finally {
-    # Always restore env vars
-    Remove-Item Env:\GOOS   -ErrorAction SilentlyContinue
-    Remove-Item Env:\GOARCH -ErrorAction SilentlyContinue
     Pop-Location
 }
 
 $size = [math]::Round((Get-Item $OutFile).Length / 1MB, 2)
 Write-Host "  OK uexl.wasm built ($size MB)"
 
-# Optional: run wasm-opt (Binaryen) for further ~15% size reduction.
+# Optional: run wasm-opt (Binaryen) for further size reduction.
 # Install: https://github.com/WebAssembly/binaryen/releases
-# Feature flags required for Go 1.21+ generated WASM.
 if (Get-Command wasm-opt -ErrorAction SilentlyContinue) {
     $tmpFile = $OutFile + ".tmp"
     wasm-opt -Oz `
@@ -68,10 +78,9 @@ if (Get-Command wasm-opt -ErrorAction SilentlyContinue) {
     Write-Host "  INFO wasm-opt not found, skipping (install Binaryen for extra ~15% reduction)"
 }
 
-# Copy wasm_exec.js from Go SDK
 if (Test-Path $WasmExecSrc) {
     Copy-Item $WasmExecSrc (Join-Path $PublicDir "wasm_exec.js") -Force
-    Write-Host "  OK wasm_exec.js copied from $GoRoot"
+    Write-Host "  OK wasm_exec.js copied from $TinyGoRoot"
 } else {
     Write-Host "  ERROR: wasm_exec.js not found at $WasmExecSrc"
     exit 1
