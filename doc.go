@@ -1,15 +1,23 @@
-// Package uexl provides a bytecode-compiled expression evaluator for Go.
+// Package uexl provides a bytecode-compiled, embedded expression evaluation engine
+// with explicit nullish/boolish semantics and pipe-based data transformations.
 //
-// UExL parses expressions into an AST, compiles them into bytecode, and executes
-// them on a small VM with explicit nullish semantics and pipe-based transforms.
+// # Quick Start
 //
-// Quick start:
+// Evaluate a simple expression:
 //
-//	result, err := uexl.EvalExpr("10 + 20 |: $1 * 2")
-//	if err != nil {
-//		// handle error
-//	}
-//	_ = result
+//	result, err := uexl.Eval("price * qty", map[string]any{"price": 9.99, "qty": 3.0})
 //
-// For language and syntax docs, see the book directory in this repository.
+// # Environments
+//
+// An Env bundles functions, pipe handlers, and globals into an immutable,
+// goroutine-safe evaluation context:
+//
+//	env := uexl.DefaultWith(uexl.WithFunctions(uexl.Functions{"discount": discountFn}))
+//
+// # Compile Once, Evaluate Many Times
+//
+//	rule, err := env.Compile("price * qty * (1 - discount)")
+//	for _, order := range orders { total, _ := rule.Eval(ctx, order) }
+//
+// For full language, syntax, and API docs, see the book/ directory.
 package uexl
