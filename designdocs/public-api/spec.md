@@ -32,8 +32,9 @@ Lib             — shareable, composable bundle of functions + pipes + globals
 Env             — immutable environment (functions + pipe handlers + global vars)
 EnvInfo         — snapshot of an Env's registered symbols, used for introspection
 CompiledExpr    — immutable pre-compiled expression, produced by Env.Compile
-PipeContext     — interface passed to custom pipe handlers; hides *vm.VM internals
 ```
+
+> **Note:** `PipeContext`, `Functions`, `PipeHandler`, `PipeHandlers`, `ParserError`, and `ParseErrors` are type aliases, not new types — see §2.2.
 
 ### 2.2 Type Re-exports (avoid forcing users to import internal packages)
 
@@ -130,6 +131,105 @@ type EnvInfo struct {
 ```
 
 `Eval` executes the pre-compiled bytecode against `vars`, respecting `ctx` for cancellation and deadline. `Variables()` returns the sorted list of variable names (without `$` prefix) that the expression references. `Env()` returns the `*Env` the expression was compiled against, useful for introspection and logging.
+
+---
+
+### 2.8 Complete API Quick Reference
+
+A consolidated, scannable view of every exported symbol. Use this as the go/no-go checklist before implementation begins.
+
+#### Concrete Types
+
+| Type | Kind | Goroutine-safe | Notes |
+|---|---|---|---|
+| `Option` | `func(*envConfig)` | n/a | Opaque; create only via `With*` helpers |
+| `Env` | struct (pointer) | ✅ after construction | Immutable fields; own `sync.Pool` |
+| `EnvInfo` | struct (value) | ✅ | Read-only snapshot; safe to copy and pass around |
+| `EnvConfig` | struct (pointer) | scoped | Only accessible inside `Lib.Apply`; never stored |
+| `CompiledExpr` | struct (pointer) | ✅ | Immutable bytecode + parent env; pool-based eval |
+| `Lib` | interface | n/a | Implemented by third-party library packages |
+
+#### Type Aliases (re-exported — no sub-package import needed)
+
+| Alias | Resolves to | Underlying shape |
+|---|---|---|
+| `Functions` | `vm.VMFunctions` | `map[string]func(args ...any) (any, error)` |
+| `PipeHandler` | `vm.PipeHandler` | `func(ctx PipeContext, input any) (any, error)` |
+| `PipeHandlers` | `vm.PipeHandlers` | `map[string]PipeHandler` |
+| `PipeContext` | `vm.PipeContext` | interface (`EvalItem`, `EvalWith`, `Alias`, `Context`) |
+| `ParserError` | `parsererrors.ParserError` | value struct (`Line`, `Column`, `Code`, `Message`) |
+| `ParseErrors` | `parsererrors.ParseErrors` | value struct (`Errors []ParserError`) |
+
+#### Package-level Functions — Environment Construction
+
+| Signature | Returns | Notes |
+|---|---|---|
+| `Default()` | `*Env` | Singleton; stdlib builtins + default pipes; no globals |
+| `DefaultWith(opts ...Option)` | `*Env` | `Default().Extend(opts...)`; does not mutate singleton |
+| `NewEnv(opts ...Option)` | `*Env` | Blank slate — no builtins, no pipes, no globals |
+
+#### Package-level Functions — Options
+
+| Signature | Panics on nil? | Notes |
+|---|---|---|
+| `WithFunctions(fns Functions) Option` | ✅ | Merges into env; later call wins for same key |
+| `WithPipeHandlers(pipes PipeHandlers) Option` | ✅ | Same merge semantics as `WithFunctions` |
+| `WithGlobals(vars map[string]any) Option` | ✅ | Env-level vars; shadowed by per-call vars |
+| `WithLib(lib Lib) Option` | ✅ | Calls `lib.Apply(cfg)` during construction |
+
+#### Package-level Functions — One-Shot Evaluation
+
+| Signature | Returns | Notes |
+|---|---|---|
+| `Eval(expr string, vars map[string]any)` | `(any, error)` | Uses `Default()` + `context.Background()` internally |
+| `Validate(expr string)` | `error` | Uses `Default()`; no `*CompiledExpr` artifact |
+| `MustCompile(expr string)` | `*CompiledExpr` | Uses `Default()`; panics — for `var` declarations only |
+
+#### Package-level Functions — Result Coercion Helpers
+
+| Signature | Widening | Truthy coercion |
+|---|---|---|
+| `AsFloat64(v any) (float64, error)` | `int`, `int64`, `float32` → `float64` | — |
+| `AsBool(v any) (bool, error)` | none | ❌ `AsBool(1)` → error |
+| `AsString(v any) (string, error)` | none | — |
+| `AsSlice(v any) ([]any, error)` | none | — |
+| `AsMap(v any) (map[string]any, error)` | none | — |
+
+#### Methods on `*Env`
+
+| Signature | Returns | Notes |
+|---|---|---|
+| `Extend(opts ...Option)` | `*Env` | New child env; parent unchanged; own pool |
+| `Compile(expr string)` | `(*CompiledExpr, error)` | Parse + compile + fn-name validation; no VM |
+| `MustCompile(expr string)` | `*CompiledExpr` | Panics — for startup `var` declarations only |
+| `Validate(expr string)` | `error` | Thin wrapper: `_, err := e.Compile(expr)` |
+| `Eval(ctx, expr string, vars map[string]any)` | `(any, error)` | One-shot: Compile + Eval; borrows VM from pool |
+| `Info()` | `EnvInfo` | Sorted snapshot of all symbols; goroutine-safe |
+| `HasFunction(name string)` | `bool` | `false` for empty string |
+| `HasPipe(name string)` | `bool` | `false` for empty string |
+| `HasGlobal(name string)` | `bool` | `false` for empty string |
+
+#### Methods on `*CompiledExpr`
+
+| Signature | Returns | Notes |
+|---|---|---|
+| `Eval(ctx context.Context, vars map[string]any)` | `(any, error)` | Hot path; borrows `*vm.VM` from env pool |
+| `Variables()` | `[]string` | Sorted; derived from `bytecode.ContextVars`; copy |
+| `Env()` | `*Env` | Allocation-free pointer return |
+
+#### Methods on `EnvInfo`
+
+| Signature | Returns | Notes |
+|---|---|---|
+| `String()` | `string` | Implements `fmt.Stringer`; multiline; stable sort |
+
+#### Methods on `*EnvConfig` (only accessible inside `Lib.Apply`)
+
+| Signature | Panics on nil? | Notes |
+|---|---|---|
+| `AddFunctions(fns Functions)` | ✅ | Merges into in-progress config |
+| `AddPipeHandlers(pipes PipeHandlers)` | ✅ | Same merge semantics |
+| `AddGlobals(vars map[string]any)` | ✅ | Same merge semantics |
 
 ---
 
@@ -343,7 +443,7 @@ Package-level convenience function. Equivalent to:
 
 ```go
 func Eval(expr string, vars map[string]any) (any, error) {
-    return Default().Eval(expr, vars)
+    return Default().Eval(context.Background(), expr, vars)
 }
 ```
 
@@ -392,11 +492,11 @@ One-shot parse + compile + run within the environment. Context is forwarded to t
 
 ```go
 func (e *Env) Eval(ctx context.Context, expr string, vars map[string]any) (any, error) {
-    p, err := e.Compile(expr)
+    ce, err := e.Compile(expr)
     if err != nil {
         return nil, err
     }
-    return c.Eval(ctx, vars)
+    return ce.Eval(ctx, vars)
 }
 ```
 
@@ -829,7 +929,8 @@ Globals from child `Env` (via `Extend`) shadow globals from the parent, applying
 ```
 uexl-go/
 ├── uexl.go        — Eval(), Validate(), MustCompile(), Default(), DefaultWith(),
-│                    NewEnv(), Option, Functions, PipeHandler, PipeHandlers aliases,
+│                    NewEnv(), Option, type aliases (Functions, PipeHandler, PipeHandlers,
+│                    PipeContext, ParserError, ParseErrors),
 │                    WithFunctions, WithPipeHandlers, WithGlobals, WithLib
 ├── env.go         — Env struct, NewEnv impl, Extend, Compile, MustCompile,
 │                    Validate, Eval, HasFunction, HasPipe, HasGlobal, Info
@@ -978,21 +1079,6 @@ func (c *CompiledExpr) Env() *Env             // returns the Env used at compile
 ```
 
 ```go
-// pipe_context.go  (re-exports vm.PipeContext)
-
-type PipeContext = vm.PipeContext
-
-// vm.PipeContext interface (defined in vm package):
-//
-// type PipeContext interface {
-//     EvalItem(item any, index int) (any, error)
-//     EvalWith(scopeVars map[string]any) (any, error)
-//     Alias() string
-//     Context() context.Context
-// }
-```
-
-```go
 // doc.go
 
 // Package uexl provides a bytecode-compiled expression evaluation engine.
@@ -1083,7 +1169,7 @@ These are **programmer errors** (wrong API usage detectable at startup), not run
 - [ ] Implement `(*Env).Validate(expr string) error` as thin wrapper (`_, err := e.Compile(expr); return err`)
 - [ ] Implement package-level `Validate(expr string) error` using `Default()`
 - [ ] Create `result.go`: implement `AsFloat64`, `AsBool`, `AsString`, `AsSlice`, `AsMap` with nil-guards and numeric widening; no panics
-- [ ] Rewrite `uexl.go`: declare `Functions`, `PipeHandler`, `PipeHandlers` type aliases; add `Eval`, `Validate`, `WithFunctions`, `WithPipeHandlers`, `WithGlobals`, `WithLib`; remove `EvalExpr`
+- [ ] Rewrite `uexl.go`: declare `Functions`, `PipeHandler`, `PipeHandlers`, `PipeContext`, `ParserError`, `ParseErrors` type aliases; add `Eval`, `Validate`, `WithFunctions`, `WithPipeHandlers`, `WithGlobals`, `WithLib`; remove `EvalExpr`
 - [ ] Create `doc.go` with package-level godoc
 
 ### Phase 2 — Extend, MustCompile, DefaultWith, WithLib, globals
@@ -1102,7 +1188,7 @@ These are **programmer errors** (wrong API usage detectable at startup), not run
 - [ ] `TestEval_basic` — package-level `Eval` with vars
 - [ ] `TestEval_noVars` — `vars` is `nil`
 - [ ] `TestEval_parseError` — malformed expression returns error, not panic
-- [ ] `TestEval_errorIsParserError` — `errors.As(err, &*parsererrors.ParserError{})` succeeds on parse failure
+- [ ] `TestEval_errorIsParserError` — `errors.As(err, &pe)` with `var pe uexl.ParserError` succeeds on parse failure
 
 **Default and NewEnv**
 - [ ] `TestDefault_hasBuiltins` — `Default().Eval("len('hi')", nil)` returns `2.0`
@@ -1284,7 +1370,7 @@ This section benchmarks the UExL public API design against three major Go expres
 | Decision | Rationale |
 |---|---|
 | `Env` as value receiver pattern (not functional options on a builder) | Simpler API footprint; aligns with `sync.Pool` ownership; matches `Extend` composability |
-| Type aliases for `VMFunctions`, `PipeHandler`, `PipeHandlers` | Users import only `uexl`; internal refactoring doesn't break import paths |
+| Type aliases for `Functions`, `PipeHandler`, `PipeHandlers`, `PipeContext`, `ParserError`, `ParseErrors` | Users import only `uexl`; internal refactoring doesn't break import paths |
 | `Default()` singleton via `sync.Once` | Zero-boilerplate one-liner evals; peers (expr, gval) have similar one-shot helpers |
 | No truthy coercion in `AsBool` | Preserves UExL's explicit boolish semantics (see design-philosophy.md); prevents silent bugs in boolean-heavy rule engines |
 | `Variables()` returns sorted `[]string` | Deterministic output for tests and documentation; sorted copy prevents aliasing |
