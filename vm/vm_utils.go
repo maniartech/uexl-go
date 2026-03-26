@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"context"
 	"errors"
 
 	"github.com/maniartech/uexl/code"
@@ -32,13 +33,32 @@ type VMFunction func(args ...any) (any, error)
 // VMFunctions is a registry mapping function names to their implementations.
 type VMFunctions map[string]VMFunction
 
-// PipeHandler defines the signature for pipe handlers, which process data flowing through pipes. It receives the input value, the block of code to execute,
-// the alias for the current item, and a reference to the VM for context.
-type PipeHandler func(
-	input any,
-	block any,
-	alias string,
-	vm *VM) (any, error)
+// PipeContext provides pipe handlers with access to predicate evaluation and the
+// evaluation context. It replaces the previous *VM parameter, preventing internal
+// VM internals from leaking into user-facing pipe handler code.
+type PipeContext interface {
+	// EvalItem runs the pipe predicate with $item=item and $index=index set in scope.
+	// If an alias was declared (e.g. "|map as $x:"), the alias var is also set to item.
+	// Zero-allocation hot path — use for map, filter, find, some, every, sort, groupBy, flatMap.
+	EvalItem(item any, index int) (any, error)
+
+	// EvalWith runs the pipe predicate with arbitrary scope variables.
+	// Use for accumulation patterns: reduce ($acc), window ($window), chunk ($chunk).
+	// Allocate the scope map once outside the iteration loop and reuse it for performance.
+	EvalWith(scopeVars map[string]any) (any, error)
+
+	// Alias returns the user-defined alias from the pipe expression (e.g. "$x" from
+	// "|map as $x:"). Returns empty string if no alias was declared.
+	Alias() string
+
+	// Context returns the evaluation context, enabling cancellation and deadline checks.
+	Context() context.Context
+}
+
+// PipeHandler defines the signature for custom pipe handlers.
+// ctx provides zero-copy predicate evaluation and cancellation support.
+// input is the value flowing into this pipe stage.
+type PipeHandler func(ctx PipeContext, input any) (any, error)
 
 // PipeHandlers is a registry mapping pipe names to their handler functions.
 type PipeHandlers map[string]PipeHandler
@@ -89,6 +109,7 @@ type VM struct {
 	frames    []*Frame
 	framesIdx int
 	safeMode  bool
+	ctx       context.Context // evaluation context; defaults to context.Background()
 }
 
 func New(libCtx LibContext) *VM {
@@ -100,6 +121,7 @@ func New(libCtx LibContext) *VM {
 	}
 
 	return &VM{
+		ctx:             context.Background(),
 		functionContext: libCtx.Functions,
 		pipeHandlers:    libCtx.PipeHandlers,
 		frames:          make([]*Frame, MaxFrames),
@@ -108,6 +130,16 @@ func New(libCtx LibContext) *VM {
 		aliasVars:       make(map[string]any),
 	}
 
+}
+
+// SetContext sets the evaluation context for this VM instance.
+// Must be called before Run. A nil ctx is normalized to context.Background().
+// Safe to call on a VM borrowed from sync.Pool before each evaluation.
+func (vm *VM) SetContext(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	vm.ctx = ctx
 }
 
 func NewFrame(instructions code.Instructions, basePointer int) *Frame {

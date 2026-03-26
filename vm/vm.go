@@ -72,6 +72,11 @@ func (vm *VM) setBaseInstructions(bytecode *compiler.ByteCode, contextVarsValues
 func (vm *VM) run() error {
 	frame := vm.currentFrame()
 	for frame.ip < len(frame.instructions) {
+		// Cooperative cancellation: check at every opcode boundary.
+		// context.Background().Err() is always nil — zero overhead when uncancelled.
+		if err := vm.ctx.Err(); err != nil {
+			return err
+		}
 		opcode := code.Opcode(frame.instructions[frame.ip])
 		switch opcode {
 		case code.OpConstant:
@@ -297,9 +302,9 @@ func (vm *VM) run() error {
 			blockIdx := code.ReadUint16(frame.instructions[frame.ip+5 : frame.ip+7])
 
 			pipeTypeVal := vm.constants[pipeTypeIdx]
-			pipeType, _ := pipeTypeVal.AsString() // Extract string from Value
+			pipeType, _ := pipeTypeVal.AsString()
 			alias := vm.systemVars[aliasIdx].(string)
-			block := vm.constants[blockIdx].ToAny() // Convert Value to any for compatibility
+			blk, _ := vm.constants[blockIdx].ToAny().(*compiler.InstructionBlock)
 
 			input := vm.Pop()
 
@@ -307,7 +312,10 @@ func (vm *VM) run() error {
 			if !ok {
 				return fmt.Errorf("unknown pipe type: %s", pipeType)
 			}
-			result, err := handler(input, block, alias, vm)
+			pctx := &pipeContextImpl{vm: vm, block: blk, alias: alias}
+			vm.pushPipeScope()
+			result, err := handler(pctx, input)
+			vm.popPipeScope()
 			if err != nil {
 				return err
 			}
