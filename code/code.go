@@ -120,7 +120,6 @@ var definations = map[Opcode]*Definition{
 func Lookup(op byte) (*Definition, error) {
 	def, ok := definations[Opcode(op)]
 	if !ok {
-		// TODO: handle error properly
 		return nil, fmt.Errorf("unknown opcode: %d", op)
 	}
 	return def, nil
@@ -129,8 +128,7 @@ func Lookup(op byte) (*Definition, error) {
 func Make(op Opcode, operands ...int) []byte {
 	def, ok := definations[op]
 	if !ok {
-		// should never happen, but if it does, we panic
-		panic(fmt.Sprintf("unknown opcode: %d", op))
+		return []byte{byte(op)}
 	}
 	instructionLen := 1
 	for _, w := range def.OperandWidths {
@@ -174,21 +172,6 @@ func (ins Instructions) String() string {
 		i += 1 + read
 	}
 	return out.String()
-}
-
-func (ins Instructions) fmtInstruction(def *Definition, operands []int) string {
-	operandCount := len(def.OperandWidths)
-	if len(operands) != operandCount {
-		return fmt.Sprintf("ERROR: operand len %d does not match defined %d\n",
-			len(operands), operandCount)
-	}
-	switch operandCount {
-	case 0:
-		return def.Name
-	case 1:
-		return fmt.Sprintf("%s %d", def.Name, operands[0])
-	}
-	return fmt.Sprintf("ERROR: unhandled operandCount for %s\n", def.Name)
 }
 
 func ReadOperands(def *Definition, ins Instructions) ([]int, int) {

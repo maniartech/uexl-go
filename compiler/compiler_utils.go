@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/maniartech/uexl/code"
 	"github.com/maniartech/uexl/parser"
@@ -78,12 +79,13 @@ func (c *Compiler) enterScope() {
 	c.scopeIndex++
 }
 
-func (c *Compiler) exitScope() {
+func (c *Compiler) exitScope() error {
 	if c.scopeIndex == 0 {
-		panic("exitScope: already at the global scope")
+		return fmt.Errorf("exitScope: already at the global scope")
 	}
 	c.scopes = c.scopes[:c.scopeIndex]
 	c.scopeIndex--
+	return nil
 }
 
 func (c *Compiler) compilePredicateBlock(expr parser.Node) (int, error) {
@@ -97,7 +99,9 @@ func (c *Compiler) compilePredicateBlock(expr parser.Node) (int, error) {
 	}
 	blockIns := c.ByteCode().Instructions
 
-	c.exitScope()
+	if err := c.exitScope(); err != nil {
+		return 0, err
+	}
 	return c.addConstant(&InstructionBlock{Instructions: blockIns}), nil
 }
 

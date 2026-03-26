@@ -48,20 +48,19 @@ func TestEnterExitScope(t *testing.T) {
 	if len(c.scopes) != 2 || c.scopeIndex != 1 {
 		t.Error("enterScope did not add new scope")
 	}
-	c.exitScope()
+	if err := c.exitScope(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if len(c.scopes) != 1 || c.scopeIndex != 0 {
 		t.Error("exitScope did not remove scope")
 	}
 }
 
-func TestExitScopePanicsAtGlobal(t *testing.T) {
+func TestExitScopeErrorsAtGlobal(t *testing.T) {
 	c := New()
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic on exitScope at global scope")
-		}
-	}()
-	c.exitScope()
+	if err := c.exitScope(); err == nil {
+		t.Error("expected error on exitScope at global scope")
+	}
 }
 
 func TestIsPipeLocalVar(t *testing.T) {

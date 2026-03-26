@@ -19,6 +19,8 @@ benchmarks/results/
 
 # Legacy benchmark artifacts in repo root (to be deleted)
 *.prof
+cpu_*.prof
+mem_*.prof
 wip-notes/*.txt
 
 # Dependency directories (remove the comment below to include it)

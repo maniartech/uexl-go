@@ -1,4 +1,4 @@
-package uexl_go
+package uexl
 
 import (
 	"github.com/maniartech/uexl/compiler"
@@ -18,7 +18,10 @@ func EvalExpr(expr string) (any, error) {
 		return nil, err
 	}
 
-	machine := vm.New(vm.LibContext{})
+	machine := vm.New(vm.LibContext{
+		Functions:    vm.Builtins,
+		PipeHandlers: vm.DefaultPipeHandlers,
+	})
 	result, err := machine.Run(comp.ByteCode(), nil)
 	if err != nil {
 		return nil, err
