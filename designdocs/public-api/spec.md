@@ -34,7 +34,7 @@ EnvInfo         — snapshot of an Env's registered symbols, used for introspect
 CompiledExpr    — immutable pre-compiled expression, produced by Env.Compile
 ```
 
-> **Note:** `PipeContext`, `Functions`, `PipeHandler`, `PipeHandlers`, `ParserError`, and `ParseErrors` are type aliases, not new types — see §2.2.
+> **Note:** `Function`, `PipeContext`, `Functions`, `PipeHandler`, `PipeHandlers`, `ParserError`, and `ParseErrors` are type aliases, not new types — see §2.2.
 
 ### 2.2 Type Re-exports (avoid forcing users to import internal packages)
 
@@ -42,7 +42,8 @@ Type aliases are defined at the `uexl` package level so callers never need to im
 
 **From `vm` package:**
 ```
-Functions    = vm.VMFunctions     — map[string]func(args ...any) (any, error)
+Function     = vm.VMFunction      — func(args ...any) (any, error)
+Functions    = vm.VMFunctions     — map[string]Function
 PipeHandler  = vm.PipeHandler     — func(ctx PipeContext, input any) (any, error)
 PipeHandlers = vm.PipeHandlers    — map[string]PipeHandler
 PipeContext  = vm.PipeContext     — interface for pipe predicate evaluation (see §3.25)
@@ -153,7 +154,8 @@ A consolidated, scannable view of every exported symbol. Use this as the go/no-g
 
 | Alias | Resolves to | Underlying shape |
 |---|---|---|
-| `Functions` | `vm.VMFunctions` | `map[string]func(args ...any) (any, error)` |
+| `Function` | `vm.VMFunction` | `func(args ...any) (any, error)` |
+| `Functions` | `vm.VMFunctions` | `map[string]Function` |
 | `PipeHandler` | `vm.PipeHandler` | `func(ctx PipeContext, input any) (any, error)` |
 | `PipeHandlers` | `vm.PipeHandlers` | `map[string]PipeHandler` |
 | `PipeContext` | `vm.PipeContext` | interface (`EvalItem`, `EvalWith`, `Alias`, `Context`) |
@@ -956,7 +958,8 @@ import (
 )
 
 // Type aliases — users import only "github.com/maniartech/uexl"
-type Functions    = vm.VMFunctions
+type Function     = vm.VMFunction      // func(args ...any) (any, error)
+type Functions    = vm.VMFunctions     // map[string]Function
 type PipeHandler  = vm.PipeHandler     // func(ctx PipeContext, input any) (any, error)
 type PipeHandlers = vm.PipeHandlers
 type PipeContext  = vm.PipeContext     // see §3.25
@@ -1169,7 +1172,7 @@ These are **programmer errors** (wrong API usage detectable at startup), not run
 - [ ] Implement `(*Env).Validate(expr string) error` as thin wrapper (`_, err := e.Compile(expr); return err`)
 - [ ] Implement package-level `Validate(expr string) error` using `Default()`
 - [ ] Create `result.go`: implement `AsFloat64`, `AsBool`, `AsString`, `AsSlice`, `AsMap` with nil-guards and numeric widening; no panics
-- [ ] Rewrite `uexl.go`: declare `Functions`, `PipeHandler`, `PipeHandlers`, `PipeContext`, `ParserError`, `ParseErrors` type aliases; add `Eval`, `Validate`, `WithFunctions`, `WithPipeHandlers`, `WithGlobals`, `WithLib`; remove `EvalExpr`
+- [ ] Rewrite `uexl.go`: declare `Function`, `Functions`, `PipeHandler`, `PipeHandlers`, `PipeContext`, `ParserError`, `ParseErrors` type aliases; add `Eval`, `Validate`, `WithFunctions`, `WithPipeHandlers`, `WithGlobals`, `WithLib`; remove `EvalExpr`
 - [ ] Create `doc.go` with package-level godoc
 
 ### Phase 2 — Extend, MustCompile, DefaultWith, WithLib, globals
