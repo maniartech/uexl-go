@@ -279,7 +279,8 @@ type PipeExpression struct {
 	Expression Expression // The pipe's predicate expression block
 	PipeType   string
 	Alias      string
-	Index      int // Index of the predicate block
+	Args       []any // Compile-time literal arguments; nil = no args
+	Index      int   // Index of the predicate block
 	Line       int
 	Column     int
 }

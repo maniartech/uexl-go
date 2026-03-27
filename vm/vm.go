@@ -300,11 +300,18 @@ func (vm *VM) run() error {
 			pipeTypeIdx := code.ReadUint16(frame.instructions[frame.ip+1 : frame.ip+3])
 			aliasIdx := code.ReadUint16(frame.instructions[frame.ip+3 : frame.ip+5])
 			blockIdx := code.ReadUint16(frame.instructions[frame.ip+5 : frame.ip+7])
+			argsIdx := code.ReadUint16(frame.instructions[frame.ip+7 : frame.ip+9])
 
 			pipeTypeVal := vm.constants[pipeTypeIdx]
 			pipeType, _ := pipeTypeVal.AsString()
 			alias := vm.systemVars[aliasIdx].(string)
 			blk, _ := vm.constants[blockIdx].ToAny().(*compiler.InstructionBlock)
+
+			// Resolve compile-time args from constants pool; nil when sentinel 0xFFFF
+			var pipeArgs []any
+			if argsIdx != 0xFFFF {
+				pipeArgs, _ = vm.constants[argsIdx].ToAny().([]any)
+			}
 
 			input := vm.Pop()
 
@@ -312,7 +319,7 @@ func (vm *VM) run() error {
 			if !ok {
 				return fmt.Errorf("unknown pipe type: %s", pipeType)
 			}
-			pctx := &pipeContextImpl{vm: vm, block: blk, alias: alias}
+			pctx := &pipeContextImpl{vm: vm, block: blk, alias: alias, args: pipeArgs}
 			vm.pushPipeScope()
 			result, err := handler(pctx, input)
 			vm.popPipeScope()
@@ -322,7 +329,7 @@ func (vm *VM) run() error {
 			if err := vm.Push(result); err != nil {
 				return err
 			}
-			frame.ip += 7
+			frame.ip += 9
 		case code.OpSafeModeOn:
 			vm.safeMode = true
 			frame.ip += 1

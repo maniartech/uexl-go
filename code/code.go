@@ -108,8 +108,8 @@ var definations = map[Opcode]*Definition{
 	OpMemberAccess:       {"OpMemberAccess", []int{}},
 	OpObject:             {"OpObject", []int{2}},
 	OpCallFunction:       {"OpCallFunction", []int{2, 2}},
-	OpPipe:               {"OpPipe", []int{2, 2, 2}}, // pipeTypeIdx, aliasIdx, blockIdx
-	OpSlice:              {"OpSlice", []int{1}},      // 1 for optional slicing, 0 for regular
+	OpPipe:               {"OpPipe", []int{2, 2, 2, 2}}, // pipeTypeIdx, aliasIdx, blockIdx, argsIdx (0xFFFF = no args)
+	OpSlice:              {"OpSlice", []int{1}},         // 1 for optional slicing, 0 for regular
 	OpNull:               {"OpNull", []int{}},
 	OpSafeModeOn:         {"OpSafeModeOn", []int{}},
 	OpSafeModeOff:        {"OpSafeModeOff", []int{}},

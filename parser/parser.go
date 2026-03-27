@@ -113,6 +113,7 @@ func (p *Parser) parsePipeExpression() Expression {
 	aliases := []string{}
 	expressions := []Expression{firstExpression}
 	pipeTypes := []string{DefaultPipeType}
+	pipeArgsList := [][]any{nil} // parallel slice; first entry is for the base expression (no args)
 
 	startLine, startColumn := expressions[0].Position()
 
@@ -129,7 +130,7 @@ func (p *Parser) parsePipeExpression() Expression {
 	aliases = append(aliases, alias)
 
 	for p.current.Type == constants.TokenPipe {
-		if !p.processPipeSegment(&expressions, &pipeTypes, &aliases) {
+		if !p.processPipeSegment(&expressions, &pipeTypes, &aliases, &pipeArgsList) {
 			return nil
 		}
 	}
@@ -159,6 +160,7 @@ func (p *Parser) parsePipeExpression() Expression {
 			Expression: expr,
 			PipeType:   pipeTypes[i],
 			Alias:      aliases[i],
+			Args:       pipeArgsList[i],
 			Index:      i,
 			Line:       startLine,
 			Column:     startColumn,
@@ -974,15 +976,79 @@ func (p *Parser) handleLeadingPipe() Expression {
 	return nil
 }
 
-// processPipeSegment processes a single pipe segment and returns false if parsing should stop
-func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]string, aliases *[]string) bool {
+// processPipeSegment processes a single pipe segment and returns false if parsing should stop.
+// pipeArgsList receives compiled-time literal arguments parsed from |pipe(arg1, arg2, ...): syntax.
+func (p *Parser) processPipeSegment(expressions *[]Expression, pipeTypes *[]string, aliases *[]string, pipeArgsList *[][]any) bool {
 	op := p.current
 	p.advance()
 
 	pipeType := p.determinePipeType(op)
 	*pipeTypes = append(*pipeTypes, pipeType)
 
-	// Check for empty pipe with alias immediately after consuming pipe
+	// For named pipes (|name: or |name(args):), the tokenizer leaves ':' unconsumed so
+	// the parser can distinguish args-form from predicate-form unambiguously.
+	// The default pipe (|:) has ':' as its name and was already consumed by the tokenizer.
+	var args []any
+	isNamedPipe := op.Value.Str != ":"
+
+	if isNamedPipe {
+		if p.current.Type == constants.TokenLeftParen {
+			// Args form: |pipe(lit, lit, ...): predicate
+			p.advance() // consume '('
+			for p.current.Type != constants.TokenRightParen && p.current.Type != constants.TokenEOF {
+				switch p.current.Type {
+				case constants.TokenNumber:
+					args = append(args, p.current.Value.Num)
+					p.advance()
+				case constants.TokenString:
+					args = append(args, p.current.Value.Str)
+					p.advance()
+				case constants.TokenBoolean:
+					args = append(args, p.current.Value.Bool)
+					p.advance()
+				case constants.TokenNull:
+					args = append(args, nil)
+					p.advance()
+				default:
+					// ':' or '|' inside args means ')' was never written — report as unclosed
+					if p.current.Type == constants.TokenColon || p.current.Type == constants.TokenPipe {
+						p.addError(errors.ErrUnclosedFunction, "expected ')' to close pipe arguments")
+					} else {
+						p.addError(errors.ErrInvalidArgument, "pipe arguments must be compile-time literals (number, string, bool, or null)")
+					}
+					p.consumeRemainingTokens()
+					return false
+				}
+				if p.current.Type == constants.TokenComma {
+					p.advance() // consume ','
+					// Reject trailing comma
+					if p.current.Type == constants.TokenRightParen {
+						p.addError(errors.ErrInvalidArgument, "trailing comma not allowed in pipe arguments")
+						p.consumeRemainingTokens()
+						return false
+					}
+				}
+			}
+			if p.current.Type != constants.TokenRightParen {
+				p.addError(errors.ErrUnclosedFunction, "expected ')' after pipe arguments")
+				return false
+			}
+			p.advance() // consume ')'
+			if p.current.Type != constants.TokenColon {
+				p.addErrorWithExpected(errors.ErrExpectedToken, "expected ':' after pipe arguments", ":")
+				return false
+			}
+			p.advance() // consume ':'
+		} else if p.current.Type == constants.TokenColon {
+			p.advance() // consume ':' — standard |name: predicate form
+		} else {
+			p.addErrorWithExpected(errors.ErrExpectedToken, "expected ':' or '(' after pipe name", ":")
+			return false
+		}
+	}
+	*pipeArgsList = append(*pipeArgsList, args)
+
+	// Check for empty pipe with alias immediately after consuming pipe delimiter
 	if p.current.Type == constants.TokenAs {
 		p.addErrorWithToken(errors.ErrEmptyPipeWithAlias, errors.GetErrorMessage(errors.ErrEmptyPipeWithAlias))
 		p.advance() // consume 'as'

@@ -50,7 +50,9 @@ func (vm *VM) sliceArray(arr []any, start, end, step any) error {
 	}
 
 	s = vm.adjustSliceIndex(s, len(arr))
-	if e != -1 {
+	if st > 0 || e != -1 {
+		// For forward slices, always adjust end (user-specified -1 means last-1).
+		// For backward slices, -1 is the sentinel meaning "allow past index 0" so skip.
 		e = vm.adjustSliceIndex(e, len(arr))
 	}
 
@@ -102,7 +104,7 @@ func (vm *VM) sliceString(str string, start, end, step any) error {
 	}
 
 	s = vm.adjustSliceIndex(s, len(b))
-	if e != -1 {
+	if st > 0 || e != -1 {
 		e = vm.adjustSliceIndex(e, len(b))
 	}
 

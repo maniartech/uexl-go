@@ -483,24 +483,52 @@ func (t *Tokenizer) readString() (Token, error) {
 
 func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
 	startColumn := t.column
-	t.advance() // consume first '|'
-	if t.current() == '|' {
-		t.advance() // consume second '|'
-		operator := "||"
-		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
+	t.advance() // consume '|'
+
+	// Check for '||' immediately — adjacency required, no whitespace between the two '|'.
+	if t.pos < len(t.input) && t.input[t.pos] == '|' {
+		t.advance()
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: "||"}, Token: "||", Line: t.line, Column: startColumn}, nil
 	}
 
-	if t.current() == ':' {
-		t.advance() // consume ':'
-		pipeValue := ":"
-		return Token{Type: constants.TokenPipe, Value: TokenValue{Kind: TVKString, Str: pipeValue}, Token: pipeValue, Line: t.line, Column: startColumn}, nil
-	}
-
-	// Manual scan for optional [A-Za-z]+ followed by ':'
-	// We only accept ASCII letters for pipe names as before.
+	// Lookahead using string index (does not advance t.pos) to skip optional whitespace
+	// and identify whether this '|' is a pipe operator or a bitwise OR.
+	s := t.input
 	i := t.pos
-	for i < len(t.input) {
-		r, size := utf8.DecodeRuneInString(t.input[i:])
+	for i < len(s) {
+		c := s[i]
+		if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+			i++
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r != utf8.RuneError && unicode.IsSpace(r) {
+			i += size
+			continue
+		}
+		break
+	}
+	// i now points to the first non-whitespace character after '|'.
+
+	if i >= len(s) {
+		// '|' at end of input — bitwise OR
+		return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: "|"}, Token: "|", Line: t.line, Column: startColumn}, nil
+	}
+
+	// Check for ':' — default pipe; whitespace between '|' and ':' is allowed (| : == |:).
+	if s[i] == ':' {
+		// Advance t.pos past any whitespace and then the ':'.
+		for t.pos <= i {
+			t.advance()
+		}
+		return Token{Type: constants.TokenPipe, Value: TokenValue{Kind: TVKString, Str: ":"}, Token: ":", Line: t.line, Column: startColumn}, nil
+	}
+
+	// Scan pipe name letters starting at i (after any leading whitespace).
+	// Only ASCII letters are accepted for pipe names.
+	nameStart := i
+	for i < len(s) {
+		r, size := utf8.DecodeRuneInString(s[i:])
 		if r == utf8.RuneError && size == 1 {
 			break
 		}
@@ -510,19 +538,44 @@ func (t *Tokenizer) readPipeOrBitwiseOr() (Token, error) {
 		}
 		break
 	}
-	// If at least one letter and next char is ':' then it's a named pipe
-	if i > t.pos && i < len(t.input) && t.input[i] == ':' {
-		pipeName := t.input[t.pos:i]
-		// Advance over the name and ':' without allocating
-		for t.pos < i {
-			t.advance()
+	nameEnd := i
+
+	if nameEnd > nameStart {
+		pipeName := s[nameStart:nameEnd]
+
+		// Skip optional whitespace after the pipe name, then look for ':' or '('.
+		// Whitespace between the pipe name and ':' or '(' is non-significant:
+		//   "|map:"  == "|map :"  == "| map :"
+		//   "|window(3):" == "|window (3):" == "| window ( 3 ):"
+		// Both ':' and '(' are left unconsumed for the parser to disambiguate.
+		j := nameEnd
+		for j < len(s) {
+			c := s[j]
+			if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+				j++
+				continue
+			}
+			r, size := utf8.DecodeRuneInString(s[j:])
+			if r != utf8.RuneError && unicode.IsSpace(r) {
+				j += size
+				continue
+			}
+			break
 		}
-		t.advance() // consume ':'
-		return Token{Type: constants.TokenPipe, Value: TokenValue{Kind: TVKString, Str: pipeName}, Token: pipeName, Line: t.line, Column: startColumn}, nil
+
+		if j < len(s) && (s[j] == ':' || s[j] == '(') {
+			// Advance t.pos past leading whitespace + name + trailing whitespace.
+			// Leave ':' or '(' unconsumed for the parser.
+			for t.pos < j {
+				t.advance()
+			}
+			return Token{Type: constants.TokenPipe, Value: TokenValue{Kind: TVKString, Str: pipeName}, Token: pipeName, Line: t.line, Column: startColumn}, nil
+		}
 	}
 
-	operator := "|"
-	return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: operator}, Token: operator, Line: t.line, Column: startColumn}, nil
+	// Fallthrough: '|' is a bitwise OR operator.
+	// t.pos is NOT advanced past any letters or whitespace — they remain for the next NextToken() call.
+	return Token{Type: constants.TokenOperator, Value: TokenValue{Kind: TVKOperator, Str: "|"}, Token: "|", Line: t.line, Column: startColumn}, nil
 }
 
 func (t *Tokenizer) readOperator() (Token, error) {

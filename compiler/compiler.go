@@ -218,8 +218,12 @@ func (c *Compiler) Compile(node parser.Node) error {
 			if err != nil {
 				return err
 			}
-			c.emit(code.OpPipe, pipeTypeIdx, aliasIdx, blockIdx)
-
+			// Emit the 4th operand: argsIdx (0xFFFF = no args sentinel)
+			argsIdx := 0xFFFF
+			if len(pipeExpr.Args) > 0 {
+				argsIdx = c.addConstant(pipeExpr.Args)
+			}
+			c.emit(code.OpPipe, pipeTypeIdx, aliasIdx, blockIdx, argsIdx)
 		}
 	case *parser.MemberAccess, *parser.IndexAccess:
 		return c.compileAccessNode(node, false)

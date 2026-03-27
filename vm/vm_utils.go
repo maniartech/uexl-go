@@ -51,6 +51,10 @@ type PipeContext interface {
 	// "|map as $x:"). Returns empty string if no alias was declared.
 	Alias() string
 
+	// Args returns compile-time literal arguments declared in the pipe header,
+	// e.g. []any{float64(3)} for |window(3):. Returns nil when no args were provided.
+	Args() []any
+
 	// Context returns the evaluation context, enabling cancellation and deadline checks.
 	Context() context.Context
 }

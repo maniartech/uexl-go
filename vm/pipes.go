@@ -26,7 +26,7 @@ var DefaultPipeHandlers = PipeHandlers{
 
 // pipeContextImpl is the internal implementation of PipeContext.
 // One instance is created per OpPipe dispatch; it holds the predicate block,
-// the alias name, and a back-pointer to the executing VM.
+// the alias name, compile-time args, and a back-pointer to the executing VM.
 //
 // Frame reuse: the *Frame is created lazily on the first EvalItem/EvalWith call
 // and then reused across all iterations by resetting ip and basePointer only.
@@ -35,6 +35,7 @@ type pipeContextImpl struct {
 	vm    *VM
 	block *compiler.InstructionBlock
 	alias string
+	args  []any  // compile-time literal args; nil when no args provided (0xFFFF sentinel)
 	frame *Frame // lazily created, reused across iterations
 }
 
@@ -57,6 +58,10 @@ func (p *pipeContextImpl) EvalWith(scopeVars map[string]any) (any, error) {
 	}
 	return p.runFrame()
 }
+
+// Args returns the compile-time literal arguments declared in the pipe header.
+// Returns nil when no args were provided (the common case).
+func (p *pipeContextImpl) Args() []any { return p.args }
 
 // Alias returns the user-declared alias (e.g. "$x" from "|map as $x:"),
 // or empty string when none was declared.
@@ -281,6 +286,11 @@ func WindowPipeHandler(ctx PipeContext, input any) (any, error) {
 		return nil, fmt.Errorf("window pipe expects array input")
 	}
 	windowSize := 2
+	if args := ctx.Args(); len(args) > 0 {
+		if n, ok := args[0].(float64); ok && n >= 2 {
+			windowSize = int(n)
+		}
+	}
 	var result []any
 	scope := make(map[string]any, 2) // allocated once, reused across iterations
 	for i := 0; i <= len(arr)-windowSize; i++ {
@@ -301,6 +311,11 @@ func ChunkPipeHandler(ctx PipeContext, input any) (any, error) {
 		return nil, fmt.Errorf("chunk pipe expects array input")
 	}
 	chunkSize := 2
+	if args := ctx.Args(); len(args) > 0 {
+		if n, ok := args[0].(float64); ok && n >= 2 {
+			chunkSize = int(n)
+		}
+	}
 	var result []any
 	scope := make(map[string]any, 2) // allocated once, reused across iterations
 	for i := 0; i < len(arr); i += chunkSize {

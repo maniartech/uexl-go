@@ -595,10 +595,10 @@ func TestPipeExpression(t *testing.T) {
 	cases := []compilerTestCase{
 		// Single pipe expression: only one OpPipe emitted; predicate captured in InstructionBlock constant
 		{`[1,2] |map: $item * 2`, []any{1.0, 2.0, "map", 2.0, nil}, []code.Instructions{
-			code.Make(code.OpConstant, 0),   // 1.0
-			code.Make(code.OpConstant, 1),   // 2.0
-			code.Make(code.OpArray, 2),      // build initial array
-			code.Make(code.OpPipe, 2, 0, 4), // pipeTypeIdx=2 ("map"), aliasIdx=0 (""), blockIdx=4 (InstructionBlock)
+			code.Make(code.OpConstant, 0),           // 1.0
+			code.Make(code.OpConstant, 1),           // 2.0
+			code.Make(code.OpArray, 2),              // build initial array
+			code.Make(code.OpPipe, 2, 0, 4, 0xFFFF), // pipeTypeIdx=2 ("map"), aliasIdx=0 (""), blockIdx=4, argsIdx=0xFFFF (no args)
 		}},
 		// Multiple pipes: two OpPipe instructions, each with its own block constants
 		{`[1,2,3] |filter: $item > 1 |map: $item * 2`, []any{1.0, 2.0, 3.0, "filter", 1.0, nil, "map", 2.0, nil}, []code.Instructions{
@@ -606,8 +606,8 @@ func TestPipeExpression(t *testing.T) {
 			code.Make(code.OpConstant, 1), // 2.0
 			code.Make(code.OpConstant, 2), // 3.0
 			code.Make(code.OpArray, 3),
-			code.Make(code.OpPipe, 3, 0, 5), // filter pipe: pipeTypeIdx=3, aliasIdx=0, blockIdx=5
-			code.Make(code.OpPipe, 6, 2, 8), // map pipe: pipeTypeIdx=6, aliasIdx=2 (second empty alias), blockIdx=8
+			code.Make(code.OpPipe, 3, 0, 5, 0xFFFF), // filter pipe: pipeTypeIdx=3, aliasIdx=0, blockIdx=5, argsIdx=0xFFFF
+			code.Make(code.OpPipe, 6, 2, 8, 0xFFFF), // map pipe: pipeTypeIdx=6, aliasIdx=2, blockIdx=8, argsIdx=0xFFFF
 		}},
 	}
 	runCompilerTestCases(t, cases)

@@ -141,15 +141,15 @@ func testExpectedObject(t *testing.T, expected any, actual any) error {
 			return fmt.Errorf("expected a string, got %T", actual)
 		}
 	case []any:
-		e, ok := expected.([]any)
+		a, ok := actual.([]any)
 		if !ok {
 			return fmt.Errorf("expected an array, got %T", actual)
 		}
-		if len(v) != len(e) {
-			return fmt.Errorf("expected array of length %d, got %d", len(e), len(v))
+		if len(v) != len(a) {
+			return fmt.Errorf("expected array of length %d, got %d", len(v), len(a))
 		}
 		for i := range v {
-			if err := testExpectedObject(t, e[i], v[i]); err != nil {
+			if err := testExpectedObject(t, v[i], a[i]); err != nil {
 				return fmt.Errorf("error at index %d: %s", i, err)
 			}
 		}
@@ -492,10 +492,10 @@ func TestStringContainsFunction(t *testing.T) {
 func TestArrayLiterals(t *testing.T) {
 	tests := []vmTestCase{
 		{"[]", []any{}},
-		{"[1]", []any{1}},
-		{"[1, 2, 3]", []any{1, 2, 3}},
-		{"[true, false, 1, \"hello\"]", []any{true, false, 1, "hello"}},
-		{"[1, 1 + 4, 3 * 4]", []any{1, 5, 12}},
+		{"[1]", []any{1.0}},
+		{"[1, 2, 3]", []any{1.0, 2.0, 3.0}},
+		{"[true, false, 1, \"hello\"]", []any{true, false, 1.0, "hello"}},
+		{"[1, 1 + 4, 3 * 4]", []any{1.0, 5.0, 12.0}},
 	}
 	runVmTests(t, tests)
 }
