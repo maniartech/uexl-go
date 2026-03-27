@@ -21,6 +21,7 @@ Objects and arrays are fundamental data structures in UExL, enabling you to repr
 - Use dot notation: `obj.key1`
 - Use bracket notation: `obj["key 3"]`
 - Bracket notation is required for keys with spaces or special characters.
+- The bracket key can be any expression that evaluates to a string — enabling computed/dynamic key access.
 
 ### Example
 ```
@@ -29,8 +30,13 @@ user = {
   age: 30,
   "favorite color": "blue"
 }
-user.name              // "Alice"
-user["favorite color"] // "blue"
+user.name                    // "Alice"
+user["favorite color"]       // "blue"
+
+// Computed key — any expression works as the key:
+field = "name"
+user[field]                  // "Alice"
+user["favor" + "ite color"]  // "blue"
 ```
 
 ## Arrays
@@ -46,26 +52,31 @@ user["favorite color"] // "blue"
 
 ### Accessing Array Elements
 - Use zero-based indexing: `arr[0]`
-- Negative indices are not supported.
-- Out-of-bounds access returns `null`.
+- Negative indices count from the end: `arr[-1]` is the last element, `arr[-2]` is second-to-last.
+- Out-of-bounds access raises an error.
 
 ### Example
 ```
 arr = [10, 20, 30]
+arr[0]    // 10
 arr[1]    // 20
-arr[10]   // null
+arr[-1]   // 30  (last element)
+arr[-2]   // 20
+arr[10]   // error: array index out of bounds
 ```
 
 ## Strings: Index Access
-- Strings can be indexed with square brackets to get the character at a given zero-based position.
-- Negative indices are not supported.
-- Out-of-bounds access returns `null`.
+- Strings can be indexed with square brackets to access a byte at a given zero-based position.
+- Negative indices count from the end: `"hello"[-1]` is `"o"`.
+- Out-of-bounds access raises an error.
+- For Unicode strings, indexing is at the byte level. Use `runes(s)` or `graphemes(s)` to index safely at the code-point or grapheme level.
 
 ### Examples
 ```
 "hello"[0]   // "h"
 "hello"[4]   // "o"
-"hello"[10]  // null
+"hello"[-1]  // "o"  (last byte)
+"hello"[10]  // error: string index out of bounds
 ```
 
 Note:
@@ -77,7 +88,7 @@ Note:
   `{user: {profile: {name: "Bob"}}}`
 - Arrays can contain objects, and vice versa.
 - Use pipes to process arrays:
-  `[1, 2, 3] |map: $1 * 2`
+  `[1, 2, 3] |map: $item * 2`
 - Use pipes to extract properties:
   `users |map: $1.name`
  - Use indexing on strings when mapping or filtering:

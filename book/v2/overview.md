@@ -2,6 +2,8 @@
 
 This section documents language features that are designed but not yet implemented. Everything here is subject to change based on implementation experience and community feedback.
 
+For the full implementation status of all features (including those that are done, deferred, or discontinued), see [status.md](status.md).
+
 ## Dynamic Pipe Expressions
 
 The centerpiece of the planned work is **Dynamic Pipe Expressions** — authoring new pipe behaviors purely in UExL syntax (pipe macros), without writing any Go code. This is similar in spirit to dynamic function expressions, but tailored for pipeline stages.
@@ -13,13 +15,6 @@ The centerpiece of the planned work is **Dynamic Pipe Expressions** — authorin
 - Allow predicate expressions to be passed unevaluated and used inside the macro
 - Preserve current pipe semantics (`$last`, `$item`, `$index`, `$acc`, etc.)
 
-### Highlights
-
-- Register dynamic pipe expressions by name with a UExL pipeline fragment
-- Predicate capture via `$PRED` placeholder in templates
-- Strict usage rules: macros that require `$PRED` must be called with a predicate
-- Full composition: macros can chain multiple stages and even invoke other macros
-
 See [Dynamic Pipe Expressions](dynamic-pipe-expressions.md) for details and examples.
 
 ## Dynamic Function Expressions
@@ -30,11 +25,16 @@ See [Dynamic Function Expressions](dynamic-function-expressions.md) for details.
 
 ## Cross-type Operator Polymorphism
 
-A small, predictable set of operator overloads for ergonomic cross-type operations (e.g. `string + number`, `string * count`). Currently a proposal; the semantics are not yet finalized.
+A small, predictable set of operator overloads for ergonomic cross-type operations (e.g. `string + number`, `string * count`, `array + array`). Currently a proposal; the semantics are not yet finalized.
 
 See [Cross-type Operator Polymorphism](cross-type-operator-polymorphism.md) for the design.
 
+## Other Pending Items
+
+See [pending-things.md](pending-things.md) for the remaining backlog of smaller features.
+
 ---
 
-> **Already implemented:** Several features that were originally planned under "v2" are now part of the main language. See the main book for: [??](../operators/nullish-coalescing.md), [?.](../operators/null-chaining.md), [Slicing](../operators/slicing.md), [Strings and Unicode](../strings-unicode.md), [Numeric Semantics](../numeric-semantics.md), and [Performance](../performance.md).
+> **Graduated to main book:** The following features were originally planned under "v2" and are now part of the main language:
+> [??](../operators/nullish-coalescing.md), [?.](../operators/null-chaining.md), [Slicing](../operators/slicing.md) (including negative indices and step), [Strings and Unicode](../strings-unicode.md), [Numeric Semantics / NaN / Inf](../numeric-semantics.md), [flatMap pipe](../pipes/types.md), computed object key access, and all 12 built-in pipes.
 
