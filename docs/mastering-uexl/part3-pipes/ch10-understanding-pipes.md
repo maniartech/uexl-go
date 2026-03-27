@@ -25,18 +25,24 @@ Each stage is independent. Each predicate sees the element(s) it receives via sc
 
 ```
 input |pipetype: predicate
+input |pipetype(n): predicate
 ```
 
 Where:
 - **input** — any expression producing the value that flows into the pipe
 - **`|`** — literal pipe character (not bitwise OR, which needs a space `a | b`)
 - **pipetype** — the name of the pipe handler (e.g., `map`, `filter`, `reduce`)
+- **`(n)`** — optional compile-time literal argument; currently used by `|window(n):` and `|chunk(n):` to set the window or chunk size
 - **`:`** — required separator; the predicate follows immediately after
 
-```uexl
+```
 [1, 2, 3, 4, 5] |map: $item * 2
-//                ^^^^ ^^^^^^^^
-//                type  predicate
+                 ^^^^ ^^^^^^^^
+                 type  predicate
+
+[1, 2, 3, 4, 5] |window(3): $window
+                 ^^^^^^^^^^ ^^^^^^^
+                 type+arg    predicate
 ```
 
 ### The colon is required
@@ -124,20 +130,26 @@ Set by the `|:` handler. Holds the entire input value:
 
 ### `$window` (window pipe)
 
-Set by `|window:`. Holds the current sliding window as an array of consecutive elements. Default window size is 2.
+Set by `|window:` / `|window(n):`. Holds the current sliding window as an array of consecutive elements. The window **size defaults to 2**; pass a compile-time literal integer argument for a custom size.
 
 ```uexl
 [1, 2, 3, 4] |window: $window[0] + $window[1]
-// windows: [1,2],[2,3],[3,4] → results: [3, 5, 7]
+// default size 2 — windows: [1,2],[2,3],[3,4] → results: [3, 5, 7]
+
+[1, 2, 3, 4, 5] |window(3): $window
+// explicit size 3 — windows: [1,2,3],[2,3,4],[3,4,5]
 ```
 
 ### `$chunk` (chunk pipe)
 
-Set by `|chunk:`. Holds the current fixed-size chunk as an array. Default chunk size is 2.
+Set by `|chunk:` / `|chunk(n):`. Holds the current fixed-size chunk as an array. The chunk **size defaults to 2**; pass a compile-time literal integer argument for a custom size.
 
 ```uexl
-[1, 2, 3, 4, 5, 6] |chunk: $chunk[0] + $chunk[1]
-// chunks: [1,2],[3,4],[5,6] → results: [3, 7, 11]
+[1, 2, 3, 4, 5, 6] |chunk: $chunk
+// default size 2 — chunks: [1,2],[3,4],[5,6] → result: [[1,2],[3,4],[5,6]]
+
+[1, 2, 3, 4, 5] |chunk(3): $chunk
+// explicit size 3 — chunks: [1,2,3],[4,5] → result: [[1,2,3],[4,5]]
 ```
 
 ---

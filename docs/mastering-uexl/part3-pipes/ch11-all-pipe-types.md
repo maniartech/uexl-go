@@ -19,8 +19,8 @@
 | `unique` | `[]any` | `[]any` | Deduplicate elements |
 | `sort` | `[]any` | `[]any` | Order elements by a key |
 | `groupBy` | `[]any` | `object` | Partition elements into groups |
-| `window` | `[]any` | `[]any` | Sliding window over elements |
-| `chunk` | `[]any` | `[]any` | Fixed-size consecutive slices |
+| `window` | `[]any` | `[]any` | Sliding window over elements (default size 2; `\|window(n):` for custom size) |
+| `chunk` | `[]any` | `[]any` | Fixed-size consecutive slices (default size 2; `\|chunk(n):` for custom size) |
 | `flatMap` | `[]any` | `[]any` | Map then flatten one level |
 | `pipe` (alias `\|:`) | `any` | `any` | Passthrough — arbitrary transform |
 
@@ -229,45 +229,75 @@ orders |groupBy: $item.status
 
 ---
 
-## 11.11 `|window:` — Sliding Window
+## 11.11 `|window:` / `|window(n):` — Sliding Window
 
-Applies the predicate to overlapping windows of consecutive elements. Default window size is 2.
+Applies the predicate to overlapping windows of consecutive elements. The **window size defaults to 2**. Pass a compile-time literal integer argument to use a different size.
 
 **Scope variables:** `$window` (array of the current window), `$index` (window start index)
 
 ```uexl
+// Default size 2
 [1, 2, 3, 4, 5] |window: $window[0] + $window[1]
 // windows: [1,2],[2,3],[3,4],[4,5]
 // results: [3, 5, 7, 9]
+
+// Explicit size via args
+[1, 2, 3, 4, 5] |window(3): $window
+// windows: [1,2,3],[2,3,4],[3,4,5]
+
+[1, 2, 3, 4, 5] |window(3): $window[0] + $window[1] + $window[2]
+// results: [6, 9, 12]
 ```
 
 ```uexl
-// Detect upward trends (price increasing)
+// Detect upward trends (default size 2 is natural for pairs)
 prices |window: $window[1] > $window[0]
 // => [true, false, true, ...]  (true where next > current)
+
+// 4-period moving average
+prices |window(4): ($window[0] + $window[1] + $window[2] + $window[3]) / 4
 ```
 
-**Window size:** Currently fixed at 2 (pairs). Custom window sizes are planned for a future version.
+**Arg rules:**
+- Must be a literal integer `≥ 2`; fractions, zero, and negatives fall back to the default of 2.
+- Whitespace around the argument is allowed: `|window( 3 ):` is valid.
+- When no argument is given (`|window:`), size is 2.
+- If the array is shorter than the window size, the result is an empty array.
 
 ---
 
-## 11.12 `|chunk:` — Fixed-Size Batches
+## 11.12 `|chunk:` / `|chunk(n):` — Fixed-Size Batches
 
-Divides the array into consecutive non-overlapping chunks of fixed size (default: 2). The last chunk may be smaller than the chunk size.
+Divides the array into consecutive non-overlapping chunks. The **chunk size defaults to 2**. Pass a compile-time literal integer argument to use a different size. The last chunk may be smaller than the requested size.
 
 **Scope variables:** `$chunk` (current batch as array), `$index` (batch number, 0-based)
 
 ```uexl
-[1, 2, 3, 4, 5, 6] |chunk: $chunk[0] + ($chunk[1] ?? 0)
-// chunks: [1,2],[3,4],[5,6]
-// results: [3, 7, 11]
+// Default size 2
+[1, 2, 3, 4, 5] |chunk: $chunk
+// chunks: [1,2],[3,4],[5]
+// result: [[1,2],[3,4],[5]]
 
-[1, 2, 3, 4, 5] |chunk: $chunk[0] + ($chunk[1] ?? 0)
-// chunks: [1,2],[3,4],[5]  (last chunk has 1 element)
-// results: [3, 7, 5]
+// Explicit size via args
+[1, 2, 3, 4, 5, 6] |chunk(3): $chunk
+// chunks: [1,2,3],[4,5,6]
+
+[1, 2, 3, 4, 5] |chunk(3): $chunk[0] + $chunk[1] + ($chunk[2] ?? 0)
+// chunks: [1,2,3],[4,5]  — last chunk has 2 elements
+// results: [6, 9]
 ```
 
-Use `?? 0` when accessing `$chunk[1]` on the last odd chunk to avoid an index-out-of-bounds error.
+Use `?? 0` when accessing beyond the end of the last (potentially short) chunk to avoid a runtime error.
+
+```uexl
+// Process in batches of 100, keep only full batches
+records |chunk(100): $chunk |filter: len($chunk) == 100
+```
+
+**Arg rules:**
+- Must be a literal integer `≥ 2`; fractions, zero, and negatives fall back to the default of 2.
+- Whitespace around the argument is allowed: `|chunk( 4 ):` is valid.
+- When no argument is given (`|chunk:`), size is 2.
 
 ---
 
@@ -398,6 +428,7 @@ cart.items |every: $item.product.stock > 0
 - `$acc` starts as `null` in `|reduce:` — always guard with `$acc ?? initial`.
 - `|find:` returns `null`, not an empty array, when nothing matches.
 - `|sort:` sorts ascending; negate numeric keys for descending.
+- `|window(n):` and `|chunk(n):` accept a compile-time literal integer argument for the window/chunk size; both default to 2 when no argument is provided.
 - `|groupBy:` returns an object, not an array.
 - `|:` gives you `$last`, the full input — use it to apply a single expression to a pipe result.
 - Pipe scopes stack — nested pipes each get their own `$item`/`$index`.

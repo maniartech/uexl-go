@@ -2,6 +2,10 @@
 
 > "The best way to understand an expression language is to evaluate something. Let's start in thirty seconds."
 
+> **Documentation convention:** UExL does not support comments — there is no `//`, `#`, or `/* */` syntax in the language. Throughout this book, `//` annotations in code blocks show expected output or clarify what a value represents. They are documentation aids only and must not be written in real UExL expressions.
+>
+> UExL also does not support multiple statements. Each evaluation accepts exactly one expression. When multiple expressions appear in a single code block, each line is a separate, independent example — not a multi-line program.
+
 ---
 
 ## 2.1 The UExL Playground

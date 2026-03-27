@@ -17,8 +17,8 @@ UExL ships with 12 built-in pipe types covering the full spectrum of collection-
 | `\|unique:` | `$item`, `$index` | Deduplicate by predicate key |
 | `\|groupBy:` | `$item`, `$index` | Group into `map[string][]any` by key |
 | `\|flatMap:` | `$item`, `$index` | Map then flatten one level |
-| `\|chunk:` | `$chunk`, `$index` | Split into fixed-size sub-arrays |
-| `\|window:` | `$window`, `$index` | Sliding window sub-arrays |
+| `\|chunk(n):` | `$chunk`, `$index` | Split into fixed-size sub-arrays (default size: 2) |
+| `\|window(n):` | `$window`, `$index` | Sliding window sub-arrays (default size: 2) |
 
 ## Passthrough: `|:`
 
@@ -117,23 +117,27 @@ Maps each element and then flattens the result by one level. Useful when the pre
 orders |flatMap: $item.lineItems       // flat list of all line items
 ```
 
-## Chunking: `|chunk:`
+## Chunking: `|chunk:` / `|chunk(n):`
 
-Splits the array into sub-arrays of the given fixed size. The predicate must evaluate to a positive integer.
-
-```uexl
-[1, 2, 3, 4, 5] |chunk: 2             // [[1,2],[3,4],[5]]
-```
-
-Inside a following pipe stage, `$chunk` is the current sub-array and `$index` is the chunk number.
-
-## Sliding window: `|window:`
-
-Produces overlapping sub-arrays of the given size, sliding one element at a time.
+Splits the array into consecutive, non-overlapping sub-arrays. The chunk size defaults to `2`. Pass a literal integer argument to use a different size.
 
 ```uexl
-[1, 2, 3, 4] |window: 3               // [[1,2,3],[2,3,4]]
-arr |window: 2 |map: $window[0] + $window[1]  // pairwise sums
+[1, 2, 3, 4, 5] |chunk: $chunk         // [[1,2],[3,4],[5]]   (default size 2)
+[1, 2, 3, 4, 5] |chunk(3): $chunk      // [[1,2,3],[4,5]]     (explicit size 3)
+[1, 2, 3, 4, 5] |chunk(4): $chunk      // [[1,2,3,4],[5]]     (explicit size 4)
 ```
 
-Inside a following pipe stage, `$window` is the current window array and `$index` is the window start position.
+Inside the predicate, `$chunk` is the current sub-array and `$index` is the zero-based chunk number. The last chunk may be shorter than the requested size.
+
+## Sliding window: `|window:` / `|window(n):`
+
+Produces overlapping sub-arrays that slide one element at a time. The window size defaults to `2`. Pass a literal integer argument to use a different size.
+
+```uexl
+[1, 2, 3, 4, 5] |window: $window       // [[1,2],[2,3],[3,4],[4,5]]        (default size 2)
+[1, 2, 3, 4, 5] |window(3): $window    // [[1,2,3],[2,3,4],[3,4,5]]        (explicit size 3)
+arr |window(2): $window[0] + $window[1]  // pairwise sums (same as default)
+arr |window(3): $window[0] + $window[1] + $window[2]  // triple sums
+```
+
+Inside the predicate, `$window` is the current window array and `$index` is the window start index. If the input length is less than the window size, the result is an empty array.

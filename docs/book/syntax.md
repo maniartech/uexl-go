@@ -37,6 +37,10 @@ NaN                 // Special number (enabled by default)
 5 != 3              // Not equals: true (C/Python/JS style)
 ```
 
+> **Documentation convention:** UExL does not support comments — there is no `//`, `#`, or `/* */` syntax in the language. Throughout this documentation, `//` annotations in code blocks show expected output or clarify what a value represents. They are documentation aids only and must not be written in real UExL expressions.
+>
+> UExL also does not support multiple statements. Each evaluation accepts exactly one expression. When multiple expressions appear in a single code block, each line is a separate, independent example — not a multi-line program.
+
 ## Whitespace and Formatting
 Whitespace (spaces, tabs, newlines) is generally ignored except where needed to separate tokens. You can format expressions across multiple lines for clarity:
 

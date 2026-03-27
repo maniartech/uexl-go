@@ -41,10 +41,10 @@ Specialized pipes additionally emit:
   - `$item` – current element
   - `$index` – current index
 - `window`:
-  - `$window` – the current sliding window (array)
+  - `$window` – the current sliding window (array); default size 2, pass `|window(n):` for a custom size
   - `$index` – window start index
 - `chunk`:
-  - `$chunk` – the current chunk (array)
+  - `$chunk` – the current chunk (array); default size 2, pass `|chunk(n):` for a custom size
   - `$index` – chunk index
 
 Notes:
@@ -66,8 +66,8 @@ Notes:
 | reduce               | `$last`        | `$acc`, `$item`, `$index` | Accumulates; predicate returns new accumulator |
 | sort                 | `$last`        | `$item`, `$index`    | Comparator key expression per element |
 | groupBy              | `$last`        | `$item`, `$index`    | Key expression groups elements |
-| window               | `$last`        | `$window`, `$index`  | Sliding window; index = window start |
-| chunk                | `$last`        | `$chunk`, `$index`   | Fixed-size subsets |
+| window               | `$last`        | `$window`, `$index`  | Sliding window; default size 2; use `\|window(n):` for larger sizes |
+| chunk                | `$last`        | `$chunk`, `$index`   | Fixed-size subsets; default size 2; use `\|chunk(n):` for larger sizes |
 
 > `$last` inside a specialized stage references the whole incoming collection (or value) given to that stage.
 

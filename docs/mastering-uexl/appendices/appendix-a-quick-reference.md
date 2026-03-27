@@ -74,8 +74,10 @@
 | `arr \|unique:` | — | Deduplicated array |
 | `arr \|sort: bool` | `$item`, `$index` | Sorted array (asc by default) |
 | `arr \|groupBy: key` | `$item`, `$index` | Object keyed by computed value |
-| `arr \|window: expr` | `$window`, `$index` | Sliding window of 2 elements |
+| `arr \|window: expr` | `$window`, `$index` | Sliding window (default size 2) |
+| `arr \|window(n): expr` | `$window`, `$index` | Sliding window of `n` elements |
 | `arr \|chunk: expr` | `$chunk`, `$index` | Chunks of 2 elements each |
+| `arr \|chunk(n): expr` | `$chunk`, `$index` | Chunks of `n` elements each |
 | `arr \|flatMap: expr` | `$item`, `$index` | Map then flatten |
 | `value \|: expr` | `$last` | Passthrough / default pipe |
 

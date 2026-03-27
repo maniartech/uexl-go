@@ -76,25 +76,29 @@ arr |flatMap: $item.children
 ---
 
 ### window
-Provides a sliding window of elements.
+Provides a sliding window of elements. The default window size is 2. Pass a literal integer argument in parentheses to use a different size.
 
 **Special variables:** `$window`, `$index`
 
 **Example:**
 ```uexl
-arr |window: 3 |map: $window[0] + $window[1] + $window[2]
+arr |window: $window[0] + $window[1]                          // default size 2
+arr |window(3): $window[0] + $window[1] + $window[2]          // explicit size 3
+prices |window(4): ($window[0] + $window[1] + $window[2] + $window[3]) / 4  // 4-period moving average
 ```
 
 ---
 
 ### chunk
-Splits array into chunks of a given size.
+Splits array into chunks of a given size. The default chunk size is 2. Pass a literal integer argument in parentheses to use a different size.
 
 **Special variables:** `$chunk`, `$index`
 
 **Example:**
 ```uexl
-arr |chunk: 2
+arr |chunk: $chunk           // default size 2: [[1,2],[3,4],[5]]
+arr |chunk(3): $chunk        // explicit size 3
+arr |chunk(10): $chunk |filter: len($chunk) == 10  // keep only full batches
 ```
 
 ---

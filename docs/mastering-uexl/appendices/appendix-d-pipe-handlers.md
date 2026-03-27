@@ -6,14 +6,14 @@ UExL ships with 13 built-in pipe handlers registered in `vm.DefaultPipeHandlers`
 
 ## Pipe Syntax
 
-```uexl
+```
 input |pipeName: predicate
-input |pipeName as $alias: predicate
+input |pipeName(n): predicate
 ```
 
 - `input` must be an array for all pipes except `|:` (passthrough)
-- `predicate` is an expression evaluated once per element (or once for the whole input for `unique`)
-- `$alias` gives the scope variable a custom name for chaining
+- `(n)` is an optional compile-time literal argument currently used by `|window(n):` and `|chunk(n):` to set the window or chunk size
+- `predicate` is an expression evaluated once per element (or once for the whole collection for some pipes)
 
 ---
 
@@ -198,46 +198,53 @@ orders |groupBy: $item.status
 
 ---
 
-## `|window:`
+## `|window:` / `|window(n):`
 
-Produces a sliding window of 2 consecutive elements at a time.
+Produces a sliding window of `n` consecutive elements at a time. The **window size defaults to 2**; pass a literal integer argument to use a custom size. Whitespace around the argument is allowed.
 
 | Scope variable | Type | Value |
 |----------------|------|-------|
-| `$window` | array | Current window (array of 2 elements) |
-| `$index` | number | Zero-based window index |
+| `$window` | array | Current window |
+| `$index` | number | Zero-based window start index |
 
-**Input**: array (minimum 2 elements recommended)
-**Output**: array of windows, where each window is an array of 2 elements
+**Input**: array
+**Output**: array of windows (each window is a sub-array of `n` elements)
 
 ```uexl
 prices |window: {a: $window[0], b: $window[1], delta: $window[1] - $window[0]}
-# For [10, 20, 15], produces:
+# Default size 2 — for [10, 20, 15], produces:
 # [{a:10, b:20, delta:10}, {a:20, b:15, delta:-5}]
+
+prices |window(3): ($window[0] + $window[1] + $window[2]) / 3
+# Explicit size 3 — 3-period moving average
 ```
 
-> Window size is fixed at 2. Custom window sizes require a custom pipe handler.
+> If the array length is smaller than the window size, the result is an empty array.
 
 ---
 
-## `|chunk:`
+## `|chunk:` / `|chunk(n):`
 
-Divides the array into fixed-size chunks of 2 elements each.
+Divides the array into consecutive, non-overlapping chunks of `n` elements each. The **chunk size defaults to 2**; pass a literal integer argument to use a custom size. The last chunk may be smaller than the requested size.
 
 | Scope variable | Type | Value |
 |----------------|------|-------|
-| `$chunk` | array | Current chunk (array of up to 2 elements) |
+| `$chunk` | array | Current chunk (array of up to `n` elements) |
 | `$index` | number | Zero-based chunk index |
 
 **Input**: array
-**Output**: array of chunks (each chunk is an array of up to 2 elements; last chunk may be shorter)
+**Output**: array of chunks (each chunk is an array; last chunk may be shorter)
 
 ```uexl
 [1, 2, 3, 4, 5] |chunk: $chunk
-# Produces: [[1, 2], [3, 4], [5]]
-```
+# Default size 2 — produces: [[1, 2], [3, 4], [5]]
 
-> Chunk size is fixed at 2. For other sizes, register a custom pipe handler.
+[1, 2, 3, 4, 5] |chunk(3): $chunk
+# Explicit size 3 — produces: [[1, 2, 3], [4, 5]]
+
+[1, 2, 3, 4, 5] |chunk(3): $chunk[0] + $chunk[1] + ($chunk[2] ?? 0)
+# results: [6, 9]  (3rd slot guarded for the short last chunk)
+```
 
 ---
 
