@@ -4,6 +4,12 @@ This section documents language features that are designed but not yet implement
 
 For the full implementation status of all features (including those that are done, deferred, or discontinued), see [status.md](status.md).
 
+## Pipe Parameters
+
+Pass compile-time literal arguments directly to pipe handlers — `|window(3):`, `|chunk(4):`. Enables built-in pipes with configurable behavior (window/chunk size) and gives custom Go pipe handlers an args channel via `PipeContext.Args()`.
+
+See [Pipe Parameters](pipe-parameters.md) for the full specification.
+
 ## Dynamic Pipe Expressions
 
 The centerpiece of the planned work is **Dynamic Pipe Expressions** — authoring new pipe behaviors purely in UExL syntax (pipe macros), without writing any Go code. This is similar in spirit to dynamic function expressions, but tailored for pipeline stages.

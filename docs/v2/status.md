@@ -44,6 +44,25 @@ These items appear in `pending-things.md` or earlier planning notes but are **fu
 
 ## Not Started
 
+### Pipe Parameters
+> Designed in `pipe-parameters.md`. Requirements finalized 2026-03-27.
+
+| Feature | Notes |
+|---------|-------|
+| ❌ `\|window(n):` — parametric window size | Requires tokenizer + parser + compiler + VM changes; `OpPipe` gains 4th operand |
+| ❌ `\|chunk(n):` — parametric chunk size | Same infrastructure as window |
+| ❌ `PipeContext.Args() []any` method | New interface method; `pipeContextImpl.args` field + constant pool entry |
+
+**Finalized decisions:**
+- Args are **compile-time literals only** (number, string, bool, null). No expressions or variables.
+- Multiple args are supported: `|someHandler(3, "asc", true):`
+- `|window:` (no args) defaults to size `2` — fully backward compatible.
+- `|reduce(n):` is **not** implemented — `($acc ?? 0) + $item` is the canonical pattern.
+- Sentinel `0xFFFF` in the 4th operand of `OpPipe` means "no args provided".
+- See `pipe-parameters.md` for full specification and implementation checklist.
+
+---
+
 ### Dynamic Pipe Expressions
 > Designed in `dynamic-pipe-expressions.md` and `migration-and-design.md`.
 
