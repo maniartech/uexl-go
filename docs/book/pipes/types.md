@@ -127,7 +127,9 @@ Splits the array into consecutive, non-overlapping sub-arrays. The chunk size de
 [1, 2, 3, 4, 5] |chunk(4): $chunk      // [[1,2,3,4],[5]]     (explicit size 4)
 ```
 
-Inside the predicate, `$chunk` is the current sub-array and `$index` is the zero-based chunk number. The last chunk may be shorter than the requested size.
+Inside the predicate, `$chunk` is the current sub-array and `$index` is the zero-based chunk number.
+
+**Boundary behavior:** The last chunk may be shorter than `n` when the array length is not a multiple of `n`. If the array is shorter than `n`, exactly one chunk is produced containing all elements. Use `?? 0` when accessing a fixed index in the predicate to guard against short final chunks.
 
 ## Sliding window: `|window:` / `|window(n):`
 
@@ -140,4 +142,6 @@ arr |window(2): $window[0] + $window[1]  // pairwise sums (same as default)
 arr |window(3): $window[0] + $window[1] + $window[2]  // triple sums
 ```
 
-Inside the predicate, `$window` is the current window array and `$index` is the window start index. If the input length is less than the window size, the result is an empty array.
+Inside the predicate, `$window` is the current window array and `$index` is the window start index.
+
+**Boundary behavior:** Every window is always exactly `n` elements — there are no partial windows. The result contains `len - n + 1` windows. If the array is shorter than the window size, the result is an empty array.

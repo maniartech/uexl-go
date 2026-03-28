@@ -219,7 +219,7 @@ prices |window(3): ($window[0] + $window[1] + $window[2]) / 3
 # Explicit size 3 — 3-period moving average
 ```
 
-> If the array length is smaller than the window size, the result is an empty array.
+> **Boundary behavior:** Every window is always exactly `n` elements — there are no partial windows. The result contains `len(arr) - n + 1` windows. If the array is shorter than the window size, the result is an empty array.
 
 ---
 
@@ -245,6 +245,8 @@ Divides the array into consecutive, non-overlapping chunks of `n` elements each.
 [1, 2, 3, 4, 5] |chunk(3): $chunk[0] + $chunk[1] + ($chunk[2] ?? 0)
 # results: [6, 9]  (3rd slot guarded for the short last chunk)
 ```
+
+> **Boundary behavior:** The result contains `⌈len(arr) / n⌉` chunks. The last chunk may contain fewer than `n` elements. If the array is shorter than `n`, exactly one chunk is produced. When the length is an exact multiple of `n`, all chunks are the same size.
 
 ---
 

@@ -87,6 +87,8 @@ arr |window(3): $window[0] + $window[1] + $window[2]          // explicit size 3
 prices |window(4): ($window[0] + $window[1] + $window[2] + $window[3]) / 4  // 4-period moving average
 ```
 
+**Boundary behavior:** Every window is always the full `n` elements — the result has `len - n + 1` windows. If the array is shorter than `n`, the result is an empty array.
+
 ---
 
 ### chunk
@@ -100,6 +102,8 @@ arr |chunk: $chunk           // default size 2: [[1,2],[3,4],[5]]
 arr |chunk(3): $chunk        // explicit size 3
 arr |chunk(10): $chunk |filter: len($chunk) == 10  // keep only full batches
 ```
+
+**Boundary behavior:** The last chunk may be shorter than `n`. If the array is shorter than `n`, exactly one chunk is produced. Use `?? 0` when indexing the predicate to guard against short final chunks.
 
 ---
 

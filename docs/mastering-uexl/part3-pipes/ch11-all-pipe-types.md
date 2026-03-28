@@ -264,6 +264,8 @@ prices |window(4): ($window[0] + $window[1] + $window[2] + $window[3]) / 4
 - When no argument is given (`|window:`), size is 2.
 - If the array is shorter than the window size, the result is an empty array.
 
+**Boundary behavior:** Every window is always exactly `n` elements — there are no partial windows. The result contains `len(arr) - n + 1` windows. Unlike chunking, every element appears in at least one window when `len(arr) >= n`.
+
 ---
 
 ## 11.12 `|chunk:` / `|chunk(n):` — Fixed-Size Batches
@@ -298,6 +300,8 @@ records |chunk(100): $chunk |filter: len($chunk) == 100
 - Must be a literal integer `≥ 2`; fractions, zero, and negatives fall back to the default of 2.
 - Whitespace around the argument is allowed: `|chunk( 4 ):` is valid.
 - When no argument is given (`|chunk:`), size is 2.
+
+**Boundary behavior:** The result always contains `⌈len(arr) / n⌉` chunks. The last chunk holds the remaining elements and may be shorter than `n`. If the array is shorter than `n`, exactly one chunk is produced containing all elements. When the length is an exact multiple of `n`, all chunks are the same size.
 
 ---
 
