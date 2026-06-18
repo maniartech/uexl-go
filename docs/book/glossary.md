@@ -10,7 +10,7 @@ A quick reference for UExL terminology and concepts.
   - See: operators/null-chaining.md
 - Nullish coalescing (??)
   - Returns the left value unless it is nullish; otherwise returns the right.
-  - Keeps valid falsy (0, "", false).
+  - Keeps valid falsy (0, "", false, the epoch datetime, a zero duration) — these are falsy but not nullish.
   - See: operators/nullish-coalescing.md
 - Equality (==, !=)
   - Exact equality for primitives; no cross‑type coercion (e.g., "1" == 1 is false).
@@ -50,7 +50,7 @@ A quick reference for UExL terminology and concepts.
 
 - Truthiness (aka Boolish)
   - A value is truthy if it is non‑nullish and not the zero value of its type.
-  - Zero values by type: number 0; string ""; boolean false; empty array []; empty object {}.
+  - Zero values by type: number 0; string ""; boolean false; empty array []; empty object {}; datetime at the epoch (1970‑01‑01T00:00:00.000Z, i.e. 0 ms); duration of 0 ms.
   - Null and unavailable/missing are nullish and therefore falsy.
   - Logical operators (||, &&) rely on this notion of truthiness.
 - Boolean conversion
@@ -98,3 +98,14 @@ For deeper dives, follow the links in each section to the full documentation pag
   - Enabled by default (configurable); there is no `Infinity` literal.
   - Ordering: `-Inf < any finite number < +Inf`.
   - See `vm/ieee754-semantics.md` for operator semantics with infinities and NaN.
+
+## Temporal values (datetime, duration)
+
+- datetime
+  - A value type representing an instant in time, stored as milliseconds since the Unix epoch (1970‑01‑01T00:00:00.000Z, UTC). Zoneless: it identifies an absolute instant, not a wall‑clock‑in‑a‑zone.
+  - Falsy only at the epoch (0 ms); every other instant is truthy. Never nullish.
+- duration
+  - A value type representing an exact span of time in milliseconds (may be negative, e.g. from subtracting a later instant from an earlier one).
+  - Falsy only when 0 ms; every other span is truthy. Never nullish.
+- Status
+  - The datetime/duration types and their truthiness are implemented. Their authoring surface — datetime literals (`d"…"`), duration literals (e.g. `7d`), temporal operators, and the datetime functions — is being introduced incrementally. See the [DateTime Specification](../specs/datetime-spec.md).

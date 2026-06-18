@@ -509,22 +509,39 @@ func isTruthy(val any) bool {
 		return len(v) > 0
 	case map[string]any:
 		return len(v) > 0
+	case DateTime:
+		return v.Millis != 0
+	case Duration:
+		return v.Millis != 0
 	default:
 		return val != nil
 	}
 }
 
-// isTruthyValue - zero-alloc truthiness check for Value types.
-// Merging TypeAny+default into one case saves ~5 AST nodes vs separate cases,
-// keeping this function within Go's inlining budget of 80.
+// isTruthyValue - zero-alloc truthiness check for Value types. The original primitive switch sat right
+// at Go's inlining budget (cost 78/80), so adding temporal cases would spill it. Instead the two hottest
+// cases (bool, number — the ones the boolean/logical benchmarks exercise) stay inline, and the remaining
+// types are handled by isTruthyValueSlow. Temporal values follow the zero-is-falsy rule like number
+// (epoch instant / zero duration are falsy); null is falsy (datetime-spec §6.2).
 func isTruthyValue(val Value) bool {
 	switch val.Typ {
 	case TypeBool:
 		return val.BoolVal
 	case TypeFloat:
 		return val.FloatVal != 0
+	default:
+		return isTruthyValueSlow(val)
+	}
+}
+
+//go:noinline
+func isTruthyValueSlow(val Value) bool {
+	switch val.Typ {
 	case TypeString:
 		return val.StrVal != ""
+	case TypeDateTime, TypeDuration:
+		// Zero ms (epoch instant / zero-length duration) is falsy, like 0/""/false (datetime-spec §6.2).
+		return val.FloatVal != 0
 	case TypeNull:
 		return false
 	default:

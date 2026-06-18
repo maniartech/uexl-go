@@ -347,9 +347,17 @@ The comparison operators `==`, `!=`, `<`, `<=`, `>`, `>=` MUST operate on tempor
 
 ### 6.2 Truthiness
 
-A `datetime` or `duration` value MUST be **truthy** in boolean contexts (it is never nullish). Temporal
-values MUST NOT participate in implicit conversion to `number` (consistent with the absence of
-mixed `datetime`/`number` arithmetic, §12).
+A temporal value is **falsy** when its canonical millisecond value is `0` — i.e. the epoch instant
+`d"1970-01-01T00:00:00.000Z"` and a zero-length `duration` — and **truthy** for every other value (every
+other instant, including any real-world `now()`, and every non-zero duration). This follows UExL's
+general rule that the **zero value** of a type is falsy (`0`, `""`, `false`, empty list/map), independent
+of whether the value is "present": an empty string is a real, non-null string yet falsy, and likewise the
+zero instant and zero span are real values yet falsy.
+
+A temporal value is **never nullish** — it is falsy-but-present, so the nullish-coalescing operator does
+not treat it as null (`d"1970-01-01T00:00:00Z" ?? x` evaluates to the epoch instant, exactly as `0 ?? x`
+evaluates to `0`). The truthiness test inspects the canonical millisecond value directly and performs
+**no** implicit conversion to `number` (§8.2).
 
 ## 7. Timezones
 
@@ -743,6 +751,9 @@ Resolved in this revision:
 - DateTime and duration literal syntax (including suffix literals); duration ISO 8601 interchange.
 - Accepted format and defaulting; range and calendar rules; timezone policy.
 - Equality/ordering, truthiness, the full operator table including division (§8.3).
+- Truthiness — temporal values follow the **zero-is-falsy** rule: the epoch instant and a zero duration
+  are falsy (like `0`/`""`/`false`), every other value is truthy, and temporal values are never nullish
+  (§6.2).
 - Calendar difference — `diffMonths`/`diffYears` **added** (truncated toward zero, §5.3, §11).
 - Formatting/parsing — **NITES** for `datetime` (default layout `iso`), **ISO 8601** for `duration`
   (§10), with `gotime` as the reference implementation.

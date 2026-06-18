@@ -71,6 +71,17 @@ Objects are collections of key-value pairs, enclosed in curly braces. Keys are s
   - `obj.key` or `obj["key"]`
 - **Edge Case:** Keys must be unique within an object.
 
+## Datetime and Duration
+
+UExL's type system includes two temporal value types:
+
+- **`datetime`** — an instant in time, represented as milliseconds since the Unix epoch (`1970-01-01T00:00:00.000Z`, UTC). It is zoneless: it identifies an absolute instant, not a wall-clock reading in a particular zone.
+- **`duration`** — an exact span of time in milliseconds, which may be negative (for example, the result of subtracting a later instant from an earlier one).
+
+**Truthiness:** like every other type, a temporal value is falsy when it is the *zero* of its type — a `datetime` at the epoch (`0` ms) and a `duration` of `0` ms are falsy; every other instant or span is truthy. Temporal values are never nullish (so `??` does not treat them as missing), exactly as with `0`, `""`, and `false`.
+
+> **Status:** the `datetime`/`duration` types and their truthiness are implemented. Their authoring surface — datetime literals (`d"…"`), duration literals (e.g. `7d`, `30m`), temporal operators (`date − date`, `date ± duration`), and the datetime functions — is being introduced incrementally. See the [DateTime Specification](../specs/datetime-spec.md) for the full design.
+
 ## Putting It All Together: Examples
 ```
 42
