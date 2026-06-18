@@ -108,4 +108,4 @@ For deeper dives, follow the links in each section to the full documentation pag
   - A value type representing an exact span of time in milliseconds (may be negative, e.g. from subtracting a later instant from an earlier one).
   - Falsy only when 0 ms; every other span is truthy. Never nullish.
 - Status
-  - The datetime/duration types and their truthiness are implemented. Their authoring surface — datetime literals (`d"…"`), duration literals (e.g. `7d`), temporal operators, and the datetime functions — is being introduced incrementally. See the [DateTime Specification](../specs/datetime-spec.md).
+  - The datetime/duration types, their **literals** (`d"…"`, and `7d`/`30ms`/`1.5h`), and their truthiness are implemented and work today. Temporal **operators** (`date − date`, `date ± duration`, comparisons) and the datetime **functions** (`parseDate`, `formatDate`, `now`, …) are being introduced incrementally. See the [DateTime Specification](../specs/datetime-spec.md).

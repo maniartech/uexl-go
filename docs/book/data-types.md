@@ -78,9 +78,19 @@ UExL's type system includes two temporal value types:
 - **`datetime`** — an instant in time, represented as milliseconds since the Unix epoch (`1970-01-01T00:00:00.000Z`, UTC). It is zoneless: it identifies an absolute instant, not a wall-clock reading in a particular zone.
 - **`duration`** — an exact span of time in milliseconds, which may be negative (for example, the result of subtracting a later instant from an earlier one).
 
+**Datetime literals** are written with a `d` prefix followed by an ISO 8601 / RFC 3339 string. A missing time-of-day defaults to midnight UTC; an offset is used to compute the UTC instant and then discarded:
+- `d"2024-12-01"` — date only → `2024-12-01T00:00:00.000Z`
+- `d"2024-12-01T10:30:00Z"` — explicit UTC instant
+- `d"2024-12-01T10:30:00+05:30"` — the **same** instant as `d"2024-12-01T05:00:00Z"`
+- An invalid literal such as `d"2024-13-01"` or `d"2024-02-30"` is a **parse-time error**.
+
+**Duration literals** are a number with a fixed-unit suffix and no whitespace, where `ms`=millisecond, `s`=second, `m`=minute, `h`=hour, `d`=day, `w`=week. There is deliberately no month or year suffix (those are not fixed-length):
+- `7d` (7 days), `1.5h` (90 minutes), `30ms`, `45s`, `2w`
+- Fractional magnitudes are allowed and truncate to whole milliseconds (`1.5h` → `5400000` ms).
+
 **Truthiness:** like every other type, a temporal value is falsy when it is the *zero* of its type — a `datetime` at the epoch (`0` ms) and a `duration` of `0` ms are falsy; every other instant or span is truthy. Temporal values are never nullish (so `??` does not treat them as missing), exactly as with `0`, `""`, and `false`.
 
-> **Status:** the `datetime`/`duration` types and their truthiness are implemented. Their authoring surface — datetime literals (`d"…"`), duration literals (e.g. `7d`, `30m`), temporal operators (`date − date`, `date ± duration`), and the datetime functions — is being introduced incrementally. See the [DateTime Specification](../specs/datetime-spec.md) for the full design.
+> **Status:** the `datetime`/`duration` types, their **literals** (above), and their truthiness are implemented and work today. Temporal **operators** (`date − date`, `date ± duration`, comparisons) and the datetime **functions** (`parseDate`, `formatDate`, `now`, …) are being introduced incrementally — so a literal evaluates to a value, but arithmetic on it is not available yet. See the [DateTime Specification](../specs/datetime-spec.md).
 
 ## Putting It All Together: Examples
 ```

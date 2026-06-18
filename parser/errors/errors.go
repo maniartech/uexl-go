@@ -38,6 +38,8 @@ const (
 	ErrInvalidNumber      ErrorCode = "invalid-number"
 	ErrInvalidString      ErrorCode = "invalid-string"
 	ErrUnterminatedString ErrorCode = "unterminated-string"
+	ErrInvalidDateTime    ErrorCode = "invalid-datetime"
+	ErrInvalidDuration    ErrorCode = "invalid-duration"
 
 	// Collection Errors
 	ErrUnclosedArray       ErrorCode = "unclosed-array"
@@ -157,6 +159,8 @@ var errorMessages = map[ErrorCode]string{
 	ErrInvalidNumber:      "invalid number format",
 	ErrInvalidString:      "invalid string format",
 	ErrUnterminatedString: "unterminated string",
+	ErrInvalidDateTime:    "invalid datetime literal",
+	ErrInvalidDuration:    "invalid duration literal",
 
 	ErrUnclosedArray:       "unclosed array, expected ']'",
 	ErrUnclosedObject:      "unclosed object, expected '}'",

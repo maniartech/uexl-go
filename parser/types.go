@@ -11,6 +11,8 @@ const (
 	TVKNull
 	TVKIdentifier
 	TVKOperator
+	TVKDateTime // canonical epoch milliseconds in TokenValue.Int
+	TVKDuration // canonical millisecond span in TokenValue.Int
 )
 
 // TokenValue provides strongly typed token payloads via a tagged union struct
@@ -19,6 +21,7 @@ type TokenValue struct {
 	Num  float64
 	Str  string
 	Bool bool
+	Int  int64 // canonical int64 payload for TVKDateTime (epoch ms) and TVKDuration (ms)
 }
 
 // PropertyKind represents the type of property in member access
@@ -84,6 +87,8 @@ const (
 	NodeTypeStringLiteral     NodeType = "StringLiteral"
 	NodeTypeBooleanLiteral    NodeType = "BooleanLiteral"
 	NodeTypeNullLiteral       NodeType = "NullLiteral"
+	NodeTypeDateTimeLiteral   NodeType = "DateTimeLiteral"
+	NodeTypeDurationLiteral   NodeType = "DurationLiteral"
 	NodeTypeIdentifier        NodeType = "Identifier"
 	NodeTypeArrayLiteral      NodeType = "ArrayLiteral"
 	NodeTypeObjectLiteral     NodeType = "ObjectLiteral"
@@ -193,6 +198,30 @@ type NullLiteral struct {
 func (nl *NullLiteral) expressionNode()      {}
 func (nl *NullLiteral) Type() NodeType       { return NodeTypeNullLiteral }
 func (nl *NullLiteral) Position() (int, int) { return nl.Line, nl.Column }
+
+// DateTimeLiteral is a compile-time-constant datetime instant (canonical epoch ms), parsed from a
+// d"..." literal at lex time.
+type DateTimeLiteral struct {
+	Millis int64
+	Line   int
+	Column int
+}
+
+func (dl *DateTimeLiteral) expressionNode()      {}
+func (dl *DateTimeLiteral) Type() NodeType       { return NodeTypeDateTimeLiteral }
+func (dl *DateTimeLiteral) Position() (int, int) { return dl.Line, dl.Column }
+
+// DurationLiteral is a compile-time-constant duration span (canonical ms) from a suffix literal (e.g.
+// 7d, 30ms, 1.5h). The magnitude is non-negative; unary minus is applied by the operator layer.
+type DurationLiteral struct {
+	Millis int64
+	Line   int
+	Column int
+}
+
+func (dl *DurationLiteral) expressionNode()      {}
+func (dl *DurationLiteral) Type() NodeType       { return NodeTypeDurationLiteral }
+func (dl *DurationLiteral) Position() (int, int) { return dl.Line, dl.Column }
 
 type Identifier struct {
 	Name   string

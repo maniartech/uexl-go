@@ -629,6 +629,10 @@ func (p *Parser) parsePrimary() Expression {
 		return p.parseBoolean()
 	case constants.TokenNull:
 		return p.parseNull()
+	case constants.TokenDateTime:
+		return p.parseDateTime()
+	case constants.TokenDuration:
+		return p.parseDuration()
 	case constants.TokenIdentifier:
 		return p.parseIdentifierOrFunctionCall()
 	case constants.TokenLeftParen:
@@ -754,6 +758,18 @@ func (p *Parser) parseNull() Expression {
 	token := p.current
 	p.advance()
 	return &NullLiteral{Line: token.Line, Column: token.Column}
+}
+
+func (p *Parser) parseDateTime() Expression {
+	token := p.current
+	p.advance()
+	return &DateTimeLiteral{Millis: token.Value.Int, Line: token.Line, Column: token.Column}
+}
+
+func (p *Parser) parseDuration() Expression {
+	token := p.current
+	p.advance()
+	return &DurationLiteral{Millis: token.Value.Int, Line: token.Line, Column: token.Column}
 }
 
 func (p *Parser) parseGroupedExpression() Expression {

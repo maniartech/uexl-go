@@ -189,6 +189,11 @@ the same exact units (no year/month).
    truncated toward zero to a whole millisecond (§4.3).
 4. MUST treat a unary minus before a duration literal as negation of the resulting `duration`
    (`-7d` → a `duration` of `-604800000` ms; see §8).
+5. The magnitude is a **plain decimal** (integer or fractional, e.g. `7`, `1.5`); **scientific/exponent
+   notation is not a duration magnitude** — `1e3ms` lexes as the number `1e3` followed by the identifier
+   `ms` (a syntax error in expression position), not a duration. Authors write `1000ms`.
+6. A duration literal whose value exceeds the representable range (the largest span between two in-range
+   `datetime` values, which keeps `|ms|` within the exact-integer range) MUST be a parse-time error.
 
 **Constant vs dynamic.** Suffix literals require a literal numeric amount and therefore cover only
 *constant* durations. For a computed amount, use the `duration(amount, unit)` constructor (§11), e.g.

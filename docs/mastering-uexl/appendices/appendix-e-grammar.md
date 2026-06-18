@@ -112,6 +112,8 @@ Literal ::= NumberLiteral
           | StringLiteral
           | BooleanLiteral
           | NullLiteral
+          | DateTimeLiteral
+          | DurationLiteral
 
 NumberLiteral  ::= DecimalInteger
                  | DecimalFloat
@@ -126,6 +128,17 @@ StringLiteral  ::= "'" { AnyCharExceptSingleQuote } "'"
 BooleanLiteral ::= 'true' | 'false'
 
 NullLiteral    ::= 'null'
+
+(* Datetime: 'd' prefix + ISO 8601 / RFC 3339 string, parsed and validated at lex time. *)
+DateTimeLiteral ::= 'd' ( "'" ISO8601 "'" | '"' ISO8601 '"' )
+ISO8601         ::= Date [ 'T' Time [ Offset ] ]
+Date            ::= Digit Digit Digit Digit '-' Digit Digit '-' Digit Digit
+Time            ::= Digit Digit ':' Digit Digit [ ':' Digit Digit [ '.' Digit { Digit } ] ]
+Offset          ::= 'Z' | ('+' | '-') Digit Digit ':' Digit Digit
+
+(* Duration: a plain decimal magnitude (no exponent) + a fixed-unit suffix, no whitespace. *)
+DurationLiteral ::= DecimalMagnitude DurationUnit
+DurationUnit    ::= 'ms' | 's' | 'm' | 'h' | 'd' | 'w'   (* longest-match; no month/year *)
 
 Identifier     ::= Letter { Letter | Digit | '_' }
 ```

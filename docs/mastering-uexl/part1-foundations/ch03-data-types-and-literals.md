@@ -4,9 +4,9 @@
 
 ---
 
-## 3.1 The Six Types
+## 3.1 The Core Types
 
-UExL has six data types. Every value in every expression is exactly one of them:
+UExL has six core data types, plus two **temporal** types — `datetime` and `duration` (see §3.8). Every value in every expression is exactly one of them:
 
 | Type | Examples | Go underlying type |
 |------|----------|-------------------|
@@ -16,6 +16,8 @@ UExL has six data types. Every value in every expression is exactly one of them:
 | **Null** | `null` | `nil` |
 | **Array** | `[1, 2, 3]`, `["a", true, null]` | `[]any` |
 | **Object** | `{name: "Alice", score: 98}` | `map[string]any` |
+| **Datetime** | `d"2024-12-01"`, `d"2024-12-01T10:30:00Z"` | int64 ms (→ host `time.Time`) |
+| **Duration** | `7d`, `1.5h`, `30ms` | int64 ms (→ host `time.Duration`) |
 
 There is no `integer` type separate from `float64`. There is no `undefined` (JavaScript's ghost) — missing values are `null`. There are no typed arrays or typed maps. This small type surface keeps expressions readable and reduces the mental overhead when authoring rules.
 
@@ -150,7 +152,7 @@ true || false   // => true
 
 ### Truthiness vs. booleanness
 
-UExL distinguishes between a value *being* a boolean and being *truthy*. The logical operators (`&&`, `||`, `!`) work on *truthiness* — they consider any value that is not `false`, `null`, `0`, `""`, `[]`, or `{}` as truthy.
+UExL distinguishes between a value *being* a boolean and being *truthy*. The logical operators (`&&`, `||`, `!`) work on *truthiness* — they consider any value truthy unless it is the *zero* of its type: `false`, `null`, `0`, `""`, `[]`, `{}`, the **epoch** datetime, or a **zero** duration.
 
 The truthiness table for common values:
 
@@ -168,6 +170,10 @@ The truthiness table for common values:
 | `{a: 1}` | Yes | Non-empty object |
 | `{}` | No | Empty object is falsy |
 | `null` | No | Null is falsy |
+| `d"1970-01-01T00:00:00Z"` | No | The **epoch** datetime (`0` ms) is falsy |
+| `d"2024-12-01"` | Yes | Any other instant is truthy |
+| `0d` | No | A **zero** duration is falsy |
+| `7d` | Yes | Any non-zero duration is truthy |
 
 > **TIP:** Use `!!value` as an idiom for explicit boolean conversion: `!!1` → `true`, `!!0` → `false`, `!!""` → `false`, `!!"x"` → `true`. This is more readable than `value != null && value != false && value != 0`.
 
@@ -254,7 +260,53 @@ customer["name"]    // bracket notation (same result)
 
 ---
 
-## 3.8 How Types Flow Through the Go Integration
+## 3.8 Datetime and Duration
+
+Beyond the six core types, UExL has two **temporal** value types for working with time.
+
+A **`datetime`** is an instant in time — milliseconds since the Unix epoch (`1970-01-01T00:00:00.000Z`, UTC). It is *zoneless*: it identifies an absolute instant, not a wall-clock reading in a particular zone. Write one with a `d` prefix and an ISO 8601 / RFC 3339 string:
+
+```uexl
+d"2024-12-01"                    // date only → 2024-12-01T00:00:00.000Z
+d"2024-12-01T10:30:00Z"          // explicit UTC instant
+d"2024-12-01T10:30:00+05:30"     // same instant as d"2024-12-01T05:00:00Z"
+d'2024-12-01'                    // single quotes are also accepted
+```
+
+A missing time-of-day defaults to midnight UTC; an offset is used to compute the UTC instant and then discarded (so the two forms above are equal). An invalid literal is a **parse-time error**, caught before evaluation:
+
+```uexl
+d"2024-13-01"             // ParseError: month out of range
+d"2024-02-30"             // ParseError: day out of range
+d"2024-12-01T10:30:60Z"   // ParseError: leap second
+```
+
+A **`duration`** is an exact span of time in milliseconds (it may be negative). Write one as a number with a fixed-unit suffix and no whitespace:
+
+| Suffix | Unit | `1<suffix>` in ms |
+|--------|------|-------------------|
+| `ms` | millisecond | 1 |
+| `s` | second | 1000 |
+| `m` | minute | 60000 |
+| `h` | hour | 3600000 |
+| `d` | day | 86400000 |
+| `w` | week | 604800000 |
+
+```uexl
+7d        // 7 days
+1.5h      // 90 minutes (fractional magnitudes truncate to whole ms)
+30ms      // 30 milliseconds (longest-match: "ms", not "m" then "s")
+45s
+2w
+```
+
+There is deliberately **no month or year suffix** — a month is 28–31 days and a year is 365 or 366, so they are not fixed-length; calendar shifts are handled by functions (forthcoming) instead. Because the minute suffix is `m`, omitting month/year keeps `m` unambiguously "minute".
+
+> **NOTE:** Datetime and duration **literals** and **truthiness** work today. Temporal **operators** (`date − date` → duration, `date + duration`, comparisons like `<`) and the datetime **functions** (`now()`, `parseDate()`, `formatDate()`, `addMonths()`, …) are being added incrementally — so a literal evaluates to a value, but arithmetic on it is not available yet. Until then, host functions registered in `LibContext` (Chapter 14) can operate on datetime/duration values, and host `time.Time` ↔ datetime interop is also forthcoming.
+
+---
+
+## 3.9 How Types Flow Through the Go Integration
 
 When you pass context data to UExL from Go, the values must be representable as UExL types. Here is the mapping:
 
@@ -280,7 +332,7 @@ When you pass context data to UExL from Go, the values must be representable as 
 
 ---
 
-## 3.9 No Implicit Type Coercion
+## 3.10 No Implicit Type Coercion
 
 A deliberate and important design choice: UExL **never silently converts one type to another**. Operations on mismatched types produce a TypeError.
 
@@ -306,7 +358,7 @@ For numeric parsing (`"5"` → `5`) or boolean coercion (`1` → `true`), regist
 
 ---
 
-## 3.10 ShopLogic: Context Type Planning
+## 3.11 ShopLogic: Context Type Planning
 
 For ShopLogic, we need to decide what types our context values will be. Here's an initial type plan:
 

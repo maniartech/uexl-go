@@ -247,6 +247,10 @@ func (c *Compiler) Compile(node parser.Node) error {
 	case *parser.NumberLiteral:
 		// Add the number literal to constants
 		c.emit(code.OpConstant, c.addConstant(node.Value))
+	case *parser.DateTimeLiteral:
+		c.emit(code.OpConstant, c.addValueConstant(types.NewDateTimeValue(node.Millis)))
+	case *parser.DurationLiteral:
+		c.emit(code.OpConstant, c.addValueConstant(types.NewDurationValue(node.Millis)))
 	case *parser.BooleanLiteral:
 		if node.Value {
 			c.emit(code.OpTrue)

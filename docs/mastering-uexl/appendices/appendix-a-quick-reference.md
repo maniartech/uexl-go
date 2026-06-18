@@ -12,6 +12,8 @@
 | Null | `null` |
 | Array | `[1, 2, 3]` `['a', 'b']` `[]` |
 | Object | `{name: 'Alice', age: 30}` `{}` |
+| Datetime | `d"2024-12-01"` `d"2024-12-01T10:30:00Z"` |
+| Duration | `7d` `1.5h` `30ms` `45s` `2w` |
 
 ---
 

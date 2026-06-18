@@ -60,6 +60,12 @@ func (c *Compiler) addConstant(node any) int {
 	return len(c.constants) - 1
 }
 
+// addValueConstant appends an already-typed Value to the constant pool (no any->Value round-trip).
+func (c *Compiler) addValueConstant(v types.Value) int {
+	c.constants = append(c.constants, v)
+	return len(c.constants) - 1
+}
+
 func (c *Compiler) addContextVar(node string) int {
 	for i, existing := range c.contextVars {
 		if existing == node {

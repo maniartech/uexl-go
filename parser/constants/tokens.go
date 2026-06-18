@@ -28,7 +28,9 @@ const (
 	TokenNull
 	TokenDollar
 	TokenAs
-	TokenError // Special token type for tokenizer errors
+	TokenDateTime // d"..." datetime literal; canonical epoch ms in TokenValue.Int
+	TokenDuration // duration literal (e.g. 5m, 1.5h, 30ms); canonical ms in TokenValue.Int
+	TokenError    // Special token type for tokenizer errors
 )
 
 // String returns the string representation of a token type
@@ -76,6 +78,10 @@ func (t TokenType) String() string {
 		return "Dollar"
 	case TokenAs:
 		return "As"
+	case TokenDateTime:
+		return "DateTime"
+	case TokenDuration:
+		return "Duration"
 	case TokenError:
 		return "Error"
 	default:

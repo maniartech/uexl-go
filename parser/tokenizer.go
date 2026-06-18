@@ -9,6 +9,7 @@ import (
 
 	"github.com/maniartech/uexl/parser/constants"
 	"github.com/maniartech/uexl/parser/errors"
+	"github.com/maniartech/uexl/types"
 )
 
 type Token struct {
@@ -42,6 +43,14 @@ func (t Token) AsBool() (bool, bool) {
 		return t.Value.Bool, true
 	}
 	return false, false
+}
+
+// AsInt returns the canonical int64 (epoch ms / duration ms) for datetime/duration tokens.
+func (t Token) AsInt() (int64, bool) {
+	if t.Value.Kind == TVKDateTime || t.Value.Kind == TVKDuration {
+		return t.Value.Int, true
+	}
+	return 0, false
 }
 
 // Pre-allocated common single character strings to avoid allocations
@@ -106,6 +115,11 @@ func (t *Tokenizer) NextToken() (Token, error) {
 	case ch == 'r':
 		if t.peek() == '"' || t.peek() == '\'' {
 			return t.readString()
+		}
+		fallthrough
+	case ch == 'd':
+		if t.peek() == '"' || t.peek() == '\'' {
+			return t.readDateTime()
 		}
 		fallthrough
 	case isLetter(ch):
@@ -227,6 +241,15 @@ func (t *Tokenizer) readNumber() (Token, error) {
 		}
 	}
 
+	// Duration suffix literal (datetime-spec §3.3): a unit immediately after a plain (non-exponent)
+	// numeric magnitude. Scientific notation is not a duration magnitude — 1e3ms lexes as the number
+	// 1e3 followed by the identifier ms, so authors write 1000ms.
+	if !hasExp {
+		if unit, weight, ulen, ok := t.matchDurationUnit(); ok {
+			return t.makeDuration(start, startColumn, t.pos, unit, weight, ulen)
+		}
+	}
+
 	originalToken := t.input[start:t.pos]
 	// Fast path: no exponent, parse simple int or decimal manually to avoid allocations
 	if !hasExp {
@@ -344,6 +367,123 @@ func (t *Tokenizer) readIdentifierOrKeyword() (Token, error) {
 		return Token{Type: constants.TokenIdentifier, Value: TokenValue{Kind: TVKIdentifier, Str: originalToken}, Token: originalToken, Line: t.line, Column: startColumn}, nil
 	}
 }
+
+// readDateTime lexes a d"..."/d'...' datetime literal. The inner ISO 8601 string is parsed by
+// types.ParseISODateTime at lex time and the canonical epoch ms is carried in TokenValue.Int. Per
+// datetime-spec §3.1 the contents are taken verbatim (no escape processing); an invalid literal is a
+// parse-time error.
+func (t *Tokenizer) readDateTime() (Token, error) {
+	start := t.pos
+	startColumn := t.column
+
+	// consume the 'd' prefix
+	t.pos++
+	t.column++
+	t.setCur()
+
+	// the opening quote
+	quote := t.current()
+	t.pos++
+	t.column++
+	t.setCur()
+
+	// scan verbatim to the matching closing quote
+	for t.pos < len(t.input) && t.input[t.pos] != byte(quote) {
+		if t.input[t.pos] == '\n' {
+			t.line++
+			t.column = 1
+		} else {
+			t.column++
+		}
+		t.pos++
+	}
+
+	if t.pos >= len(t.input) {
+		errMsg := errors.GetErrorMessage(errors.ErrUnterminatedQuote)
+		return Token{}, errors.NewParserError(errors.ErrUnterminatedQuote, t.line, startColumn, errMsg)
+	}
+
+	t.pos++ // consume closing quote
+	t.column++
+	t.setCur()
+
+	originalToken := t.input[start:t.pos]
+	content := originalToken[2 : len(originalToken)-1] // strip 'd' + surrounding quotes
+	ms, err := types.ParseISODateTime(content)
+	if err != nil {
+		errMsg := errors.GetErrorMessage(errors.ErrInvalidDateTime)
+		return Token{}, errors.NewParserError(errors.ErrInvalidDateTime, t.line, startColumn, errMsg+": "+err.Error())
+	}
+	return Token{Type: constants.TokenDateTime, Value: TokenValue{Kind: TVKDateTime, Int: ms}, Token: originalToken, Line: t.line, Column: startColumn}, nil
+}
+
+// matchDurationUnit longest-matches a duration unit suffix at the current position (the end of a numeric
+// magnitude), returning the unit, its millisecond weight, and byte length. A match is rejected (so the
+// magnitude stays a plain number) when the unit is followed by an identifier char, so 30days / 5hours are
+// not duration+identifier. Quote-adjacency (7d") is intentionally allowed to match so makeDuration can
+// raise the specific dt-err-009 error. Units: datetime-spec §3.3 (no month/year).
+func (t *Tokenizer) matchDurationUnit() (unit string, weight int64, ulen int, ok bool) {
+	p, n := t.pos, len(t.input)
+	if p >= n {
+		return "", 0, 0, false
+	}
+	switch {
+	case p+1 < n && t.input[p] == 'm' && t.input[p+1] == 's': // longest-match: "ms" before "m"/"s"
+		unit, weight, ulen = "ms", 1, 2
+	case t.input[p] == 's':
+		unit, weight, ulen = "s", 1000, 1
+	case t.input[p] == 'm':
+		unit, weight, ulen = "m", 60000, 1
+	case t.input[p] == 'h':
+		unit, weight, ulen = "h", 3600000, 1
+	case t.input[p] == 'd':
+		unit, weight, ulen = "d", 86400000, 1
+	case t.input[p] == 'w':
+		unit, weight, ulen = "w", 604800000, 1
+	default:
+		return "", 0, 0, false
+	}
+	if q := p + ulen; q < n { // word boundary: a following identifier char means this is not a duration
+		c := t.input[q]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '$' {
+			return "", 0, 0, false
+		}
+	}
+	return unit, weight, ulen, true
+}
+
+// makeDuration finalizes a duration suffix literal: it parses the magnitude, consumes the unit, rejects
+// the operator-less 7d"..." form (dt-err-009), bounds the result, and emits a TokenDuration carrying the
+// canonical ms. The magnitude is non-negative; fractional magnitudes truncate toward zero (§3.3).
+func (t *Tokenizer) makeDuration(start, startColumn, numEnd int, unit string, weight int64, ulen int) (Token, error) {
+	magStr := t.input[start:numEnd]
+	mag, err := strconv.ParseFloat(magStr, 64)
+	if err != nil || math.IsInf(mag, 0) || math.IsNaN(mag) {
+		errMsg := errors.GetErrorMessage(errors.ErrInvalidDuration)
+		return Token{}, errors.NewParserError(errors.ErrInvalidDuration, t.line, startColumn, errMsg+": '"+magStr+unit+"'")
+	}
+
+	t.pos += ulen // consume the unit bytes
+	t.column += ulen
+	t.setCur()
+
+	// dt-err-009: a duration immediately followed by a quote (no operator) is a parse error.
+	if t.pos < len(t.input) && (t.input[t.pos] == '"' || t.input[t.pos] == '\'') {
+		errMsg := errors.GetErrorMessage(errors.ErrInvalidDuration)
+		return Token{}, errors.NewParserError(errors.ErrInvalidDuration, t.line, startColumn, errMsg+": missing operator before datetime literal")
+	}
+
+	prod := mag * float64(weight) // magnitude is non-negative
+	if prod > float64(types.MaxDurationMillis) {
+		errMsg := errors.GetErrorMessage(errors.ErrInvalidDuration)
+		return Token{}, errors.NewParserError(errors.ErrInvalidDuration, t.line, startColumn, errMsg+": out of range")
+	}
+	ms := int64(prod) // truncate toward zero
+
+	originalToken := t.input[start:t.pos]
+	return Token{Type: constants.TokenDuration, Value: TokenValue{Kind: TVKDuration, Int: ms}, Token: originalToken, Line: t.line, Column: startColumn}, nil
+}
+
 func (t *Tokenizer) readString() (Token, error) {
 	start := t.pos
 	startColumn := t.column
