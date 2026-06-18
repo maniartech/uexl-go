@@ -8,6 +8,8 @@ Companion artifacts:
 - `standard-library.md` — generated consistency matrix + family-completeness report
 - `cmd/builtins-check` — drift checker / matrix generator
 - `datetime-spec.md` — normative datetime/duration functions
+- `adr-0001-builtins-and-datetime-architecture.md` — the ratifying decisions (core/library layering,
+  conversion naming, clock injection)
 
 > Naming: the root package/directory is **`builtins`** (plural) — consistent with `vm.Builtins`,
 > `cmd/builtins-check`, and the "built-in functions" vocabulary used throughout the docs. (Singular
@@ -39,6 +41,11 @@ the existing builtins and add the missing ones. It complements the roadmap (the 
 - `vm.Builtins` (a literal map in `vm/builtins.go`) holds the 13 current builtins.
 - The VM merges `vm.Builtins` with host-registered functions (`LibContext.Functions`).
 - Public API exposes `uexl.Functions = vm.VMFunctions`.
+- A **library-composition API already exists**: `uexl.Lib` (`Apply(*EnvConfig)`), attached via the
+  `WithLib` / `WithFunctions` options at `Env` construction (`uexl.go`, `env_config.go`). `EnvConfig` is
+  **additive only** — `AddFunctions` / `AddPipeHandlers` / `AddGlobals`. It **cannot** register literal
+  syntax or operators (those are compiled into the tokenizer and VM). This is the attach mechanism for
+  opt-in standard-library bundles (§3.1).
 
 The refactor changes **where functions live and how the default set is assembled** — not how they are
 called.
@@ -71,8 +78,8 @@ builtins/
   collections/            # array/object operations
     collections.go        # len, get, set, has, keys, values, remove, merge
     collections_test.go
-  conversion/             # to* (lenient/null) · parse* (strict/error) · format*
-    conversion.go         # str/toString, toNumber, parseNumber, formatNumber, toBoolean, parseBoolean
+  conversion/             # parseX (strict/error) · tryParseX (safe/null) · str
+    conversion.go         # str, parseNum/tryParseNum, parseBool/tryParseBool, formatNum
     conversion_test.go
   introspection/          # type queries
     introspection.go      # typeOf, isNull, isNumber, isString, isBool, isArray, isObject,
@@ -95,6 +102,39 @@ Notes:
   on argument type; the string view-lengths (`runeLen`, etc.) live in `strings/unicode_views.go`.
 - `split`/`join` live together in `strings/split_join.go` (string-centric explode/reassemble).
 - `datetime` is the only family with an external dependency (`gotime`).
+
+### 3.1 Core vs attachable libraries
+
+Per [ADR-0001](adr-0001-builtins-and-datetime-architecture.md), UExL is layered: a small always-present
+**core**, plus opt-in standard-library bundles a host attaches with `WithLib`. The rule: *if the parser or
+VM must understand it, it is core; if it is just a function call, it is an attachable library.*
+
+**Not in `builtins/` at all** (compiled into the tokenizer / compiler / VM, because the `Lib` API cannot
+add them):
+
+- the `datetime` / `duration` **value types**
+- the `d"..."` literal (+ its fixed ISO parser) and the `7d` / `30ms` suffix literals
+- the temporal **operators** (`date − date`, `date ± duration`, …)
+
+These are core language surface and live in `parser/` and `vm/`, not in a family package.
+
+**In `builtins/`, as attachable `Lib` bundles** — each family package is exposed both individually (so a
+host can attach just what it needs) and via an aggregate default:
+
+| Family package | Attach as | Recommended for |
+|----------------|-----------|-----------------|
+| `numbers` (math) | `uexl.WithMath()` | general-purpose hosts |
+| `strings` | `uexl.WithStrings()` | general-purpose hosts |
+| `collections` | `uexl.WithCollections()` | general-purpose hosts |
+| `conversion` | `uexl.WithConversion()` | general-purpose hosts |
+| `introspection` | `uexl.WithIntrospection()` | general-purpose hosts |
+| `datetime` | `uexl.WithDatetime()` | **recommended**; the *functions* only — the type/literal/operators are core |
+| `json` | `uexl.WithJSON()` | optional / extension |
+
+The attach options live in the **root `uexl` package** (not the family packages) to keep the import
+direction clean — see §5.1. A minimal host attaches nothing (`uexl.Default()` may still seed an
+irreducible set such as `len` / `typeof`); a full host composes the families it wants. Calling a function
+whose library is not attached is an "unknown function" error — never a silently wrong result.
 
 ---
 
@@ -195,6 +235,53 @@ var Builtins = func() VMFunctions {
 }()
 ```
 
+### 5.1 Family → `Lib` adapter (attachable bundles)
+
+Families stay **pure descriptor sets** — they import only `builtins/fn`, never `uexl` or `vm`. The
+per-family attach options therefore live in the **root `uexl` package**, which already sits above
+everything (it imports `vm` and may import the families directly). This keeps the import graph acyclic:
+
+```
+builtins/fn  ←  builtins/<family>  ←  builtins  ←  vm  ←  uexl
+                       ▲                                    │
+                       └──────────── uexl imports families ─┘   (one direction; no family imports upward)
+```
+
+> Why not `datetime.Lib()` in the family package? `Lib` / `EnvConfig` live in `uexl`, and `uexl → vm →
+> builtins → <family>`. A family importing `uexl` would close that loop into a cycle. Putting the option
+> constructors in `uexl` avoids it.
+
+```go
+// uexl package — one shared adapter turns descriptor sets into a Functions map…
+func functionsOf(sets ...[]fn.Descriptor) Functions {
+    out := Functions{}
+    for _, set := range sets {
+        for _, d := range set {
+            out[d.Name] = Function(d.Fn) // Function == vm.VMFunction; Fn has the same signature
+        }
+    }
+    return out
+}
+
+// …and each family gets a thin WithX option built on the existing WithFunctions.
+func WithMath() Option        { return WithFunctions(functionsOf(numbers.Funcs)) }
+func WithStrings() Option     { return WithFunctions(functionsOf(strings.Funcs)) }
+func WithCollections() Option { return WithFunctions(functionsOf(collections.Funcs)) }
+func WithConversion() Option  { return WithFunctions(functionsOf(conversion.Funcs)) }
+func WithDatetime() Option    { return WithFunctions(functionsOf(datetime.Funcs)) }
+// …etc. A host composes: uexl.DefaultWith(uexl.WithDatetime(), uexl.WithMath())
+```
+
+Two assembly paths over the same descriptors:
+
+- `builtins.Default()` → the aggregate registry that seeds `vm.Builtins` (the all-batteries default used
+  by `uexl.Default()`).
+- `uexl.WithX()` → a single family as an attachable bundle, layered on the existing `WithFunctions` /
+  `Lib` plumbing (a host may also wrap several with a custom `Lib` for redistribution).
+
+The **datetime type, `d"..."` literal, suffix literals, and operators are not produced here** — they are
+core, implemented in `parser/` and `vm/`. `uexl.WithDatetime()` registers only the §10–§11 *functions*.
+
 ---
 
 ## 6. Phased plan (build & tests stay green)
@@ -203,10 +290,10 @@ var Builtins = func() VMFunctions {
 |-------|------|------------------------|
 | **0 — Scaffold** | Add `builtins/fn` + `builtins.Default()`; point `vm.Builtins` at it (initially wrapping the existing 13) | — |
 | **1 — Migrate** | Move the 13 current builtins into `strings`/`collections`/`conversion`; remove the `vm/builtins.go` literal; update manifest `impl` refs | impl refs updated |
-| **2 — Reconcile (T0)** | `conversion`: implement `toNumber`/`toBoolean`; make `toString` an alias of `str`; implement (or remove) example fns | `documented-only → implemented` |
-| **3 — Core families (T1)** | `numbers`, `introspection`, string ops, `split`, collection accessors, `parseNumber` | `gap → implemented` |
+| **2 — Reconcile (T0)** | `conversion`: implement `parseNum`/`tryParseNum`, `parseBool`/`tryParseBool`; keep `str`; implement (or remove) example fns | `documented-only → implemented` |
+| **3 — Core families (T1)** | `numbers`, `introspection`, string ops, `split`, collection accessors | `gap → implemented` |
 | **4 — Datetime (T1)** | `builtins/datetime` wrapping `gotime`; implements the datetime spec | `planned → implemented` |
-| **5 — Nice-to-have (T2)** | `avg`/`clamp`, `trim*`, `pad*`, `merge`/`remove`, `formatNumber`, utf16 views, datetime conveniences | `gap → implemented` |
+| **5 — Nice-to-have (T2)** | `avg`/`clamp`, `trim*`, `pad*`, `merge`/`remove`, `formatNum`, utf16 views, datetime conveniences | `gap → implemented` |
 | **6 — Optional (T3)** | `json`, unicode view functions, locale/case profiles | extension entries |
 
 Per-phase checklist:
@@ -237,8 +324,9 @@ This closes the loop: **code (descriptors) → manifest (emitted) → checker (v
 
 ## 8. Conventions (recap)
 
-- `to*` = lenient coercion, `null` on failure; `parse*` = strict, **error** on failure; `format*` =
-  value → string.
+- `parseX` = strict, **error** on failure; `tryParseX` = safe, `null` on failure; `str` = value → string;
+  `formatX` = pattern-directed render. Short type tokens: `Num`, `Bool`, `Date`, `Dur`
+  ([ADR-0001](adr-0001-builtins-and-datetime-architecture.md) §B).
 - Unicode ops come in byte / rune / grapheme / utf16 views.
 - All builtins are pure; "current time" is context-injected (see datetime-spec §9.1).
 - Cross-cutting semantics still to pin (rounding mode, `mod` sign, string-index unit, `typeOf`

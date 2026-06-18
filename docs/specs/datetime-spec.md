@@ -4,7 +4,10 @@ Status: Draft
 Audience: Language designers, implementers of UExL ports, conformance authors
 Scope: Normative definition of the UExL `datetime` and `duration` value types, their literals,
 operators, and core semantics
-Profile: Core (mandatory)
+Layering: The `datetime`/`duration` **types**, the `d"..."` and duration suffix **literals**, and the
+temporal **operators** (§3, §8) are part of the always-present language **core**. The temporal
+**functions** (§10–§11) ship as the recommended, attachable **`datetime` standard library** (registered
+via `WithLib`). See §1.2 and [ADR-0001](adr-0001-builtins-and-datetime-architecture.md).
 
 > Normative keywords `MUST`, `MUST NOT`, `SHOULD`, `SHOULD NOT`, and `MAY` are used as defined in the
 > [Language Specification Requirements](language-spec-requirements.md), §7.
@@ -52,6 +55,36 @@ month or year length (conventions range from 30 days to 30.436875 days to calend
 lengths), so the core refuses the conversion rather than pick an arbitrary one. The rigorous host
 libraries `java.time.Duration` and Go `time.Duration` make the same choice: their exact-duration types
 do not support months or years at all.
+
+### 1.2 Core vs `datetime` library boundary (Normative)
+
+UExL is layered: a small always-present **core**, plus opt-in standard-library bundles a host attaches at
+construction (`WithLib`). Temporal support straddles that line by a single rule:
+
+> If the **parser or evaluator** must understand it, it is **core**. If it is **just a function call**,
+> it lives in the attachable **`datetime` library**.
+
+This boundary is enforced by the engine: a library may register functions, pipe handlers, and globals,
+but it cannot add literal syntax or operators (those are compiled into the tokenizer and VM).
+
+| Always in core | In the attachable `datetime` library |
+|----------------|---------------------------------------|
+| `datetime` / `duration` value **types** (§2) | all temporal **functions** (§10–§11): construction, calendar arithmetic, extraction, epoch conversion |
+| the `d"..."` **literal** + its **fixed ISO 8601 parser** (§3.1, §4) | format-directed and string **parsing**: `parseDate`/`tryParseDate`, `parseDur`/`tryParseDur` (§10.2–10.3) |
+| duration **suffix literals** `7d`, `30ms` (§3.3) | **formatting**: `formatDate` (NITES), `formatDur` (§10.1, §10.3) |
+| the temporal **operators** (§8) | `now`/`today` (clock-injected, §9.1) |
+| `typeof` recognising both types | — |
+
+Consequences:
+
+- A conforming **core** MUST accept the `datetime`/`duration` types, the `d"..."` literal (parsing the
+  fixed §4 ISO grammar), duration suffix literals, and all §8 operators — so every host can author and
+  compare temporal values without attaching anything.
+- A conforming **`datetime` library** MUST provide the §10–§11 functions. It is *recommended* for any
+  general-purpose host; a minimal host MAY omit it. When omitted, the §10–§11 functions are simply not
+  registered and calling one is an "unknown function" error — never a silently wrong result.
+- The fixed ISO parser that backs the `d"..."` literal is core; the same parsing logic MAY be shared with
+  the library's `parseDate`, but the runtime `parseDate`/`formatDate` *functions* are library surface.
 
 ## 2. Canonical Representation
 
@@ -143,7 +176,7 @@ month or year suffix, because those are not fixed-length durations (§1.1):
 > strings, where the minute specifier is `i` and `m` is month (§10.1).
 
 Suffix literals are the compact **authoring** form. For **interchange/serialization**, durations also
-have an ISO 8601 string form (`PT1H30M`) via `parseDuration` / `formatDuration` (§10.3), restricted to
+have an ISO 8601 string form (`PT1H30M`) via `parseDur` / `formatDur` (§10.3), restricted to
 the same exact units (no year/month).
 
 **Lexical rules.** A conforming tokenizer:
@@ -411,22 +444,31 @@ the boundary instant per §5.4 (silent clamp). `duration` results are not range-
 - The canonical representation — not any host-native object — MUST be used inside the evaluator and in
   any compiled/serialized constant form.
 
-### 9.1 Current Instant (`now`)
+### 9.1 Current Instant (`now` / `today`)
 
 The current instant MUST be supplied as **context-injected** state (a host-provided clock value), not
-read from an ambient host clock during evaluation. This follows the clock-injection pattern of
-`java.time.Clock` and keeps evaluation pure and deterministic (conformance tests inject a fixed instant,
-equivalent to `Clock.fixed`).
+read from an ambient host clock during evaluation. The host captures the system clock **once, at the
+start of the evaluation** (before any pipe stage runs) and injects it as the evaluation's current
+instant. This follows the clock-injection pattern of `java.time.Clock` and keeps evaluation pure and
+deterministic (conformance tests inject a fixed instant, equivalent to `Clock.fixed`).
 
 A conforming implementation:
 
 - MUST resolve `now()` (§11) from the injected clock instant for the current evaluation.
-- MUST return the **same** instant for every call to `now()` within a single expression evaluation
-  (the instant is captured once at the start of evaluation). This mirrors SQL `CURRENT_TIMESTAMP`, which
-  is stable within a statement, and guarantees expressions such as `now() - now()` evaluate to a zero
-  `duration`.
-- When no clock instant is injected, the behavior of `now()` is host-defined (it MAY raise an error or
-  use the host wall clock); such evaluations are outside the deterministic conformance guarantee.
+- MUST return the **same** instant for **every** call to `now()` within a single expression evaluation —
+  **including across different pipe stages**. The instant is captured once at the start of evaluation and
+  frozen for its duration. This mirrors SQL `CURRENT_TIMESTAMP` (stable within a statement) and
+  guarantees that `now() == now()` and `now() - now()` evaluates to a zero `duration`, so a value cannot
+  "age" between stages of the same expression.
+- MUST resolve `today()` (§11) from the **same** captured instant, truncated to UTC midnight
+  (`00:00:00.000Z`); `today()` is therefore equally stable across the whole evaluation.
+- When no clock instant is injected, the behavior of `now()` / `today()` is host-defined (it MAY raise an
+  error or use the host wall clock); such evaluations are outside the deterministic conformance guarantee.
+
+> Implementation note (Informative): the captured instant is delivered through the host's existing
+> context/variable channel — the same plumbing used for ordinary evaluation context — so `now`/`today`
+> require **no** change to the builtin call signature. `now`/`today` are part of the attachable
+> `datetime` library (§1.2); they read the core-provided injected instant.
 
 ## 10. Parsing and Formatting
 
@@ -480,10 +522,14 @@ Common specifiers (see the NITES specification for the full set):
 
 ### 10.2 DateTime Parsing — NITES and ISO
 
-- `parseDate(s: string)` → `datetime` MUST parse the §4 ISO 8601 subset (the canonical interchange
-  form). Invalid input MUST raise an **error** (not return `null`). `parseDuration` (§10.3) behaves the
-  same way. (Strict `parse*` functions raise; this is intentionally distinct from the lenient `to*`
-  coercions such as `toNumber`, which return `null` on failure.)
+String parsing follows the language-wide **`parseX` (strict) / `tryParseX` (safe)** convention
+([ADR-0001](adr-0001-builtins-and-datetime-architecture.md) §B):
+
+- `parseDate(s: string)` → `datetime` MUST parse the §4 ISO 8601 subset (the canonical interchange form)
+  and MUST **raise an error** on invalid input (never `null`). `parseDur` (§10.3) behaves the same way.
+- `tryParseDate(s: string)` → `datetime | null` MUST behave identically to `parseDate` on valid input and
+  MUST **return `null`** (not raise) on invalid input. `tryParseDur` (§10.3) is its duration counterpart.
+  This is the same strict/safe split as `parseNum`/`tryParseNum` for numbers.
 - `parseDate(s: string, pattern: string)` → `datetime` (pattern-directed parsing using a NITES pattern)
   is **Open** for v1 and MAY be deferred; ordinal and name specifiers that are documented as
   format-only in NITES are not valid for parsing.
@@ -493,12 +539,14 @@ Common specifiers (see the NITES specification for the full set):
 For serialization and interchange, durations use the **ISO 8601 duration** format, restricted to the
 **exact** components (consistent with §1.1 — no calendar units):
 
-- `formatDuration(d: duration)` → `string` MUST produce an ISO 8601 duration using only week/day/hour/
+- `formatDur(d: duration)` → `string` MUST produce an ISO 8601 duration using only week/day/hour/
   minute/second components (e.g. `PT1H30M`, `P7D`, `PT0.5S`).
-- `parseDuration(s: string)` → `duration` MUST accept ISO 8601 durations restricted to those exact
+- `parseDur(s: string)` → `duration` MUST accept ISO 8601 durations restricted to those exact
   components. The year designator (`Y`) and the **date-part** month designator (`M` before `T`) MUST be
   rejected, because months and years are not exact durations. The minute designator (`M` after `T`) is
-  accepted. (ISO 8601 disambiguates `M` by position relative to `T`.)
+  accepted. (ISO 8601 disambiguates `M` by position relative to `T`.) Invalid input MUST raise an error.
+- `tryParseDur(s: string)` → `duration | null` is the safe counterpart: it returns `null` on invalid
+  input instead of raising (per the `parseX`/`tryParseX` convention, §10.2).
 
 > Rationale: this makes both temporal types standards-based on the wire — `datetime` via ISO 8601 / NITES
 > `iso`, and `duration` via ISO 8601 duration — while the exact-only restriction prevents the variable
@@ -526,10 +574,13 @@ datePart(d"2024-12-01T00:30:00Z", "hour", "-01:00")           // 23 (prev day in
 
 ## 11. Standard-Library Functions
 
-The following functions form the core temporal library. Names are provisional pending the standard-library
-artifact; semantics are normative.
+The following functions form the attachable **`datetime` standard library** (§1.2). They are *recommended*
+for general-purpose hosts and registered via `WithLib`; a minimal host MAY omit them. Names are
+provisional pending the standard-library artifact; semantics are normative.
 
-Most temporal arithmetic is performed with operators (§8); the core library is therefore small.
+Most temporal arithmetic is performed with the **core** operators (§8) and the `d"..."` / suffix literals,
+so the library itself is small — it adds construction, calendar arithmetic, extraction, epoch conversion,
+parsing, and formatting on top of the core types.
 
 ### 11.1 Unit and Component Names
 
@@ -569,7 +620,8 @@ Function names are **plural** for the calendar add/diff family (matching `.NET` 
 | `date` | `(year, month, day)` | `datetime` | instant at `00:00:00.000Z`; validity/clamp per §5.4 |
 | `datetime` | `(year, month, day, hour?, minute?, second?, millisecond?)` | `datetime` | trailing args default to `0`; §5.4 |
 | `time` | `(hour, minute, second?, millisecond?)` | `datetime` | on the epoch date `1970-01-01`; trailing args default to `0`; §5.4 |
-| `parseDate` | `(s: string)` | `datetime` | ISO 8601 subset (§10.2) |
+| `parseDate` | `(s: string)` | `datetime` | strict; ISO 8601 subset (§10.2); **error** on invalid |
+| `tryParseDate` | `(s: string)` | `datetime \| null` | safe; `null` on invalid (§10.2) |
 | `duration` | `(amount: number, unit)` | `duration` | EXACT units only; `month`/`year` MUST error |
 
 **Epoch conversion** (the `datetime`↔`number` bridge; no implicit coercion)
@@ -597,8 +649,9 @@ Function names are **plural** for the calendar add/diff family (matching `.NET` 
 | Function | Signature | Returns | Notes |
 |----------|-----------|---------|-------|
 | `formatDate` | `(d: datetime, pattern?: string, offset?: string)` | `string` | NITES pattern/layout; default `iso`; UTC unless `offset` given (§10.1, §10.4) |
-| `formatDuration` | `(d: duration)` | `string` | ISO 8601 duration (§10.3) |
-| `parseDuration` | `(s: string)` | `duration` | ISO 8601 duration, exact components only (§10.3) |
+| `formatDur` | `(d: duration)` | `string` | ISO 8601 duration (§10.3) |
+| `parseDur` | `(s: string)` | `duration` | strict; ISO 8601 duration, exact components only (§10.3); **error** on invalid |
+| `tryParseDur` | `(s: string)` | `duration \| null` | safe; `null` on invalid (§10.3) |
 
 Notes:
 
@@ -644,8 +697,8 @@ numeric expectations MUST be verified against the reference implementation befor
 | dt-div-002 | `duration(1, "hour") / 2 == duration(30, "minute")` | `true` |
 | dt-fmt-001 | `formatDate(d"2026-12-21T15:04:05Z", "yyyy-mm-dd")` | `"2026-12-21"` |
 | dt-fmt-002 | `formatDate(d"2026-12-21T15:04:05Z")` | `"2026-12-21T15:04:05"` |
-| dt-fmt-003 | `formatDuration(duration(90, "minute"))` | `"PT1H30M"` |
-| dt-fmt-004 | `parseDuration("PT1H30M") == duration(90, "minute")` | `true` |
+| dt-fmt-003 | `formatDur(duration(90, "minute"))` | `"PT1H30M"` |
+| dt-fmt-004 | `parseDur("PT1H30M") == duration(90, "minute")` | `true` |
 | dt-ctor-001 | `date(2024, 12, 1) == d"2024-12-01"` | `true` |
 | dt-ctor-002 | `datetime(2024, 12, 1, 10, 30) == d"2024-12-01T10:30:00Z"` | `true` |
 | dt-ctor-003 | `time(10, 30) == d"1970-01-01T10:30:00Z"` | `true` |
@@ -666,18 +719,26 @@ numeric expectations MUST be verified against the reference implementation befor
 | dt-err-007 | `d"2024-12-01" + 7` | error (bare number) |
 | dt-err-008 | `d"2024-12-01" + d"2024-12-02"` | error (datetime + datetime) |
 | dt-err-009 | `7d"2024-12-01"` | parse error (no operator between duration and datetime) |
-| dt-err-010 | `parseDuration("P1Y")` | error (year not an exact duration) |
-| dt-err-011 | `parseDuration("P3M")` | error (date-part month not an exact duration) |
+| dt-err-010 | `parseDur("P1Y")` | error (year not an exact duration) |
+| dt-err-011 | `parseDur("P3M")` | error (date-part month not an exact duration) |
 | dt-err-012 | `duration(2, "months")` | error (plural unit name rejected, §11.1) |
 | dt-err-013 | `date(2023, 2, 29)` | error (invalid day for month, §5.4) |
 | dt-err-014 | `date(2024, 13, 1)` | error (invalid month, §5.4) |
 | dt-err-015 | `datetime(2024, 1, 1, 25, 0)` | error (invalid hour, §5.4) |
 | dt-err-016 | `parseDate("not-a-date")` | error (strict parse; not `null`, §10.2) |
+| dt-parse-001 | `tryParseDate("not-a-date")` | `null` (safe parse, §10.2) |
+| dt-parse-002 | `tryParseDur("nonsense")` | `null` (safe parse, §10.3) |
+| dt-parse-003 | `tryParseDate("2024-12-01") == d"2024-12-01"` | `true` |
 
 ## 13. Open Decisions Summary
 
 Resolved in this revision:
 
+- **Core vs library layering** — the `datetime`/`duration` **types**, the `d"..."` / suffix **literals**,
+  and the **operators** are always-present **core**; the **functions** (§10–§11) ship as the recommended,
+  attachable **`datetime` library** (`WithLib`). The `d"..."` literal's fixed-ISO parse is core; all
+  runtime parse/format functions are library surface (§1.2,
+  [ADR-0001](adr-0001-builtins-and-datetime-architecture.md) §A).
 - Canonical representation; distinct `datetime`/`duration` types.
 - DateTime and duration literal syntax (including suffix literals); duration ISO 8601 interchange.
 - Accepted format and defaulting; range and calendar rules; timezone policy.
@@ -685,7 +746,8 @@ Resolved in this revision:
 - Calendar difference — `diffMonths`/`diffYears` **added** (truncated toward zero, §5.3, §11).
 - Formatting/parsing — **NITES** for `datetime` (default layout `iso`), **ISO 8601** for `duration`
   (§10), with `gotime` as the reference implementation.
-- `now()` — context-injected clock, **stable within one evaluation** (§9.1).
+- `now()` / `today()` — context-injected clock captured **once** at evaluation start; the same instant is
+  returned by every call, **stable across all pipe stages** (§9.1).
 - Unit/component names — **singular only** in v1 (§11.1).
 - Function names — **plural** calendar family (`addMonths`/`addYears`/`diffMonths`/`diffYears`).
 - Dynamic constructors — `today`, `date`, `datetime`, `time` (§11.2).
@@ -693,8 +755,9 @@ Resolved in this revision:
 - Fixed-offset rendering/extraction — optional `offset` argument on `formatDate`/`datePart` (§10.4).
 - Epoch conversion — explicit `toEpochMillis`/`fromEpochMillis`/`toEpochSeconds`/`fromEpochSeconds` (§11.2).
 - `datePart` gains `weekday` (ISO 1=Mon … 7=Sun) (§11.1).
-- `parseDate`/`parseDuration` invalid input — **raise an error** (not `null`); distinct from lenient
-  `to*` coercions (§10.2).
+- Conversion naming — **`parseX` (strict, raises) / `tryParseX` (safe, `null`)** with short type tokens
+  (`parseDate`/`tryParseDate`, `parseDur`/`tryParseDur`); supersedes the earlier `to*`/`parse*` split
+  (§10.2, §10.3, [ADR-0001](adr-0001-builtins-and-datetime-architecture.md) §B).
 
 Remaining open:
 
