@@ -21,6 +21,11 @@ func TestObjectIdentifierKeys_Eval(t *testing.T) {
 		`get({outer: {inner: 5}}, "outer").inner == 5`,
 		`keys({a:1, b:2})[0] == "a"`,
 		`{a:1}.a == 1`, // member access on identifier-keyed literal
+		// `as` as a member name (mirrors {as: 1} being a valid object); dot form must agree with bracket form.
+		`{as: 1}.as == 1`,
+		`{as: 1}.as == {as: 1}["as"]`,
+		`{a: {as: 5}}.a.as == 5`, // `as` mid-chain
+		`({as: 1}).as == 1`,      // grouped
 	}
 	for _, expr := range trueExprs {
 		v, err := env.Eval(context.Background(), expr, nil)

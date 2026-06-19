@@ -379,7 +379,9 @@ func (p *Parser) parseMemberAccess() Expression {
 			}
 
 			switch p.current.Type {
-			case constants.TokenIdentifier:
+			// TokenAs is the contextual keyword `as` (pipe aliases); like an identifier it is a valid
+			// member name, so obj.as mirrors the object-key rule that {as: 1} is a valid object.
+			case constants.TokenIdentifier, constants.TokenAs:
 				property := p.current.Value.Str
 				if property == "" {
 					property = p.current.Token
