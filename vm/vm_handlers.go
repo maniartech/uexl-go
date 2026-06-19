@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/maniartech/uexl/code"
+	"github.com/maniartech/uexl/types"
 )
 
 func (vm *VM) getContextValue(name string) (any, error) {
@@ -22,6 +23,14 @@ func (vm *VM) getContextValue(name string) (any, error) {
 // executeBinaryExpressionValues evaluates binary expressions using Value types directly (zero-alloc)
 // This is the optimized dispatch path — mirrors executeComparisonOperationValues
 func (vm *VM) executeBinaryExpressionValues(operator code.Opcode, left, right Value) error {
+	// Temporal arithmetic (datetime/duration): route every combination through the dedicated handler
+	// so same-type (date-date, dur-dur) and mixed (date±dur, dur*num) pairs are all handled in the
+	// zero-alloc Value path (datetime-spec §8).
+	if left.Typ == TypeDateTime || left.Typ == TypeDuration ||
+		right.Typ == TypeDateTime || right.Typ == TypeDuration {
+		return vm.executeTemporalArithmetic(operator, left, right)
+	}
+
 	// Fast path: same types (most common)
 	if left.Typ == right.Typ {
 		switch left.Typ {
@@ -154,6 +163,126 @@ func (vm *VM) executeNumberArithmetic(operator code.Opcode, left, right float64)
 	}
 }
 
+// clampDateTimeMillis clamps a computed datetime instant to the portable range (datetime-spec §8.4).
+func clampDateTimeMillis(ms int64) int64 {
+	if ms < types.MinDateTimeMillis {
+		return types.MinDateTimeMillis
+	}
+	if ms > types.MaxDateTimeMillis {
+		return types.MaxDateTimeMillis
+	}
+	return ms
+}
+
+// clampDurationMillis bounds a duration to ±MaxDurationMillis, keeping the int64<->float64 storage
+// exact (datetime-spec §3.3; consistent with the duration-literal bound).
+func clampDurationMillis(ms int64) int64 {
+	if ms < -types.MaxDurationMillis {
+		return -types.MaxDurationMillis
+	}
+	if ms > types.MaxDurationMillis {
+		return types.MaxDurationMillis
+	}
+	return ms
+}
+
+// durationFromFloat converts a float-computed duration (ms) to a bounded int64, saturating to
+// ±MaxDurationMillis. It is used for duration * / number, where the float product/quotient can overflow:
+// a naive int64(±Inf) is implementation-defined and could flip the sign, so we saturate in float space
+// first (and reject a non-finite NaN scale). The saturated magnitude is < 2^53, so int64() is exact.
+func durationFromFloat(ms float64) (int64, error) {
+	if math.IsNaN(ms) {
+		return 0, fmt.Errorf("duration scaled by a non-numeric value")
+	}
+	if ms >= float64(types.MaxDurationMillis) {
+		return types.MaxDurationMillis, nil
+	}
+	if ms <= float64(-types.MaxDurationMillis) {
+		return -types.MaxDurationMillis, nil
+	}
+	return int64(ms), nil
+}
+
+// executeTemporalArithmetic handles datetime/duration binary arithmetic (datetime-spec §8). Valid forms:
+//
+//	date - date -> duration    date ± dur -> date    dur + date -> date
+//	dur ± dur -> duration       dur * num -> duration    num * dur -> duration
+//	dur / num -> duration       dur / dur -> number (ratio, may be fractional)
+//
+// Datetime results clamp to the portable range; duration results clamp to ±MaxDurationMillis. Every
+// other combination (date+date, date±number, duration±number, duration*duration, %, **, bitwise,
+// duration-datetime, etc.) is a type error.
+func (vm *VM) executeTemporalArithmetic(operator code.Opcode, left, right Value) error {
+	switch {
+	case left.Typ == TypeDateTime && right.Typ == TypeDateTime:
+		if operator == code.OpSub {
+			return vm.pushValue(newDurationValue(clampDurationMillis(int64(left.FloatVal) - int64(right.FloatVal))))
+		}
+		return fmt.Errorf("operator %v is not defined for two datetimes", operator)
+
+	case left.Typ == TypeDateTime && right.Typ == TypeDuration:
+		switch operator {
+		case code.OpAdd:
+			return vm.pushValue(newDateTimeValue(clampDateTimeMillis(int64(left.FloatVal) + int64(right.FloatVal))))
+		case code.OpSub:
+			return vm.pushValue(newDateTimeValue(clampDateTimeMillis(int64(left.FloatVal) - int64(right.FloatVal))))
+		}
+		return fmt.Errorf("operator %v is not defined for datetime and duration", operator)
+
+	case left.Typ == TypeDuration && right.Typ == TypeDateTime:
+		if operator == code.OpAdd {
+			return vm.pushValue(newDateTimeValue(clampDateTimeMillis(int64(right.FloatVal) + int64(left.FloatVal))))
+		}
+		return fmt.Errorf("operator %v is not defined for duration and datetime", operator)
+
+	case left.Typ == TypeDuration && right.Typ == TypeDuration:
+		switch operator {
+		case code.OpAdd:
+			return vm.pushValue(newDurationValue(clampDurationMillis(int64(left.FloatVal) + int64(right.FloatVal))))
+		case code.OpSub:
+			return vm.pushValue(newDurationValue(clampDurationMillis(int64(left.FloatVal) - int64(right.FloatVal))))
+		case code.OpDiv:
+			if int64(right.FloatVal) == 0 {
+				return fmt.Errorf("division by zero")
+			}
+			return vm.pushFloat64(left.FloatVal / right.FloatVal)
+		}
+		return fmt.Errorf("operator %v is not defined for two durations", operator)
+
+	case left.Typ == TypeDuration && right.Typ == TypeFloat:
+		switch operator {
+		case code.OpMul:
+			ms, err := durationFromFloat(left.FloatVal * right.FloatVal)
+			if err != nil {
+				return err
+			}
+			return vm.pushValue(newDurationValue(ms))
+		case code.OpDiv:
+			if right.FloatVal == 0 {
+				return fmt.Errorf("division by zero")
+			}
+			ms, err := durationFromFloat(left.FloatVal / right.FloatVal)
+			if err != nil {
+				return err
+			}
+			return vm.pushValue(newDurationValue(ms))
+		}
+		return fmt.Errorf("operator %v is not defined for duration and number", operator)
+
+	case left.Typ == TypeFloat && right.Typ == TypeDuration:
+		if operator == code.OpMul {
+			ms, err := durationFromFloat(left.FloatVal * right.FloatVal)
+			if err != nil {
+				return err
+			}
+			return vm.pushValue(newDurationValue(ms))
+		}
+		return fmt.Errorf("operator %v is not defined for number and duration", operator)
+	}
+
+	return fmt.Errorf("operator %v is not defined for these temporal operands", operator)
+}
+
 // executeStringAddition handles string concatenation with type-specific parameters
 // This eliminates interface conversion overhead by accepting string directly
 func (vm *VM) executeStringAddition(left, right string) error {
@@ -234,6 +363,13 @@ func (vm *VM) executeUnaryExpressionValue(operator code.Opcode, operand Value) e
 	case code.OpMinus:
 		if operand.Typ == TypeFloat {
 			return vm.pushFloat64(-operand.FloatVal)
+		}
+		if operand.Typ == TypeDuration {
+			// negate a duration: -ms -> negated duration (ms stored inline in FloatVal)
+			return vm.pushValue(newDurationValue(-int64(operand.FloatVal)))
+		}
+		if operand.Typ == TypeDateTime {
+			return fmt.Errorf("unary minus is not defined for datetime")
 		}
 		return vm.executeUnaryMinusOperation(operand.ToAny())
 	case code.OpBang:
@@ -334,6 +470,25 @@ func (vm *VM) executeComparisonOperationValues(operator code.Opcode, left, right
 			default:
 				return fmt.Errorf("cannot compare null values with %v", operator)
 			}
+		case TypeDateTime, TypeDuration:
+			// Compare by canonical millisecond value (stored in FloatVal). Covers ==,!=,>,>=
+			// directly; < and <= arrive as OpGreaterThan/OpGreaterThanOrEqual via the compiler swap.
+			return vm.executeNumberComparisonOperation(operator, left.FloatVal, right.FloatVal)
+		}
+	}
+
+	// A temporal value is never equal to a value of a different type (incl. a number with the same ms),
+	// and is not orderable against one (datetime-spec §8): equality resolves by type, ordering errors.
+	if left.Typ != right.Typ &&
+		(left.Typ == TypeDateTime || left.Typ == TypeDuration ||
+			right.Typ == TypeDateTime || right.Typ == TypeDuration) {
+		switch operator {
+		case code.OpEqual:
+			return vm.pushBool(false)
+		case code.OpNotEqual:
+			return vm.pushBool(true)
+		default:
+			return fmt.Errorf("temporal values are not orderable against a value of a different type")
 		}
 	}
 
