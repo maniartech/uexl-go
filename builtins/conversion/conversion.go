@@ -17,6 +17,30 @@ var Builtins = map[string]fn.Func{
 	"tryParseNum":  builtinTryParseNum,
 	"parseBool":    builtinParseBool,
 	"tryParseBool": builtinTryParseBool,
+	"formatNum":    builtinFormatNum,
+}
+
+// formatNum(x[, decimals]) renders a number as a string — with a fixed number of decimals when given,
+// otherwise the shortest exact representation.
+func builtinFormatNum(args ...any) (any, error) {
+	if err := fn.Arity("formatNum", args, 1, 2); err != nil {
+		return nil, err
+	}
+	x, err := fn.Num("formatNum", args, 0)
+	if err != nil {
+		return nil, err
+	}
+	if len(args) == 2 {
+		d, err := fn.Int("formatNum", args, 1)
+		if err != nil {
+			return nil, err
+		}
+		if d < 0 {
+			return nil, fmt.Errorf("formatNum: decimals must be non-negative, got %d", d)
+		}
+		return strconv.FormatFloat(x, 'f', d, 64), nil
+	}
+	return strconv.FormatFloat(x, 'g', -1, 64), nil
 }
 
 func parseNum(s string) (float64, bool) {

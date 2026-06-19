@@ -6,6 +6,7 @@ import (
 	"github.com/maniartech/uexl/builtins/datetime"
 	"github.com/maniartech/uexl/builtins/fn"
 	"github.com/maniartech/uexl/builtins/introspection"
+	"github.com/maniartech/uexl/builtins/json"
 	"github.com/maniartech/uexl/builtins/numbers"
 	strs "github.com/maniartech/uexl/builtins/strings"
 )
@@ -41,13 +42,17 @@ func WithStrings() Option { return libOption(strs.Builtins) }
 // remove, merge (all pure — remove/merge return new objects).
 func WithCollections() Option { return libOption(collections.Builtins) }
 
+// WithJSON registers the JSON family: parseJson (string -> value) and toJson (value -> string;
+// datetime/duration serialize to ISO 8601). toJson takes an optional second bool for pretty-printing.
+func WithJSON() Option { return libOption(json.Builtins) }
+
 // WithStdlib registers every standard-library family at once — math, conversion, introspection, strings,
-// collections, and datetime. now()/today() additionally require an injected clock (uexl.WithClock).
+// collections, json, and datetime. now()/today() additionally require an injected clock (uexl.WithClock).
 func WithStdlib() Option {
 	all := map[string]fn.Func{}
 	for _, m := range []map[string]fn.Func{
 		numbers.Builtins, conversion.Builtins, introspection.Builtins,
-		strs.Builtins, collections.Builtins, datetime.Builtins,
+		strs.Builtins, collections.Builtins, json.Builtins, datetime.Builtins,
 	} {
 		for k, v := range m {
 			all[k] = v
