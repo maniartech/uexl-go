@@ -623,6 +623,11 @@ func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
 	}
 	function, exists := vm.functionContext[functionName]
 	if !exists {
+		// now()/today() are resolved from the injected clock (datetime-spec §9.1) unless the host has
+		// registered its own function of that name.
+		if functionName == "now" || functionName == "today" {
+			return vm.callClock(functionName, numArgs)
+		}
 		return fmt.Errorf("function %s not found in context", functionName)
 	}
 
@@ -647,6 +652,52 @@ func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
 	// A nil result is a null value (every function-call expression yields a value). Push it so the
 	// stack stays balanced — e.g. tryParseDate("bad") returns nil and must compare equal to null.
 	return vm.Push(functionResult)
+}
+
+// nowContextKey is the reserved context-variable key carrying the current instant (ms since the Unix
+// epoch) for now()/today(). The host injects it once per evaluation, so now() is stable within an
+// expression (now() == now(); now() - now() == 0). See datetime-spec §9.1.
+const nowContextKey = "$now"
+
+// callClock implements now()/today() from the single injected instant in the per-evaluation context.
+// today() truncates that instant to UTC midnight. With no clock injected, the evaluation is outside the
+// deterministic guarantee and this is an error.
+func (vm *VM) callClock(name string, numArgs uint16) error {
+	if numArgs != 0 {
+		return fmt.Errorf("%s expects 0 arguments", name)
+	}
+	raw, ok := vm.contextVarsValues[nowContextKey]
+	if !ok || raw == nil {
+		return fmt.Errorf("%s() requires an injected clock; provide %q in the evaluation context (uexl.WithClock or a context variable)", name, nowContextKey)
+	}
+	ms, err := clockMillis(raw)
+	if err != nil {
+		return fmt.Errorf("%s(): %w", name, err)
+	}
+	ms = clampDateTimeMillis(ms)
+	if name == "today" {
+		rem := ms % 86400000
+		if rem < 0 {
+			rem += 86400000
+		}
+		ms -= rem // floor to UTC midnight
+	}
+	return vm.pushValue(newDateTimeValue(ms))
+}
+
+func clockMillis(raw any) (int64, error) {
+	switch v := raw.(type) {
+	case int64:
+		return v, nil
+	case int:
+		return int64(v), nil
+	case float64:
+		return int64(v), nil
+	case types.DateTime:
+		return v.Millis, nil
+	default:
+		return 0, fmt.Errorf("injected clock %q must be a millisecond number or a datetime, got %T", nowContextKey, raw)
+	}
 }
 
 func isTruthy(val any) bool {

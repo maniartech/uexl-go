@@ -135,7 +135,7 @@ func (e *Env) walkInstructions(ins code.Instructions, bc *compiler.ByteCode) err
 			funcIdx := int(code.ReadUint16(ins[i+1 : i+3]))
 			if funcIdx < len(bc.Constants) {
 				if name, ok := bc.Constants[funcIdx].AsString(); ok {
-					if _, exists := e.functions[name]; !exists {
+					if _, exists := e.functions[name]; !exists && !isReservedClockFunc(name) {
 						return fmt.Errorf("compile error: unknown function %q — not registered in this environment", name)
 					}
 				}
