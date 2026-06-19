@@ -5,6 +5,7 @@ package json
 import (
 	encjson "encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/maniartech/uexl/builtins/fn"
 	"github.com/maniartech/uexl/types"
@@ -64,7 +65,7 @@ func builtinToJson(args ...any) (any, error) {
 func jsonReady(v any) any {
 	switch x := v.(type) {
 	case types.DateTime:
-		return types.FormatNITES(x.Millis, 0, "yyyy-mm-ddThhh:ii:ssz")
+		return time.UnixMilli(x.Millis).UTC().Format(time.RFC3339)
 	case types.Duration:
 		return types.FormatISODuration(x.Millis)
 	case []any:

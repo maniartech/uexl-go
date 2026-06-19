@@ -84,6 +84,7 @@ func TestConformance_Section12(t *testing.T) {
 		{"dt-parse-001", `tryParseDate("not-a-date")`, nil},
 		{"dt-parse-002", `tryParseDur("nonsense")`, nil},
 		{"dt-parse-003", `tryParseDate("2024-12-01") == d"2024-12-01"`, true},
+		{"dt-parse-004", `parseDate("21/12/2026", "dd/mm/yyyy") == d"2026-12-21"`, true},
 	}
 	for _, c := range cases {
 		got, err := env.Eval(context.Background(), c.expr, nil)

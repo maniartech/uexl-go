@@ -302,7 +302,7 @@ A **`duration`** is an exact span of time in milliseconds (it may be negative). 
 
 There is deliberately **no month or year suffix** — a month is 28–31 days and a year is 365 or 366, so they are not fixed-length; calendar shifts are handled by the `addMonths`/`addYears` functions instead. Because the minute suffix is `m`, omitting month/year keeps `m` unambiguously "minute".
 
-> **NOTE:** Datetime/duration are fully implemented — literals, truthiness, the temporal operators (`date − date` → duration, `date + duration`, comparisons), the function library (`now()`, `today()`, `parseDate()`, `formatDate()`, `addMonths()`, `datePart()`, `durationIn()`, …), and clock injection. The function library is attached with `uexl.WithDatetime()`; `now()`/`today()` read an injected `$now` instant (`uexl.WithClock(ms)` or a per-eval context variable), stable within one evaluation.
+> **NOTE:** Datetime/duration are fully implemented — literals, truthiness, the temporal operators (`date − date` → duration, `date + duration`, comparisons), the function library (`now()`, `today()`, `parseDate()`, `formatDate()`, `addMonths()`, `datePart()`, `durationIn()`, …), and clock injection. The function library is attached with `uexl.WithDatetime()`; `now()`/`today()` read an injected `$now` instant (`uexl.WithClock(ms)` or a per-eval context variable), stable within one evaluation. `formatDate()` and the pattern form `parseDate(s, pattern)` use the **NITES** format syntax (e.g. `"yyyy-mm-dd hhhh:ii"`, where `hhhh` is the 24-hour hour and `ii` the minute), backed by the [gotime](https://github.com/maniartech/gotime) reference implementation; `parseDate(s)` with no pattern parses the ISO 8601 subset.
 
 ---
 

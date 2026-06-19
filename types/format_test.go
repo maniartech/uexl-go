@@ -2,44 +2,6 @@ package types
 
 import "testing"
 
-func TestFormatNITES(t *testing.T) {
-	dt := ms(t, "2026-12-21T15:04:05Z")
-	cases := []struct {
-		pattern string
-		off     int
-		want    string
-	}{
-		{"yyyy-mm-dd", 0, "2026-12-21"},   // dt-fmt-001
-		{"iso", 0, "2026-12-21T15:04:05"}, // dt-fmt-002 (default layout)
-		{"yyyy-mm-ddThhh:ii:ss", 0, "2026-12-21T15:04:05"},
-		{"mmm", 0, "Dec"},
-		{"mmmm", 0, "December"},
-		{"hh:ii aa", 0, "03:04 PM"},       // 12-hour + AM/PM
-		{"h:i:s", 0, "3:4:5"},             // no-pad
-		{"yyyy-mm-dd", 330, "2026-12-21"}, // offset shifts the wall clock but date holds here
-		{"hhh:ii", 330, "20:34"},          // 15:04 UTC at +05:30 -> 20:34
-		{"yy", 0, "26"},                   // 2-digit year
-		{"m/d", 0, "12/21"},               // no-pad month/day
-		{"a", 0, "pm"},                    // lowercase am/pm
-		{"z", 0, "Z"},                     // zone, UTC
-		{"z", 330, "+05:30"},              // zone with offset
-		{"o", 330, "+0530"},               // offset, no colon
-		{"ooo", 330, "+05:30"},            // offset with colon
-	}
-	for _, c := range cases {
-		if got := FormatNITES(dt, c.off, c.pattern); got != c.want {
-			t.Errorf("FormatNITES(%q, off=%d) = %q, want %q", c.pattern, c.off, got, c.want)
-		}
-	}
-	// Weekday names (2024-12-02 is a Monday).
-	if got := FormatNITES(ms(t, "2024-12-02"), 0, "www"); got != "Mon" {
-		t.Errorf("www = %q, want Mon", got)
-	}
-	if got := FormatNITES(ms(t, "2024-12-02"), 0, "wwww"); got != "Monday" {
-		t.Errorf("wwww = %q, want Monday", got)
-	}
-}
-
 func TestFormatISODuration(t *testing.T) {
 	cases := map[int64]string{
 		5400000:   "PT1H30M", // dt-fmt-003

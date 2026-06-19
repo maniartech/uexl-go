@@ -7,9 +7,45 @@ package datetime
 import (
 	"fmt"
 	"math"
+	"strings"
+	"time"
 
+	gotime "github.com/maniartech/gotime/v2"
 	"github.com/maniartech/uexl/types"
 )
+
+// namedLayouts are the NITES named layouts recognized by the datetime library, expanded to gotime's
+// NITES dialect (24-hour is hhhh; see datetime-spec §10.1). gotime itself does not know these names, so
+// formatDate/parseDate resolve them before delegating. "iso" is the default.
+var namedLayouts = map[string]string{
+	"iso":     "yyyy-mm-ddThhhh:ii:ss",
+	"isodate": "yyyy-mm-dd",
+	"date":    "yyyy-mm-dd",
+	"time":    "hhhh:ii:ss",
+	"sql":     "yyyy-mm-dd hhhh:ii:ss",
+	"rfc":     "www, dd mmm yyyy hhhh:ii:ss",
+}
+
+// defaultLayout is the layout used by formatDate when no pattern is supplied.
+const defaultLayout = "iso"
+
+// resolveLayout expands a NITES named layout (case-insensitive) to its gotime pattern, or returns the
+// pattern unchanged when it is already a raw NITES pattern.
+func resolveLayout(pattern string) string {
+	if exp, ok := namedLayouts[strings.ToLower(strings.TrimSpace(pattern))]; ok {
+		return exp
+	}
+	return pattern
+}
+
+// localTime materializes a canonical (zoneless, UTC-ms) instant as a time.Time whose wall clock is the
+// instant as seen offMin minutes east of UTC, so gotime renders the intended local components.
+func localTime(msUTC int64, offMin int) time.Time {
+	if offMin == 0 {
+		return time.UnixMilli(msUTC).UTC()
+	}
+	return time.UnixMilli(msUTC).In(time.FixedZone("", offMin*60))
+}
 
 // Builtins maps UExL function names to their implementations (the datetime standard library, minus the
 // clock-dependent now()/today() which are added by the host with an injected instant).
@@ -193,12 +229,19 @@ func builtinTime(args ...any) (any, error) {
 }
 
 func builtinParseDate(args ...any) (any, error) {
-	if err := arity("parseDate", args, 1, 1); err != nil {
+	if err := arity("parseDate", args, 1, 2); err != nil {
 		return nil, err
 	}
 	s, err := argString("parseDate", args, 0)
 	if err != nil {
 		return nil, err
+	}
+	if len(args) == 2 {
+		pattern, e := argString("parseDate", args, 1)
+		if e != nil {
+			return nil, e
+		}
+		return parseWithPattern("parseDate", pattern, s)
 	}
 	ms, perr := types.ParseISODateTime(s)
 	if perr != nil {
@@ -208,16 +251,42 @@ func builtinParseDate(args ...any) (any, error) {
 }
 
 func builtinTryParseDate(args ...any) (any, error) {
-	if err := arity("tryParseDate", args, 1, 1); err != nil {
+	if err := arity("tryParseDate", args, 1, 2); err != nil {
 		return nil, err
 	}
 	s, ok := args[0].(string)
 	if !ok {
 		return nil, nil
 	}
+	if len(args) == 2 {
+		pattern, ok := args[1].(string)
+		if !ok {
+			return nil, nil
+		}
+		v, perr := parseWithPattern("tryParseDate", pattern, s)
+		if perr != nil {
+			return nil, nil
+		}
+		return v, nil
+	}
 	ms, perr := types.ParseISODateTime(s)
 	if perr != nil {
 		return nil, nil
+	}
+	return types.DateTime{Millis: ms}, nil
+}
+
+// parseWithPattern parses s against a NITES pattern (or named layout) via the gotime engine, returning a
+// canonical zoneless datetime. A pattern without an offset field is read as a UTC wall clock; one with an
+// offset field yields the corresponding UTC instant. The result is bounded to the datetime range.
+func parseWithPattern(name, pattern, s string) (any, error) {
+	t, err := gotime.Parse(resolveLayout(pattern), s)
+	if err != nil {
+		return nil, fmt.Errorf("%s: cannot parse %q with pattern %q: %w", name, s, pattern, err)
+	}
+	ms := t.UnixMilli()
+	if ms < types.MinDateTimeMillis || ms > types.MaxDateTimeMillis {
+		return nil, fmt.Errorf("%s: parsed datetime %q is out of range", name, s)
 	}
 	return types.DateTime{Millis: ms}, nil
 }
@@ -408,7 +477,7 @@ func builtinFormatDate(args ...any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	pattern := types.DefaultLayout
+	pattern := defaultLayout
 	if len(args) >= 2 {
 		p, e := argString("formatDate", args, 1)
 		if e != nil {
@@ -428,7 +497,7 @@ func builtinFormatDate(args ...any) (any, error) {
 		}
 		offMin = m
 	}
-	return types.FormatNITES(d.Millis, offMin, pattern), nil
+	return gotime.Format(localTime(d.Millis, offMin), resolveLayout(pattern)), nil
 }
 
 func builtinFormatDur(args ...any) (any, error) {

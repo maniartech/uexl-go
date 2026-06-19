@@ -493,7 +493,8 @@ Syntax) as its date/time pattern language, and **ISO 8601** for durations.
 
 `formatDate(d: datetime, pattern: string)` → `string` MUST render a `datetime` using a NITES pattern or
 NITES named layout. NITES is case-insensitive; the canonical reference is the NITES specification, and
-`gotime` is a reference implementation.
+`gotime` is **the** reference implementation — in the Go reference, `formatDate`/`parseDate` delegate to
+`gotime` directly, so its specifier dialect (below) is authoritative.
 
 Common specifiers (see the NITES specification for the full set):
 
@@ -503,20 +504,23 @@ Common specifiers (see the NITES specification for the full set):
 | `mm` / `m` | month number (padded / no-pad) | `12` |
 | `mmm` / `mmmm` | month name (short / full) | `Dec` / `December` |
 | `dd` / `d` | day of month | `21` |
-| `hhh` | hour, 24-hour | `15` |
+| `hhhh` | hour, 24-hour | `15` |
 | `hh` / `h` | hour, 12-hour | `03` |
 | `ii` / `i` | **minute** (padded / no-pad) | `04` |
 | `ss` / `s` | second | `05` |
 | `aa` / `a` | AM/PM | `PM` / `pm` |
 | `www` / `wwww` | weekday name (short / full) | `Mon` / `Monday` |
+| `o` / `oo` / `ooo` | numeric UTC offset | `+05` / `+0530` / `+05:30` |
 
 > Note: in NITES, the minute specifier is `i` (and month is `m`). This is independent of the duration
 > literal suffixes (§3.3), where `m` means minute by the universal convention (`30m` = 30 minutes). The
 > two are different micro-syntaxes (a format *string* vs a numeric *suffix*) and do not interact.
 
 **Named layouts.** Implementations MUST support at least the named layout `iso`
-(`yyyy-mm-ddThhh:ii:ss`) and SHOULD support the other NITES named layouts (`rfc`, `sql`, `date`,
-`isodate`, etc.). `formatDate(d)` called with no pattern MUST default to the `iso` layout.
+(`yyyy-mm-ddThhhh:ii:ss`) and SHOULD support the other NITES named layouts (`rfc`, `sql`, `date`,
+`isodate`, etc.). `formatDate(d)` called with no pattern MUST default to the `iso` layout. (`gotime` does
+not itself recognize these names, so the host resolves a named layout to its specifier expansion before
+delegating.)
 
 **Locale and zone constraints (core).** In the core (deterministic) profile:
 
@@ -529,9 +533,11 @@ Common specifiers (see the NITES specification for the full set):
   > conditions **authored in UExL expression syntax** (`&&`/`||`/`!`, `==`, `%`) evaluated with the
   > CLDR operands (`n, i, v, w, f, t`) as context — making UExL the cross-platform rule notation for
   > the locale data itself.
-- Since `datetime` is a zoneless UTC instant, components and the zone specifiers render in **UTC**
-  (`z` → `Z`; `o`/`oo`/`ooo` → `+00`/`+0000`/`+00:00`). The timezone-abbreviation specifier (`zz`,
-  e.g. `MST`) requires a timezone database and is therefore **not** part of the core profile.
+- Since `datetime` is a zoneless UTC instant, components and the numeric offset specifiers render in
+  **UTC** by default (`o`/`oo`/`ooo` → `+00`/`+0000`/`+00:00`), or at the requested fixed offset when one
+  is supplied (§10.4). The timezone-abbreviation specifier (`zz`, e.g. `MST`) requires a timezone database
+  and is therefore **not** part of the core profile. (For JSON interchange, `toJson` serializes a
+  `datetime` as an RFC 3339 instant, which renders UTC as the `Z` suffix — see §10.3 / the JSON family.)
 
 ### 10.2 DateTime Parsing — NITES and ISO
 
@@ -543,9 +549,11 @@ String parsing follows the language-wide **`parseX` (strict) / `tryParseX` (safe
 - `tryParseDate(s: string)` → `datetime | null` MUST behave identically to `parseDate` on valid input and
   MUST **return `null`** (not raise) on invalid input. `tryParseDur` (§10.3) is its duration counterpart.
   This is the same strict/safe split as `parseNum`/`tryParseNum` for numbers.
-- `parseDate(s: string, pattern: string)` → `datetime` (pattern-directed parsing using a NITES pattern)
-  is **Open** for v1 and MAY be deferred; ordinal and name specifiers that are documented as
-  format-only in NITES are not valid for parsing.
+- `parseDate(s: string, pattern: string)` → `datetime` parses `s` against a NITES pattern (or named
+  layout). In the Go reference this delegates to the `gotime` engine; a pattern without an offset field
+  reads the value as a UTC wall clock, and one with an offset field yields the corresponding UTC instant.
+  `tryParseDate(s, pattern)` is the safe counterpart (`null` on failure). Ordinal-only specifiers (`dt`,
+  `mt`) are format-only and are not valid for parsing.
 
 ### 10.3 Duration Interchange — ISO 8601
 
@@ -633,8 +641,8 @@ Function names are **plural** for the calendar add/diff family (matching `.NET` 
 | `date` | `(year, month, day)` | `datetime` | instant at `00:00:00.000Z`; validity/clamp per §5.4 |
 | `datetime` | `(year, month, day, hour?, minute?, second?, millisecond?)` | `datetime` | trailing args default to `0`; §5.4 |
 | `time` | `(hour, minute, second?, millisecond?)` | `datetime` | on the epoch date `1970-01-01`; trailing args default to `0`; §5.4 |
-| `parseDate` | `(s: string)` | `datetime` | strict; ISO 8601 subset (§10.2); **error** on invalid |
-| `tryParseDate` | `(s: string)` | `datetime \| null` | safe; `null` on invalid (§10.2) |
+| `parseDate` | `(s: string, pattern?: string)` | `datetime` | strict; ISO 8601 subset, or a NITES pattern when given (§10.2); **error** on invalid |
+| `tryParseDate` | `(s: string, pattern?: string)` | `datetime \| null` | safe; `null` on invalid (§10.2) |
 | `duration` | `(amount: number, unit)` | `duration` | EXACT units only; `month`/`year` MUST error |
 
 **Epoch conversion** (the `datetime`↔`number` bridge; no implicit coercion)
@@ -743,6 +751,7 @@ this table).
 | dt-parse-001 | `tryParseDate("not-a-date")` | `null` (safe parse, §10.2) |
 | dt-parse-002 | `tryParseDur("nonsense")` | `null` (safe parse, §10.3) |
 | dt-parse-003 | `tryParseDate("2024-12-01") == d"2024-12-01"` | `true` |
+| dt-parse-004 | `parseDate("21/12/2026", "dd/mm/yyyy") == d"2026-12-21"` | `true` (pattern-directed, §10.2) |
 
 ## 13. Open Decisions Summary
 
@@ -782,7 +791,6 @@ Resolved in this revision:
 
 Remaining open (deferred for v1, not blockers):
 
-1. Pattern-directed **parsing** `parseDate(s, pattern)` — deferred for v1; ISO parsing only (§10.2).
-2. Compound duration literals such as `1h30m` as a single token — deferred (§3.3).
-3. Locale-aware name rendering (`mmmm`, `wwww`, `aa`) — reserved for a future locale profile (§10.1).
-4. Additional `datePart` components — `dayOfYear`, `weekOfYear`, `quarter` — deferred (§11.1).
+1. Compound duration literals such as `1h30m` as a single token — deferred (§3.3).
+2. Locale-aware name rendering (`mmmm`, `wwww`, `aa`) — reserved for a future locale profile (§10.1).
+3. Additional `datePart` components — `dayOfYear`, `weekOfYear`, `quarter` — deferred (§11.1).

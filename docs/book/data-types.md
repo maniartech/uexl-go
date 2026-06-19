@@ -90,7 +90,7 @@ UExL's type system includes two temporal value types:
 
 **Truthiness:** like every other type, a temporal value is falsy when it is the *zero* of its type — a `datetime` at the epoch (`0` ms) and a `duration` of `0` ms are falsy; every other instant or span is truthy. Temporal values are never nullish (so `??` does not treat them as missing), exactly as with `0`, `""`, and `false`.
 
-> **Status:** datetime/duration are fully implemented and conformance-verified — the types, literals, truthiness, the temporal **operators** (`date − date` → duration, `date ± duration`, comparisons), the datetime **function library** (`parseDate`/`formatDate`/`addMonths`/`datePart`/… attached via `uexl.WithDatetime()`), and clock-injected `now()`/`today()`. See the [DateTime Specification](../specs/datetime-spec.md).
+> **Status:** datetime/duration are fully implemented and conformance-verified — the types, literals, truthiness, the temporal **operators** (`date − date` → duration, `date ± duration`, comparisons), the datetime **function library** (`parseDate`/`formatDate`/`addMonths`/`datePart`/… attached via `uexl.WithDatetime()`), and clock-injected `now()`/`today()`. `formatDate` and `parseDate(s, pattern)` use the **NITES** format syntax (24-hour hour `hhhh`, minute `ii`), backed by the [gotime](https://github.com/maniartech/gotime) reference implementation. See the [DateTime Specification](../specs/datetime-spec.md).
 
 ## Putting It All Together: Examples
 ```
