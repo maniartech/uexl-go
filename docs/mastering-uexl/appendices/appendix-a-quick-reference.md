@@ -40,7 +40,7 @@
 
 ---
 
-## Built-in Functions (all 14)
+## Built-in Functions (core, 13)
 
 | Function | Description |
 |----------|-------------|
@@ -59,7 +59,23 @@
 | `join(arr)` | Join array of strings with empty separator |
 | `join(arr, sep)` | Join array of strings with separator |
 
-> All other math, string, and conversion functions (`upper`, `lower`, `round`, `min`, `max`, etc.) are **host-provided** — register them with `WithFunctions`.
+---
+
+## Standard Library (attach with `WithStdlib()`)
+
+Opt-in families of pure helpers; see [Appendix C](appendix-c-builtin-functions.md#the-standard-library) for full signatures. String parsers come in strict (`parseX`, errors) / safe (`tryParseX`, `null`) pairs.
+
+| Family | Option | Functions |
+|--------|--------|-----------|
+| Math | `WithMath()` | `abs` `sign` `round` `floor` `ceil` `trunc` `sqrt` `min` `max` `sum` `avg` `mod` `pow` `clamp` |
+| Conversion | `WithConversion()` | `parseNum` `tryParseNum` `parseBool` `tryParseBool` `formatNum` |
+| Introspection | `WithIntrospection()` | `typeOf` `isNull` `isNumber` `isString` `isBool` `isArray` `isObject` `isDate` `isDuration` `isEmpty` |
+| Strings | `WithStrings()` | `upper` `lower` `trim` `trimStart` `trimEnd` `replace` `split` `startsWith` `endsWith` `indexOf` `repeat` `padStart` `padEnd` |
+| Collections | `WithCollections()` | `get` `has` `keys` `values` `remove` `merge` |
+| JSON | `WithJSON()` | `parseJson` `toJson` |
+| Date/Time | `WithDatetime()` | `now` `today` `date` `datetime` `time` `parseDate` `tryParseDate` `formatDate` `parseDur` `tryParseDur` `formatDur` `duration` `durationIn` `addMonths` `addYears` `diffMonths` `diffYears` `datePart` `to/fromEpochMillis` `to/fromEpochSeconds` |
+
+> `min`/`max`/`sum`/`avg` take either an array or several numeric args. `round(x)` has no decimals parameter — use `formatNum(x, n)`. `now()`/`today()` also need `WithClock(ms)`.
 
 ---
 

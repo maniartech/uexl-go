@@ -1,6 +1,6 @@
 # Appendix C: Built-in Function Reference
 
-UExL ships with exactly 14 built-in functions. All other utility functions (`upper`, `round`, `split`, etc.) must be provided by the host application via `WithFunctions`.
+UExL has **13 core built-in functions**, registered in `vm.Builtins` and always available in every embedding (documented in full below). Beyond those, UExL ships an **attachable standard library** — families of pure helpers (`upper`, `round`, `split`, …) that the host opts into with `uexl.WithStdlib()` (or per-family options like `WithMath()`); these are summarized in the [Standard Library](#the-standard-library) section. Anything else is a host-registered function via `WithFunctions`.
 
 ---
 
@@ -254,13 +254,137 @@ join(['hello', 'world'], ' ')  # 'hello world'
 
 ---
 
+## The Standard Library
+
+The functions above are the **core** built-ins. UExL also ships an **attachable standard library** of pure helper families. Attach all of them with `uexl.WithStdlib()`, or pick families individually (`WithMath()`, `WithStrings()`, …). Every function is pure (no mutation), and string parsers follow the strict/safe convention: `parseX` errors on bad input, `tryParseX` returns `null`.
+
+```go
+env := uexl.DefaultWith(uexl.WithStdlib())            // everything
+env := uexl.DefaultWith(uexl.WithMath(), uexl.WithStrings())  // à la carte
+```
+
+### Math — `WithMath()`
+
+`min`/`max`/`sum`/`avg` accept **either a single array or several numeric arguments**.
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `abs(x)` | number | Absolute value. |
+| `sign(x)` | number | `1`, `-1`, or `0`. |
+| `round(x)` | number | Nearest integer, halves away from zero. **One argument** — no decimals param (use `formatNum`). |
+| `floor(x)` / `ceil(x)` / `trunc(x)` | number | Round down / up / toward zero. |
+| `sqrt(x)` | number | Square root; negative → `NaN`. |
+| `min` / `max` / `sum` / `avg` | number | Aggregations; `sum()` is `0`, the others need ≥1 number. |
+| `mod(a, b)` | number | Remainder with the sign of `a`. |
+| `pow(base, exp)` | number | Power; fractional exponents allowed. |
+| `clamp(x, lo, hi)` | number | Constrain to `[lo, hi]`; errors if `lo > hi`. |
+
+```uexl
+round(2.5)        # 3     (away from zero)
+min([3, 1, 2])    # 1
+mod(-7, 3)        # -1
+clamp(15, 0, 10)  # 10
+```
+
+### Conversion — `WithConversion()`
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `parseNum(s)` / `tryParseNum(s)` | number \| null | Parse a number (strict / safe). |
+| `parseBool(s)` / `tryParseBool(s)` | boolean \| null | Parse `"true"`/`"false"` (strict / safe). |
+| `formatNum(x[, decimals])` | string | Format a number; fixed `decimals` round half-to-even. |
+
+```uexl
+parseNum("  -7.5  ")   # -7.5
+tryParseNum("abc")     # null
+formatNum(3.14159, 2)  # "3.14"
+```
+
+### Introspection — `WithIntrospection()`
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `typeOf(v)` | string | `"null"`/`"number"`/`"string"`/`"boolean"`/`"array"`/`"object"`/`"datetime"`/`"duration"`. |
+| `isNull` `isNumber` `isString` `isBool` `isArray` `isObject` `isDate` `isDuration` | boolean | Single-type tests. |
+| `isEmpty(v)` | boolean | `true` for `null`, `""`, `[]`, `{}`. |
+
+```uexl
+typeOf(d"2024-01-15")  # "datetime"
+isNumber("42")         # false
+isEmpty([])            # true
+```
+
+### Strings — `WithStrings()`
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `upper(s)` / `lower(s)` | string | Case folding. |
+| `trim` / `trimStart` / `trimEnd` `(s[, cutset])` | string | Strip whitespace or `cutset` chars. |
+| `replace(s, old, new)` | string | Replace **all** occurrences. |
+| `split(s, sep)` | array | Split (`""` → characters). |
+| `startsWith` / `endsWith` `(s, x)` | bool | Prefix / suffix test. |
+| `indexOf(s, sub)` | number | **Byte** index, or `-1`. |
+| `repeat(s, count)` | string | `count` copies. |
+| `padStart` / `padEnd` `(s, length, pad)` | string | Pad to `length` **runes**. |
+
+```uexl
+trim("xxhixx", "x")         # "hi"
+split("a,b,c", ",")         # ["a", "b", "c"]
+padStart("5", 3, "0")       # "005"
+```
+
+### Collections — `WithCollections()`
+
+All pure; `remove`/`merge` return new objects.
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `get(c, key[, default])` | any | Object/array read with optional default. |
+| `has(c, key)` | bool | Key/index present. |
+| `keys(obj)` / `values(obj)` | array | Sorted keys / values by sorted key. |
+| `remove(obj, key)` | object | Copy without `key`. |
+| `merge(a, b)` | object | Shallow merge; `b` wins on collisions. |
+
+```uexl
+get({a: 1}, "z", 99)               # 99
+keys({b: 2, a: 1})                 # ["a", "b"]
+merge({a: 1}, {a: 9, b: 2})        # {a: 9, b: 2}
+```
+
+### JSON — `WithJSON()`
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `parseJson(text)` | any | JSON string → value. |
+| `toJson(value[, pretty])` | string | Value → JSON; `datetime`/`duration` serialize to ISO 8601. |
+
+```uexl
+parseJson("[1,2,3]")     # [1, 2, 3]
+toJson({a: 1, b: 2})     # "{\"a\":1,\"b\":2}"
+```
+
+### Date/Time — `WithDatetime()`
+
+Construction (`date`, `datetime`, `time`), parsing/formatting (`parseDate`/`tryParseDate`, `formatDate`, `parseDur`/`tryParseDur`, `formatDur`), calendar arithmetic (`addMonths`/`addYears`, `diffMonths`/`diffYears`, `datePart`, `duration`/`durationIn`), and epoch conversion (`to`/`fromEpochMillis`, `to`/`fromEpochSeconds`). `now()`/`today()` additionally need an injected clock (`WithClock(ms)`). Formatting/parsing use the gotime **NITES** dialect (24-hour `hhhh`, minute `ii`; named layouts `iso`/`sql`/`rfc`/…). See the [DateTime Specification](../../specs/datetime-spec.md).
+
+```uexl
+formatDate(parseDate("19/06/2026", "dd/mm/yyyy"))  # "2026-06-19T00:00:00"
+formatDate(addMonths(date(2026, 1, 31), 1))        # "2026-02-28T00:00:00"  (clamped)
+durationIn(parseDur("PT12H"), "day")               # 0.5
+```
+
+---
+
 ## Function Availability Summary
 
-| ✅ Built-in | ❌ Not built-in (host-provided) |
-|------------|-------------------------------|
-| `len`, `substr`, `contains` | `upper`, `lower`, `trim`, `replace` |
-| `str`, `set` | `split`, `startsWith`, `endsWith` |
-| `runeLen`, `runeSubstr` | `number`, `bool`, `string`, `typeof` |
-| `graphemeLen`, `graphemeSubstr` | `min`, `max`, `floor`, `ceil`, `round`, `abs` |
-| `runes`, `graphemes`, `bytes` | `concat`, `sum`, `isNaN`, `clamp` |
-| `join` | (any other function) |
+| Group | Functions | Availability |
+|-------|-----------|--------------|
+| **Core** | `len`, `substr`, `contains`, `set`, `str`, `runeLen`, `runeSubstr`, `graphemeLen`, `graphemeSubstr`, `runes`, `graphemes`, `bytes`, `join` | Always (13, `vm.Builtins`) |
+| Math | `abs`, `sign`, `round`, `floor`, `ceil`, `trunc`, `sqrt`, `min`, `max`, `sum`, `avg`, `mod`, `pow`, `clamp` | `WithMath()` |
+| Conversion | `parseNum`, `tryParseNum`, `parseBool`, `tryParseBool`, `formatNum` | `WithConversion()` |
+| Introspection | `typeOf`, `isNull`, `isNumber`, `isString`, `isBool`, `isArray`, `isObject`, `isDate`, `isDuration`, `isEmpty` | `WithIntrospection()` |
+| Strings | `upper`, `lower`, `trim`, `trimStart`, `trimEnd`, `replace`, `split`, `startsWith`, `endsWith`, `indexOf`, `repeat`, `padStart`, `padEnd` | `WithStrings()` |
+| Collections | `get`, `has`, `keys`, `values`, `remove`, `merge` | `WithCollections()` |
+| JSON | `parseJson`, `toJson` | `WithJSON()` |
+| Date/Time | `now`, `today`, `date`, `datetime`, `time`, `parseDate`, `tryParseDate`, `formatDate`, `parseDur`, `tryParseDur`, `formatDur`, `duration`, `durationIn`, `addMonths`, `addYears`, `diffMonths`, `diffYears`, `datePart`, `toEpochMillis`, `fromEpochMillis`, `toEpochSeconds`, `fromEpochSeconds` | `WithDatetime()` (+ `WithClock` for `now`/`today`) |
+| All standard-library families at once | — | `WithStdlib()` |

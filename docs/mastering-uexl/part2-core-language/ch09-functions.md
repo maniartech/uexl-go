@@ -150,13 +150,24 @@ set(product, "displayPrice", str(product.basePrice) + " USD")
 | `str(v)` | Convert | any | string |
 | `set(obj, key, val)` | Mutate | object, string, any | object |
 
-These fourteen functions are always available regardless of what host functions are registered.
+These thirteen functions are always available regardless of what host functions are registered.
+
+### Beyond the core: the standard library
+
+UExL also ships an **attachable standard library** — pure helper families that the *runtime provides* but the host opts into, rather than having to implement. Attach them all with `uexl.WithStdlib()`, or pick families with `WithMath()`, `WithStrings()`, `WithCollections()`, `WithConversion()`, `WithIntrospection()`, `WithJSON()`, and `WithDatetime()`:
+
+```go
+env := uexl.DefaultWith(uexl.WithStdlib())
+// round, min, upper, split, get, keys, parseNum, typeOf, parseJson, formatDate, …
+```
+
+This covers what used to be "host-provided" territory: math (`round`, `min`, `clamp`, …), strings (`upper`, `split`, `padStart`, …), collections (`get`, `keys`, `merge`, …), conversion (`parseNum`/`tryParseNum`, `formatNum`), introspection (`typeOf`, `isEmpty`, …), JSON (`parseJson`/`toJson`), and date/time. See [Appendix C — The Standard Library](../appendices/appendix-c-builtin-functions.md#the-standard-library) for the full reference. Genuinely application-specific functions are still the host's job (next section).
 
 ---
 
 ## 9.4 Host Functions — Extending the Runtime
 
-Everything beyond the fourteen built-ins must be registered by the embedding application. This is not a limitation — it is the design. UExL's built-in set deliberately stops at the boundary of "universally correct" functions. Anything with domain-specific semantics (number parsing, locale-aware string transforms, math utilities) belongs in the host.
+Beyond the core built-ins and the standard library, anything **application-specific** is registered by the embedding. This is not a limitation — it is the design. The runtime ships only "universally correct" functions; anything with domain-specific semantics (your pricing rules, locale-specific formatting, business lookups) belongs in the host.
 
 ### Registering a host function
 

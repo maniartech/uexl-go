@@ -21,6 +21,7 @@
   - [Pipe Types](pipes/types.md)
   - [Chaining Pipes](pipes/chaining.md)
 - [Functions](functions/overview.md)
+  - [Standard Library](functions/standard-library.md)
   - [User Defined Functions](functions/user-defined.md)
 - [Objects and Arrays](objects-arrays.md)
 - [Type Conversion](type-conversion.md)

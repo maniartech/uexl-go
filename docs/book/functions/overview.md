@@ -2,6 +2,12 @@
 
 Functions in UExL allow you to perform operations, calculations, and data transformations. Both built-in and user-defined functions can be called in expressions.
 
+Functions come from three places:
+
+- **Core built-ins** — a small fixed set always available in every embedding (`len`, `substr`, `contains`, `set`, `str`, the `rune`/`grapheme`/`byte` views, `join`). See the [Built-in Function Reference](../../mastering-uexl/appendices/appendix-c-builtin-functions.md).
+- **The standard library** — opt-in families (math, strings, collections, conversion, introspection, JSON, date/time) attached by the host with `WithStdlib()` (or per-family options). See the [Standard Library](standard-library.md).
+- **User-defined functions** — anything the host registers via `WithFunctions`. See [User Defined Functions](user-defined.md).
+
 ## Calling Functions
 - Functions are called using the syntax: `functionName(arg1, arg2, ...)`
 - Arguments can be literals, variables, or expressions.

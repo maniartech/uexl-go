@@ -19,21 +19,31 @@ true + 1          // 2 (true is 1)
 ```
 
 ## Explicit Type Conversion
-- Use built-in functions to convert values:
-  - `toNumber(value)`
-  - `toString(value)`
-  - `toBoolean(value)`
-- Use the double NOT operator (`!!`) for boolean conversion:
-  - `!!value` converts any value to a boolean using truthiness rules
-- If conversion is not possible, the result is `null`.
+
+Value-to-string is the core built-in `str` (always available). String parsing and number formatting are part of the [standard library](functions/standard-library.md#conversion) **conversion** family — attach it with `uexl.WithStdlib()` (or `WithConversion()`). Parsing follows the strict/safe convention: **`parseX`** raises an error on bad input, while **`tryParseX`** returns `null`.
+
+| Conversion | Function | On bad input |
+|------------|----------|--------------|
+| any → string | `str(v)` | — (core built-in) |
+| string → number | `parseNum(s)` / `tryParseNum(s)` | error / `null` |
+| string → boolean | `parseBool(s)` / `tryParseBool(s)` | error / `null` |
+| number → string | `formatNum(x[, decimals])` | error |
+
+Use the double NOT operator (`!!`) to convert any value to a boolean by truthiness.
 
 ### Examples
 ```
-toNumber("42")      // 42
-toNumber("abc")     // null
-toString(123)       // "123"
-toBoolean(0)        // false
-toBoolean("hello")  // true
+str(123)             // "123"
+str(true)            // "true"
+
+parseNum("42")       // 42
+parseNum("abc")      // error
+tryParseNum("abc")   // null    (safe variant)
+
+parseBool("true")    // true
+tryParseBool("yes")  // null
+
+formatNum(3.14159, 2)  // "3.14"
 
 // Boolean conversion with double NOT
 !!1                 // true
@@ -46,9 +56,9 @@ toBoolean("hello")  // true
 ```
 
 ## Edge Cases
-- Converting `null` to any type returns `null`.
-- Converting arrays or objects to numbers returns `null`.
-- Converting arrays or objects to strings returns a string representation (implementation-defined).
-- Converting non-empty arrays/objects to boolean returns `true`.
+- `str(null)` returns `"<nil>"` (Go's nil format), not `"null"`. Handle nulls first if you need JSON-style output: `v == null ? "null" : str(v)`.
+- `parseBool` accepts only the exact words `true`/`false` (case-insensitive); `"1"`/`"yes"` are rejected.
+- `tryParseNum`/`tryParseBool` return `null` for a non-string argument as well as for unparseable text.
+- `formatNum` with a fixed `decimals` rounds half-to-even; with no `decimals` it uses the shortest form, so large magnitudes render in scientific notation (`formatNum(1000000)` → `"1e+06"`).
 
 Understanding type conversion is key to writing correct and predictable UExL expressions.
