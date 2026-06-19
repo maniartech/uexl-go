@@ -858,21 +858,30 @@ func (p *Parser) parseObject() Expression {
 
 	properties := make(map[string]Expression)
 	for p.current.Type != constants.TokenRightBrace {
-		if p.current.Type != constants.TokenString {
-			p.addErrorWithExpected(errors.ErrInvalidObjectKey, "expected string key", "string")
+		// An object key is a string literal or a bareword identifier, so {a: 1} is sugar for {"a": 1}.
+		// The contextual keyword `as` lexes to its own token but is still a valid identifier-like key.
+		var key string
+		validKey := true
+		switch p.current.Type {
+		case constants.TokenString:
+			// Use the Value field which should contain the unquoted string.
+			if p.current.Value.Kind == TVKString && p.current.Value.Str != "" {
+				key = p.current.Value.Str
+			} else {
+				// Fallback: remove quotes manually if needed.
+				key = strings.Trim(p.current.Token, "'\"")
+			}
+		case constants.TokenIdentifier, constants.TokenAs:
+			key = p.current.Token
+		default:
+			p.addErrorWithExpected(errors.ErrInvalidObjectKey, "expected string or identifier key", "string or identifier")
+			validKey = false
+		}
+		if !validKey {
 			break
 		}
 
-		// Use the Value field which should contain the unquoted string
-		var key string
-		if p.current.Value.Kind == TVKString && p.current.Value.Str != "" {
-			key = p.current.Value.Str
-		} else {
-			// Fallback: remove quotes manually if needed
-			key = strings.Trim(p.current.Token, "'\"")
-		}
-
-		// Advance past the string token
+		// Advance past the key token
 		p.advance()
 
 		if p.current.Type != constants.TokenColon {
