@@ -300,9 +300,9 @@ A **`duration`** is an exact span of time in milliseconds (it may be negative). 
 2w
 ```
 
-There is deliberately **no month or year suffix** — a month is 28–31 days and a year is 365 or 366, so they are not fixed-length; calendar shifts are handled by functions (forthcoming) instead. Because the minute suffix is `m`, omitting month/year keeps `m` unambiguously "minute".
+There is deliberately **no month or year suffix** — a month is 28–31 days and a year is 365 or 366, so they are not fixed-length; calendar shifts are handled by the `addMonths`/`addYears` functions instead. Because the minute suffix is `m`, omitting month/year keeps `m` unambiguously "minute".
 
-> **NOTE:** Datetime and duration **literals** and **truthiness** work today. Temporal **operators** (`date − date` → duration, `date + duration`, comparisons like `<`) and the datetime **functions** (`now()`, `parseDate()`, `formatDate()`, `addMonths()`, …) are being added incrementally — so a literal evaluates to a value, but arithmetic on it is not available yet. Until then, host functions registered in `LibContext` (Chapter 14) can operate on datetime/duration values, and host `time.Time` ↔ datetime interop is also forthcoming.
+> **NOTE:** Datetime/duration are fully implemented — literals, truthiness, the temporal operators (`date − date` → duration, `date + duration`, comparisons), the function library (`now()`, `today()`, `parseDate()`, `formatDate()`, `addMonths()`, `datePart()`, `durationIn()`, …), and clock injection. The function library is attached with `uexl.WithDatetime()`; `now()`/`today()` read an injected `$now` instant (`uexl.WithClock(ms)` or a per-eval context variable), stable within one evaluation.
 
 ---
 

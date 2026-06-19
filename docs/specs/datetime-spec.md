@@ -1,6 +1,6 @@
 # UExL DateTime Specification
 
-Status: Draft
+Status: Implemented (Go reference) — §12 conformance verified
 Audience: Language designers, implementers of UExL ports, conformance authors
 Scope: Normative definition of the UExL `datetime` and `duration` value types, their literals,
 operators, and core semantics
@@ -680,10 +680,11 @@ Notes:
 - `datePart` and `formatDate` default to UTC; an explicit fixed `offset` (§10.4) renders/extracts as
   seen at that offset without changing the instant.
 
-## 12. Conformance Cases (Starter)
+## 12. Conformance Cases
 
-Results are canonical millisecond values (§2) unless otherwise indicated. (IDs are provisional; all
-numeric expectations MUST be verified against the reference implementation before promotion.)
+Results are canonical millisecond values (§2) unless otherwise indicated. These cases are verified against
+the Go reference implementation by `datetime_conformance_test.go` (the authoritative executable form of
+this table).
 
 | ID | Expression | Expected |
 |----|------------|----------|
@@ -775,10 +776,13 @@ Resolved in this revision:
   (`parseDate`/`tryParseDate`, `parseDur`/`tryParseDur`); supersedes the earlier `to*`/`parse*` split
   (§10.2, §10.3, [ADR-0001](adr-0001-builtins-and-datetime-architecture.md) §B).
 
-Remaining open:
+- **Implemented and conformance-verified** — the full feature (types, literals, operators, the calendar/
+  extraction/epoch/format/parse functions, and clock-injected `now`/`today`) is implemented in the Go
+  reference, and every §12 case is verified by `datetime_conformance_test.go`.
+
+Remaining open (deferred for v1, not blockers):
 
 1. Pattern-directed **parsing** `parseDate(s, pattern)` — deferred for v1; ISO parsing only (§10.2).
 2. Compound duration literals such as `1h30m` as a single token — deferred (§3.3).
 3. Locale-aware name rendering (`mmmm`, `wwww`, `aa`) — reserved for a future locale profile (§10.1).
 4. Additional `datePart` components — `dayOfYear`, `weekOfYear`, `quarter` — deferred (§11.1).
-5. All numeric conformance expectations to be verified against the reference implementation (§12).
