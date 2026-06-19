@@ -644,9 +644,8 @@ func (vm *VM) callFunction(funcIndex, numArgs uint16) error {
 	if err != nil {
 		return fmt.Errorf("error calling function %s: %w", functionName, err)
 	}
-	if functionResult == nil {
-		return nil
-	}
+	// A nil result is a null value (every function-call expression yields a value). Push it so the
+	// stack stays balanced — e.g. tryParseDate("bad") returns nil and must compare equal to null.
 	return vm.Push(functionResult)
 }
 
