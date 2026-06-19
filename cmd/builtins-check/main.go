@@ -1,8 +1,9 @@
 // Command builtins-check is the UExL standard-library consistency checker/mapper.
 //
 // It loads the canonical manifest (docs/specs/standard-library.json), compares it
-// against the live runtime registry (vm.Builtins) and the books (docs/book), and
-// emits a consistency matrix to docs/specs/standard-library.md.
+// against the live runtime registry (the core vm.Builtins plus every attachable
+// standard-library family) and the books (docs/book), and emits a consistency
+// matrix to docs/specs/standard-library.md.
 //
 //	go run ./cmd/builtins-check          # regenerate the matrix
 //	go run ./cmd/builtins-check -check    # CI mode: no write, exit 1 on hard drift
@@ -23,6 +24,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/maniartech/uexl/builtins/collections"
+	"github.com/maniartech/uexl/builtins/conversion"
+	"github.com/maniartech/uexl/builtins/datetime"
+	"github.com/maniartech/uexl/builtins/introspection"
+	jsonlib "github.com/maniartech/uexl/builtins/json"
+	"github.com/maniartech/uexl/builtins/numbers"
+	strlib "github.com/maniartech/uexl/builtins/strings"
 	"github.com/maniartech/uexl/vm"
 )
 
@@ -65,17 +73,17 @@ type familyRule struct {
 
 // familyRules encodes the symmetry audit: what *should* exist per family.
 var familyRules = []familyRule{
-	{"conversion (number)", []string{"toNumber", "parseNumber", "formatNumber"}, "lenient to*, strict parse*, and format* per type"},
-	{"conversion (boolean)", []string{"toBoolean", "parseBoolean"}, "boolean lacks a parser"},
-	{"conversion (string)", []string{"str", "format"}, "str implemented; generic format optional"},
-	{"conversion (json)", []string{"parseJson", "toJson"}, "JSON string <-> value (may be optional/extension)"},
-	{"explode-reassemble", []string{"split", "join", "runes", "graphemes", "bytes"}, "split is the missing inverse of join"},
-	{"length (unicode views)", []string{"len", "runeLen", "graphemeLen", "utf16Len"}, "utf16 view missing (JS parity)"},
-	{"substring (unicode views)", []string{"substr", "runeSubstr", "graphemeSubstr", "utf16Substr"}, "utf16 view missing (JS parity)"},
-	{"collection accessors", []string{"len", "get", "set", "has", "keys", "values", "remove"}, "set exists; get/has/keys/values/remove missing (map/filter/sort are pipe-based by design)"},
-	{"string-ops", []string{"contains", "indexOf", "startsWith", "endsWith", "replace", "trim", "upper", "lower", "split", "padStart", "padEnd", "repeat"}, "only contains/substr exist today"},
-	{"math", []string{"abs", "sign", "round", "floor", "ceil", "trunc", "min", "max", "sum", "avg", "pow", "sqrt", "mod", "clamp"}, "entire family absent; min/max/sum already referenced in the book examples"},
-	{"type-introspection", []string{"typeOf", "isNull", "isNumber", "isString", "isBool", "isArray", "isObject", "isDate", "isDuration"}, "entire family absent; isDate/isDuration newly relevant"},
+	{"conversion (number)", []string{"parseNum", "tryParseNum", "formatNum"}, "strict/safe number parse plus formatting"},
+	{"conversion (boolean)", []string{"parseBool", "tryParseBool"}, "strict/safe boolean parse"},
+	{"conversion (string)", []string{"str", "formatNum"}, "value->string is the core str; formatNum covers numbers"},
+	{"conversion (json)", []string{"parseJson", "toJson"}, "JSON string <-> value"},
+	{"explode-reassemble", []string{"split", "join", "runes", "graphemes", "bytes"}, "split/join plus the unicode views"},
+	{"length (unicode views)", []string{"len", "runeLen", "graphemeLen", "utf16Len"}, "utf16 view still missing (JS parity, optional)"},
+	{"substring (unicode views)", []string{"substr", "runeSubstr", "graphemeSubstr", "utf16Substr"}, "utf16 view still missing (JS parity, optional)"},
+	{"collection accessors", []string{"len", "get", "set", "has", "keys", "values", "remove", "merge"}, "complete; map/filter/sort are pipe-based by design"},
+	{"string-ops", []string{"contains", "indexOf", "startsWith", "endsWith", "replace", "trim", "trimStart", "trimEnd", "upper", "lower", "split", "padStart", "padEnd", "repeat"}, "complete"},
+	{"math", []string{"abs", "sign", "round", "floor", "ceil", "trunc", "min", "max", "sum", "avg", "pow", "sqrt", "mod", "clamp"}, "complete"},
+	{"type-introspection", []string{"typeOf", "isNull", "isNumber", "isString", "isBool", "isArray", "isObject", "isDate", "isDuration", "isEmpty"}, "complete"},
 }
 
 type row struct {
@@ -139,12 +147,32 @@ func loadManifest(path string) (*manifest, error) {
 	return &m, nil
 }
 
+// registryNames is the set of function names the runtime can actually provide: the always-on core
+// (vm.Builtins) plus every attachable standard-library family (registered outside vm.Builtins, via
+// uexl.WithStdlib / the per-family options). now()/today() are clock-injected and registered separately
+// from datetime.Builtins, so they are added explicitly.
 func registryNames() map[string]bool {
 	out := map[string]bool{}
 	for name := range vm.Builtins {
 		out[name] = true
 	}
+	addKeys(out, numbers.Builtins)
+	addKeys(out, conversion.Builtins)
+	addKeys(out, introspection.Builtins)
+	addKeys(out, strlib.Builtins)
+	addKeys(out, collections.Builtins)
+	addKeys(out, jsonlib.Builtins)
+	addKeys(out, datetime.Builtins)
+	out["now"] = true
+	out["today"] = true
 	return out
+}
+
+// addKeys records every key of m as present in out (value type ignored; families use different fn types).
+func addKeys[V any](out map[string]bool, m map[string]V) {
+	for name := range m {
+		out[name] = true
+	}
 }
 
 func candidateNames(m *manifest, registry map[string]bool) []string {
