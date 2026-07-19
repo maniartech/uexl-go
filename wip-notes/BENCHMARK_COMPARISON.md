@@ -1,5 +1,12 @@
 # UExL Performance Comparison vs Other Go Expression Frameworks
 
+> ⚠️ **SUPERSEDED (2026-06).** The basic-expression figure below (UExL 266.2 ns/op, "#3 of
+> 10") is from an earlier optimization phase. After further optimization, UExL now measures
+> **fastest in every head-to-head scenario** (basic ~125 ns / 0-alloc, string ~108 ns /
+> 0-alloc, function ~153 ns, map ~11,400 ns) and remains the only zero-allocation engine.
+> The **README "Performance" section** holds the current, authoritative numbers; this file is
+> retained for historical context (the cross-framework field comparison is still useful).
+
 ## Test Environment
 - **CPU**: AMD Ryzen 7 5700G with Radeon Graphics
 - **OS**: Windows

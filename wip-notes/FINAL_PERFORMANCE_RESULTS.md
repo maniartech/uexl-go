@@ -1,5 +1,12 @@
 # 🏆 Final Performance Results
 
+> ⚠️ **SUPERSEDED (2026-06).** These numbers are from an earlier optimization phase (basic
+> expr ~227–266 ns/op, ranked #3). The engine has since been optimized further — current
+> measured results put UExL **fastest in every scenario** (basic ~125 ns/0-alloc, string
+> ~108 ns/0-alloc, function ~153 ns, map ~11,400 ns), still the only zero-allocation engine.
+> See the **README "Performance" section** for the current, authoritative numbers. Kept here
+> as a historical record of the Phase-2 optimization journey.
+
 ## Benchmark Comparison (15s runs)
 
 | Framework | Time (ns/op) | Memory (B/op) | Allocs/op | Ranking |

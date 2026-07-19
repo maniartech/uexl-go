@@ -444,23 +444,23 @@ UExL uses a zero-allocation `Value` type for all runtime data. Benchmarked head-
 
 ### Benchmark Comparison
 
-All results measured with `-benchtime=10s -benchmem` on AMD Ryzen 7 5700G (Windows/amd64).
-UExL uses a pre-compiled expression with a pooled VM (same as `CompiledExpr.Eval()`). Competitors use their equivalent pre-compiled hot paths.
-**Reproduce it:** clone [golang-expression-evaluation-comparison](https://github.com/antonmedv/golang-expression-evaluation-comparison), add the `uexl_test.go` from this repo, and run `go test -bench=. -benchmem -benchtime=10s`.
+Measured on AMD Ryzen 7 5700G (Windows/amd64), Go 1.26, `-benchmem`, reporting the warm-state median of 6 runs (`-benchtime=2s -count=6`; discard the first run or two for JIT/thermal warm-up). UExL uses a pre-compiled expression with a pooled VM (same as `CompiledExpr.Eval()`). Competitors use their equivalent pre-compiled hot paths.
+**Reproduce it:** clone [golang-expression-evaluation-comparison](https://github.com/antonmedv/golang-expression-evaluation-comparison), add the `uexl_test.go` from this repo, and run `go test -bench=. -benchmem -benchtime=2s -count=6`.
+
 | Scenario | expr | cel-go | **UExL** |
 |----------|:----:|:------:|:--------:|
-| Boolean expression | 262 ns \| 1 alloc | 335 ns \| 1 alloc | **223 ns \| 0 allocs** |
-| String match | 532 ns \| 4 allocs | 535 ns \| 4 allocs | **119 ns \| 0 allocs** |
-| Custom function call | 367 ns \| 4 allocs | 397 ns \| 4 allocs | **197 ns \| 2 allocs** |
-| Map over 100 items | 21,071 ns \| 111 allocs | 80,574 ns \| 621 allocs | **16,425 ns \| 104 allocs** |
+| Boolean / general expression | ~165 ns \| 1 alloc | ~165 ns \| 1 alloc | **~125 ns \| 0 allocs** |
+| String pattern match | ~325 ns \| 4 allocs | ~348 ns \| 4 allocs | **~108 ns \| 0 allocs** |
+| Custom function call | ~228 ns \| 4 allocs | ~267 ns \| 4 allocs | **~153 ns \| 2 allocs** |
+| Map over 100 items | ~15,150 ns \| 111 allocs | ~63,500 ns \| 621 allocs | **~11,400 ns \| 104 allocs** |
 
-In these benchmarks, UExL outperforms both frameworks across every scenario and is the only one with zero allocations on the boolean and string-matching paths.
+In this measurement UExL is the fastest in every scenario, and the only engine with **zero allocations** on the boolean/comparison and string-matching paths — no GC pressure, predictable latency. Timings vary run-to-run (CPU thermal/scheduling); the **allocation counts are exact and stable**, and are UExL's most durable advantage.
 
-> **Note:** `Eval()` (parse + compile + run in one call) costs ~10,200 ns/op and 64 allocs. Always pre-compile with `MustCompile()` or `Compile()` for repeated use.
+> **Note:** `Eval()` (parse + compile + run in one call) costs ~10,000 ns/op with allocations. Always pre-compile with `MustCompile()` or `Compile()` for repeated use.
 
 ### Pipe Performance
 
-Pipe operations are measured at the VM layer. A `|map:` over 100 numeric items runs at approximately **16,400 ns/op** — 28% faster than expr and 5× faster than cel-go — with 104 allocs vs 111 (expr) and 621 (cel-go).
+Pipe operations are measured at the VM layer. A `|map:` over 100 numeric items runs at approximately **11,400 ns/op** — ~33% faster than expr and ~5.6× faster than cel-go — with 104 allocs vs 111 (expr) and 621 (cel-go).
 
 `CompiledExpr.Eval` borrows a `*vm.VM` from a `sync.Pool` on each call and returns it via `defer`. In a steady-state concurrent workload the pool stays warm, meaning most evaluations pay zero VM allocation cost.
 
